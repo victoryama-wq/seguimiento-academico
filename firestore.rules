@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Etapa 01: sin acceso a expedientes, incluso con sesión o claims.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

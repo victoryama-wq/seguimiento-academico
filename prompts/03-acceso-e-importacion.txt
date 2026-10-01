@@ -1,0 +1,15 @@
+Implementa únicamente la etapa 03: autenticación, administración de fuentes y carga persistente por lotes. Parte de las etapas anteriores integradas.
+
+Lee AGENTS.md y docs/requisitos.md. Reutiliza el parser probado; no dupliques reglas en UI/servidor.
+
+Implementa autenticación Firebase y roles administrados en servidor: administrador institucional y coordinador con carreras autorizadas. Administrador carga/publica versiones de padrón, suplemento, bajas/excepciones y catálogo, crea ciclos/cortes y catálogo de cursos esperados. Preparar asignación inicial de administrador por herramienta privilegiada documentada, nunca mediante un registro público con selección de rol.
+
+Coordinador selecciona varios reportes, ve progreso por archivo, resumen e incidencias de su alcance y confirma para publicar. El servidor valida identidad y alcance en cada operación. Los resultados de un curso compartido se distribuyen según afiliación; el uploader no obtiene acceso adicional a expedientes ajenos. Administrador/procesador son los únicos lectores de originales con datos de múltiples coordinaciones.
+
+Guardar originales en Storage privado y metadatos/versiones en Firestore. Usar trabajos persistentes con estados, reintentos acotados y errores por archivo; el trabajo aceptado sobrevive al cierre de navegador. Establecer límites de lote, archivo y filas; validar contenido real y no solo extensión. Si implementas ZIP, proteger rutas y tamaño total descomprimido.
+
+Implementar staging y confirmación atómica de la versión activa: ciclo + corte + instancia del curso. Hash y clave de idempotencia para detectar duplicados; mismo curso con contenido distinto produce versión y confirmación de sustitución. Las cargas simultáneas no pierden actualizaciones ni duplican agregados. Los cortes cerrados conservan sus fuentes; correcciones se versionan.
+
+Criterios: pruebas con emuladores de acceso permitido/denegado para ambos roles, descarga/exportación, roles falsificados y Functions; un lote con un archivo inválido permite publicar los válidos; repetir/reintentar no cambia conteos; dos cargas concurrentes producen resultado consistente; actualizar padrón no reescribe un corte cerrado. E2E con administrador y dos coordinadores sintéticos, incluido curso compartido.
+
+Ejecuta las comprobaciones y entrega PR con estados/transiciones, diseño de autorización, evidencia y pendientes. No declarar listo para producción ni conectar credenciales reales.

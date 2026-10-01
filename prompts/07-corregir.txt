@@ -1,0 +1,9 @@
+Corrige los hallazgos de revisión del PR indicado abajo. Lee AGENTS.md, docs/requisitos.md, el diff actual y el contexto de cada hallazgo.
+
+PR: [URL del PR]
+Commit revisado: [SHA]
+Hallazgos: [pegar hallazgos con escenarios e impacto]
+
+Trabaja en la rama del PR. Verifica que el problema sigue presente; corrige la causa y añade la regresión significativa que corresponda. Si un hallazgo no aplica, explica por qué con evidencia del código/prueba, sin marcarlo resuelto por conveniencia. No cambies reglas académicas ni omitas comprobaciones para poner CI en verde. Evita cambios ajenos a los hallazgos.
+
+Ejecuta las verificaciones necesarias, actualiza la descripción con hallazgo → corrección → prueba, y entrega el nuevo SHA y estado de CI. Distingue resultados locales de GitHub. No fusiones ni despliegues; solicita una nueva revisión del commit corregido.

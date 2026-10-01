@@ -1,0 +1,17 @@
+Implementa únicamente la etapa 02, sobre la etapa 01 integrada: dominio académico y parsers.
+
+Lee AGENTS.md y docs/requisitos.md. No cambies una regla del negocio para acomodar los datos. Crea funciones de dominio independientes de React/Firebase, con pruebas significativas y fixtures sintéticos para ODS, XLSX y CSV.
+
+Implementa:
+1. Lectura y mapeo configurable de encabezados de padrón, suplemento, catálogo y Moodle. Preservar valores originales y procedencia; validar formato real, tamaño y estructuras antes de procesar. Revisar mantenimiento, licencia y seguridad del parser elegido, incluyendo ODS.
+2. Identidad textual y separación de docentes; reconocimiento de grupo/ciclo/carrera/modalidad/turno/grado; COMPUB a CONPUB; prioridad de C.A; inscripciones excluidas; varias bases y especial sin base como incidencias explícitas.
+3. Fusión de correcciones aprobadas del suplemento sin borrar otras inscripciones válidas; bajas y excepciones como datos versionados. No codificar matrículas reales.
+4. Detección de actividades, categorías y totales; estados numérico/guion/vacío/inválido. Mapeos revisables cuando no sea posible interpretar automáticamente.
+5. Extracción de ID/nombre/ciclo del archivo con error claro ante ambigüedad. IDs de actividad estables mediante mapeo revisable; los cambios de texto u orden no deben fusionar actividades silenciosamente.
+6. Detección de filas duplicadas/conflictivas dentro de un reporte. No contar ambas ni elegir por orden de archivo sin registrar la resolución.
+
+Criterios: tests para los casos de docs/ci-y-revision.md correspondientes a identidad, grupos, afiliación y calificaciones. Incluir grados ordinarios, caso C.A fechado fuera de 29/08, inscripción de inglés más carrera, código 48 fuera de Arquitectura como incidencia, cero diferente de guion, columnas reordenadas y fechas sin desplazamiento por zona horaria. Múltiples actividades del mismo tipo no deben fusionarse.
+
+Si tienes acceso privado a los archivos piloto, informar conciliación por archivo y exclusiones sin subir PII al PR. Si no, avanzar con fixtures y declarar pendiente la conciliación real. No inventar que procesaste archivos de otra conversación.
+
+Ejecuta CI local, actualiza documentación y abre un PR revisable. No implementar carga nube ni panel de indicadores en esta etapa.

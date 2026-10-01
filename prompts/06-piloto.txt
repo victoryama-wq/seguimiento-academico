@@ -1,0 +1,11 @@
+Implementa únicamente la etapa 06: validar el piloto y preparar publicación. Todas las etapas previas deben estar integradas.
+
+Lee AGENTS.md y docs/requisitos.md. Verifica el código existente antes de ampliar pruebas o modificar arquitectura.
+
+1. Conciliar los cuatro libros piloto contra padrón, catálogo, suplemento y bajas/excepciones aprobadas, si están disponibles por canal privado. Reportar conteos por archivo, universo incluido, excluido y causas; revisar los casos discrepantes. No exponer identificadores en GitHub. Si faltan fuentes, marcar esta aceptación como pendiente, sin inventar resultados.
+2. Generar un lote sintético reproducible de 45 cursos y consolidado de 230 con mezcla de archivos, cursos compartidos, duplicados y errores. Medir procesamiento, consultas del panel, memoria/lecturas y almacenamiento, registrando entorno y tamaños. El número de archivos solo no representa carga si no se declaran filas/actividades por archivo.
+3. Probar recuperación ante fallo de trabajador y reintento, carrera entre importaciones, cierre/reapertura del navegador y consistencia del corte publicado. Resolver cuellos de botella encontrados, no optimizar por suposición.
+4. Preparar documentación de operación, alta de coordinadores, incidencias, restauración, retención propuesta, costos con supuestos y regresión mínima. No borrar fuentes para cumplir la retención propuesta sin una decisión aprobada.
+5. Preparar configuración de Hosting, Functions, reglas e índices para staging en Firebase. Validar que solo el bundle público llegue a Hosting; archivos y datos permanecen privados. Enumerar configuración/credenciales y permisos de destino necesarios sin pedir que se peguen secretos en el chat.
+
+Entregar PR con evidencias, defectos resueltos, limitaciones y pasos de publicación/rollback. Si falta proyecto Firebase, completar los emuladores y la preparación; declarar pendiente la prueba real en nube. El despliegue de producción requiere una instrucción posterior para un proyecto identificado. No afirmar que el piloto está publicado o que ya soporta cinco coordinaciones reales basándose solo en una compilación.

@@ -1,0 +1,10 @@
+Revisa la implementación de esta etapa antes de continuar.
+
+PR: [URL del PR]
+Etapa: [01 a 06]
+
+Lee AGENTS.md, docs/requisitos.md y los criterios de la etapa. Inspecciona el diff completo, código relacionado y resultados de CI para el último commit. No te bases solamente en el resumen del implementador. Ejecuta o reproduce las pruebas relevantes cuando tengas un entorno disponible; distingue ejecución propia de resultados reportados.
+
+Prioriza pérdida/doble cuenta de datos, interpretación errónea del guion, docentes/bajas, resolución de base/especial, versiones e idempotencia, denominadores, comparación histórica y aislamiento entre coordinaciones. Evalúa criterios funcionales y estados de error, no solo estilo.
+
+Entrega dictamen y hallazgos priorizados con ubicación, escenario, impacto y cambio propuesto; especifica commit, límites de revisión, CI y criterios todavía sin evidencia. Si no hay hallazgos bloqueantes, dilo dentro del alcance efectivamente revisado. Si falta acceso al código o logs, solicita ese material y no declares aprobación. Prepara el prompt de corrección o siguiente etapa según corresponda. Esta solicitud es de revisión: no fusionar, desplegar ni publicar comentarios en GitHub salvo instrucción explícita del usuario.

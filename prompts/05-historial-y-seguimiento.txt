@@ -1,0 +1,13 @@
+Implementa únicamente la etapa 05: cortes, comparación histórica y bitácora.
+
+Lee AGENTS.md y docs/requisitos.md. Configurar cortes cada tres semanas con fechas editables; aún no enviar recordatorios ni comunicaciones externas.
+
+Implementa cierre de corte con fotografía de versiones de fuentes, mapeos, actividades seleccionadas y afiliaciones. Una corrección conserva la fotografía y genera revisión atribuible. Permitir consultar historia sin recomputarla silenciosamente con el padrón actual.
+
+Comparar cortes con conjunto común explícito de estudiante/curso/actividad y mapeos estables. Mostrar aparte cambios de población, bajas, cambios de afiliación, nuevas actividades y cursos faltantes. Si no hay una base comparable, no publicar una diferencia porcentual engañosa.
+
+Bitácora por estudiante/curso/corte con observación, responsable, fecha, siguiente acción y estado; autoría y cambios auditables, sin editar calificaciones importadas. Aplicar alcance de coordinación en lectura y escritura.
+
+Criterios: una baja no se cuenta como recuperación; una actividad nueva no reduce artificialmente la cobertura comparable; cambiar un catálogo o padrón no altera el corte cerrado; se preserva auditoría de corrección; coordinador ajeno no puede consultar/modificar bitácora ni versiones históricas. Definir y probar política de acceso histórico cuando cambia la coordinación autorizada; no conceder acceso por un rol que el cliente envíe.
+
+Ejecuta pruebas de dominio, servidor y E2E relevantes, actualiza documentación y abre PR con ejemplos sintéticos antes/después. No activar mensajes ni producción.

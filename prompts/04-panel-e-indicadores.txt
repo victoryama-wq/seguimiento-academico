@@ -1,0 +1,15 @@
+Implementa únicamente la etapa 04: panel y métricas de seguimiento, sobre datos importados y autorizados de las etapas anteriores.
+
+Lee AGENTS.md y docs/requisitos.md. No uses mocks como origen de un panel que dice mostrar información cargada.
+
+Implementa:
+- Selección explícita de actividades por curso/corte; publicar qué universo se midió. Sin selección, mostrar sin actividades seleccionadas.
+- Conteos de estudiantes únicos, cursos cargados/esperados, cobertura N/D, guiones G/D, ceros, vacíos e inválidos, y detalle de exclusiones/incidencias.
+- Vistas institucional, coordinación, carrera, grupo base, asignatura, estudiante y docente conocido. Mostrar cuando no hay docente identificado. El título docente describe registro de calificaciones, sin atribuir falta de entrega ni retraso.
+- Filtros de ciclo/corte, coordinación, carrera/plan, grupo base, modalidad, turno y caso especial; navegación al detalle conservando contexto.
+- Agregados y paginación que eviten descargar toda la institución al navegador. Atribución por grupo base, especiales separados y atribuciones provisionales etiquetadas.
+- Exportación del alcance filtrado con definiciones, fecha del corte, selección de actividades y denominadores; neutralizar fórmulas en celdas de texto y probar coincidencia entre exportación y pantalla.
+
+Criterios: fixture sintético pequeño con resultados calculados manualmente; verificar D=N+G+V+E, cero como numérico, ninguna doble cuenta de persona y agregación ponderada por denominador. Cursos/coord sin archivos deben mostrar ausencia de datos, no indicadores inventados de cero. Totales y actividades no seleccionadas no entran al denominador. Consultas/exportaciones respetan autorización incluso manipulando solicitudes. E2E de filtros y navegación por teclado; estados móvil/escritorio, vacío, cargando y error.
+
+No crear promedios normalizados, aprobación, no entregas o vencimientos sin sus datos. Ejecutar CI y entregar PR con capturas sintéticas y cálculos inspeccionables.

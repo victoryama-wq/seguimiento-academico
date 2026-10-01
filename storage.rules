@@ -1,0 +1,9 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Los originales compartidos tampoco son legibles por su cargador.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

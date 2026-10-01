@@ -1,0 +1,17 @@
+Implementa únicamente la etapa 01 de la aplicación de seguimiento académico.
+
+Lee AGENTS.md, docs/requisitos.md y docs/ci-y-revision.md. Inspecciona el repositorio antes de editar. Si ya hay una aplicación, adapta este trabajo sin borrarla. Si hay contradicciones, explica cuáles afectan esta etapa; resuelve decisiones técnicas rutinarias y avanza.
+
+Objetivo: una base ejecutable y verificable con React + TypeScript, Firebase mediante emuladores y CI real. No construir todavía todas las pantallas ni todos los parsers.
+
+Entregables:
+- Estructura clara para web, dominio, importación, Functions y pruebas. npm workspaces si hace falta, lockfile raíz y versiones compatibles fijadas.
+- Diseño del modelo de datos en docs/modelo-datos.md: personas e inscripciones separadas; ciclos/cortes; versiones de padrón y catálogo; cursos/actividades; importaciones; calificaciones; incidencias; bitácora; membresías autorizadas. Señala claves, índices y límites, sin un documento gigante por corte.
+- Pantalla inicial en español para el panel, navegación y estados de carga, vacío y error; no presentar cifras ficticias como datos reales. Si hay demostración, etiquetarla y usar datos sintéticos.
+- firebase.json, reglas de Firestore/Storage inicialmente restrictivas, configuración de emuladores y .env.example sin secretos. Diferenciar con claridad entorno emulado y nube.
+- Scripts y workflow de CI del contrato. Pruebas significativas de esquema/validación, acceso anónimo denegado y pantalla inicial. Preparar Functions compilables sin abrir endpoints de datos.
+- README con comandos reproducibles y lista explícita de lo que aún no está implementado. Ignorar archivos privados y credenciales en Git, sin bloquear fixtures sintéticos necesarios.
+
+Criterios de aceptación: npm ci desde un clon limpio, lint, tipos, pruebas, build y flujo de emuladores ejecutados; ningún script vacío ni suite con cero pruebas; ningún recurso Firebase de producción necesario; CI cubre el código añadido. Si una limitación de infraestructura impide ejecutar algo, indícala con precisión y no marques esa prueba como aprobada.
+
+Abre un PR en una rama de esta etapa si tu entorno lo permite; no fusiones ni despliegues. Entrega URL, cambios, comandos/resultados, decisiones y pendientes. Si no puedes abrir el PR, deja los cambios y el resumen listos para hacerlo. No continúes con la etapa 02 en esta tarea.
