@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -36,6 +42,13 @@ const previewSchema = z.object({
   blocking: z.boolean(),
   issues: z.array(z.object({ code: z.string(), refs: z.array(z.string()) })),
   sourceCount: z.number().nullable(),
+  filename: z
+    .object({
+      original: z.string(),
+      sha256: z.string(),
+      resolution: z.unknown(),
+    })
+    .nullable(),
 });
 const states: Record<JobView["status"], string> = {
   awaiting_upload: "Pendiente de envío",
@@ -348,7 +361,13 @@ function Imports({ overview }: { overview: Overview }) {
   const [jobsCursor, setJobsCursor] = useState<string | null>(null);
   const [jobsNext, setJobsNext] = useState<string | null>(null);
   const [files, setFiles] = useState<
-    { file: File; courseId: string; mapping: string; progress: string }[]
+    {
+      file: File;
+      courseId: string;
+      mapping: string;
+      filenameResolution: string;
+      progress: string;
+    }[]
   >([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -356,7 +375,18 @@ function Imports({ overview }: { overview: Overview }) {
     null,
   );
   const [careerId, setCareerId] = useState(overview.member.careers[0] ?? "");
-  const [replace, setReplace] = useState(false);
+  const [confirmedProposal, setConfirmedProposal] = useState<string | null>(
+    null,
+  );
+  const previewRequest = useRef(0);
+  const proposalKey = (job: JobView) => `${job.id}:${job.replaces ?? ""}`;
+  const replace =
+    preview !== null && confirmedProposal === proposalKey(preview.job);
+  function clearPreview() {
+    previewRequest.current += 1;
+    setPreview(null);
+    setConfirmedProposal(null);
+  }
   const refresh = useCallback(async () => {
     const response = await callAcademic(
       "jobs",
@@ -413,6 +443,9 @@ function Imports({ overview }: { overview: Overview }) {
       files.map(async (f) => ({
         ...(await fileDescriptor(f.file, JSON.parse(f.mapping))),
         courseId: f.courseId,
+        ...(f.filenameResolution.trim()
+          ? { filenameResolution: JSON.parse(f.filenameResolution) }
+          : {}),
       })),
     );
     const batch = await callAcademic(
@@ -451,17 +484,19 @@ function Imports({ overview }: { overview: Overview }) {
     }
   }
   async function view(job: JobView, cursor?: string) {
-    setPreview(
-      await callAcademic(
-        "preview",
-        {
-          jobId: job.id,
-          ...(careerId ? { careerId } : {}),
-          ...(cursor ? { cursor } : {}),
-        },
-        previewSchema,
-      ),
+    clearPreview();
+    const request = previewRequest.current;
+    const response = await callAcademic(
+      "preview",
+      {
+        jobId: job.id,
+        ...(careerId ? { careerId } : {}),
+        ...(cursor ? { cursor } : {}),
+      },
+      previewSchema,
     );
+    if (request === previewRequest.current && response.job.id === job.id)
+      setPreview(response);
   }
   async function downloadOriginal(job: JobView) {
     const value = await callAcademic(
@@ -491,7 +526,7 @@ function Imports({ overview }: { overview: Overview }) {
           onChange={(e) => {
             setCutId(e.target.value);
             setJobsCursor(null);
-            setPreview(null);
+            clearPreview();
           }}
         >
           {overview.member.role === "admin" && (
@@ -510,7 +545,7 @@ function Imports({ overview }: { overview: Overview }) {
           value={careerId}
           onChange={(e) => {
             setCareerId(e.target.value);
-            setPreview(null);
+            clearPreview();
           }}
           placeholder={
             overview.member.role === "admin"
@@ -537,6 +572,7 @@ function Imports({ overview }: { overview: Overview }) {
                     mapping:
                       '{"identity":{"header":"Correo"},"columns":[{"selector":{"header":"Nota"},"kind":"activity","activityId":"actividad-1"}]}',
                     progress: "Pendiente de envío",
+                    filenameResolution: "",
                   })),
                 )
               }
@@ -584,6 +620,26 @@ function Imports({ overview }: { overview: Overview }) {
                   }
                 />
               </label>
+              {overview.member.role === "admin" && (
+                <label>
+                  Resolución administrativa del nombre para {f.file.name}
+                  <textarea
+                    value={f.filenameResolution}
+                    placeholder={
+                      'Opcional: {"externalId":"1","name":"Curso","cycle":"27-1","reason":"Motivo de la decisión"}'
+                    }
+                    onChange={(e) =>
+                      setFiles((v) =>
+                        v.map((r, n) =>
+                          n === i
+                            ? { ...r, filenameResolution: e.target.value }
+                            : r,
+                        ),
+                      )
+                    }
+                  />
+                </label>
+              )}
               <p>{f.progress}</p>
             </div>
           ))}
@@ -640,7 +696,7 @@ function Imports({ overview }: { overview: Overview }) {
         <button onClick={() => setJobsCursor(jobsNext)}>Más trabajos</button>
       )}
       {preview && (
-        <section className="preview">
+        <section className="preview" data-testid={`preview-${preview.job.id}`}>
           <h3>Revisión de {preview.job.courseId ?? preview.job.kind}</h3>
           <p>
             {preview.blocking
@@ -649,6 +705,21 @@ function Imports({ overview }: { overview: Overview }) {
           </p>
           {preview.sourceCount !== null && (
             <p>Registros procesados: {preview.sourceCount}</p>
+          )}
+          {preview.filename && (
+            <details className="filename-audit">
+              <summary>Procedencia y resolución del nombre</summary>
+              <p>Original: {preview.filename.original}</p>
+              <p>SHA-256: {preview.filename.sha256}</p>
+              <pre>{JSON.stringify(preview.filename.resolution, null, 2)}</pre>
+              {preview.job.status === "invalid" && (
+                <p>
+                  Para corregir el nombre, selecciona de nuevo el mismo original
+                  y completa la resolución administrativa con ID, nombre, ciclo
+                  y motivo. Se conserva este trabajo.
+                </p>
+              )}
+            </details>
           )}
           <ul>
             {preview.issues.map((v, i) => (
@@ -710,23 +781,32 @@ function Imports({ overview }: { overview: Overview }) {
               <input
                 type="checkbox"
                 checked={replace}
-                onChange={(e) => setReplace(e.target.checked)}
+                onChange={(e) =>
+                  setConfirmedProposal(
+                    e.target.checked ? proposalKey(preview.job) : null,
+                  )
+                }
               />
               Confirmo sustituir la versión anterior, conservando su historial
             </label>
           )}
           <button
             disabled={
-              busy || preview.blocking || preview.job.status !== "ready"
+              busy ||
+              preview.blocking ||
+              preview.job.status !== "ready" ||
+              (!!preview.job.replaces && !replace)
             }
             onClick={() =>
               void run(async () => {
+                const request = previewRequest.current;
                 await callAcademic(
                   preview.job.kind === "report" ? "publish" : "publishSource",
                   { jobId: preview.job.id, replace },
                   okSchema,
                 );
-                await view({ ...preview.job, status: "published" });
+                if (request === previewRequest.current)
+                  await view({ ...preview.job, status: "published" });
               })
             }
           >

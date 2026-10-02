@@ -233,14 +233,14 @@ export async function academicOperation(
       const input = operationSchemas.createBatch.parse(raw);
       if (
         member.role !== "admin" &&
-        input.files.some((f) => f.mapping.resolutions)
+        input.files.some((f) => f.mapping.resolutions || f.filenameResolution)
       )
         denied();
       const ids = await db.runTransaction(async (tx) => {
         const currentMember = await membership(actor, tx);
         if (
           currentMember.role !== "admin" &&
-          input.files.some((f) => f.mapping.resolutions)
+          input.files.some((f) => f.mapping.resolutions || f.filenameResolution)
         )
           denied();
         const cut = (await tx.get(db.doc(`cuts/${input.cutId}`))).data() as
@@ -255,6 +255,15 @@ export async function academicOperation(
           ).data() as Course | undefined;
           if (!course || course.cycleId !== cut.cycleId) throw missing();
           courseAccess(currentMember, course);
+          if (
+            file.filenameResolution &&
+            (file.filenameResolution.externalId !== course.externalId ||
+              file.filenameResolution.cycle !== cut.cycleId)
+          )
+            throw new HttpsError(
+              "invalid-argument",
+              "La resolución debe coincidir con ID y ciclo de la instancia seleccionada.",
+            );
           const id = hash(
             canonical({
               cut: cut.id,
@@ -262,6 +271,14 @@ export async function academicOperation(
               sources: cut.sources,
               hash: file.sha256,
               mapping: file.mapping,
+              ...(file.filenameResolution
+                ? {
+                    filename: {
+                      original: file.name,
+                      decision: file.filenameResolution,
+                    },
+                  }
+                : {}),
             }),
           );
           if (found.has(id)) continue;
@@ -269,7 +286,7 @@ export async function academicOperation(
           const previous = await tx.get(db.doc(`jobs/${id}`));
           const pointer = await tx.get(pointerRef(cut.id, course.id));
           if (previous.exists) continue;
-          const { courseId, ...descriptor } = file;
+          const { courseId, filenameResolution, ...descriptor } = file;
           jobs.push({
             id,
             kind: "report",
@@ -277,6 +294,7 @@ export async function academicOperation(
             cutId: cut.id,
             courseId,
             file: descriptor,
+            ...(filenameResolution ? { filenameResolution } : {}),
             uid: actor,
             status: "awaiting_upload",
             attempt: 0,
@@ -298,6 +316,14 @@ export async function academicOperation(
               sources: cut.sources,
               hash: file.sha256,
               mapping: file.mapping,
+              ...(file.filenameResolution
+                ? {
+                    filename: {
+                      original: file.name,
+                      decision: file.filenameResolution,
+                    },
+                  }
+                : {}),
             }),
           ),
         );

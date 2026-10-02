@@ -70,8 +70,8 @@ formato duplicaría semántica compleja de hojas/fechas.
 ## Bundle
 
 `npm run build` pasa y conserva la advertencia de Vite para chunks mayores de
-500 kB minificados. Etapa 03: **dist/assets/index-CZSJIvSd.js**, **802 733 bytes**
-en disco; Vite muestra **802,73 kB**, gzip estimado **240,05 kB**. La UI de acceso
+500 kB minificados. Revisión PR #2: **dist/assets/index-DdChR5_k.js**, **806 051 bytes**
+en disco; Vite muestra **806,05 kB**, gzip estimado **240,98 kB**. La UI de acceso
 e importación aumenta el archivo respecto de los 774 279 bytes de etapa 02.
 SheetJS permanece en Node, sin importación desde la UI. No se subió el umbral.
 

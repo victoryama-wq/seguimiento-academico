@@ -181,3 +181,21 @@ identidades nulas, docentes/bajas, duplicados y mapeos auditables. No se infiere
 escalas, fechas, carreras o actividades. No hay conciliación con archivos reales.
 Dependencias, bundle, carga 45/230 cursos, retención, costos, recuperación y nube
 continúan pendientes. Indicadores y panel corresponden a etapa 04.
+
+### Correcciones de revisión del PR #2
+
+- Solo `calificacion_invalida` es incidencia publicable; cualquier código distinto
+  o desconocido bloquea por defecto. Se conserva la incidencia en la fila y el
+  estado/valor original en resultados y exportación del alcance autorizado.
+- La confirmación de sustitución se vincula a ID de propuesta y versión anterior.
+  Cada nueva revisión invalida la selección; un contador de solicitudes impide
+  que respuestas fuera de orden reemplacen la propuesta actual. Se aplica a
+  reportes y fuentes administrativas, sin cambiar la transacción de publicación.
+- `filenameResolution` usa el contrato del resolver académico aprobado. Solo
+  administración puede adjuntarla; servidor valida ID/ciclo contra la instancia
+  y fija actor de sesión/versión de trabajo. La identidad del trabajo incorpora
+  nombre original y decisión cuando hay resolución. Esto permite corregir un
+  original ya rechazado, conservar ambos trabajos y reutilizar el reenvío exacto.
+  Nombre, hash, decisión, motivo, actor y versión quedan disponibles en revisión
+  administrativa y artefacto privado. No se atribuye este permiso al cargador.
+- No se introducen reglas académicas nuevas ni cambios de dependencias/workflow.

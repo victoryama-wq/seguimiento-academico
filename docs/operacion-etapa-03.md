@@ -65,6 +65,14 @@ Un selector es `{"header":"Encabezado exacto"}`; encabezados ambiguos requieren
 índice explícito según el parser de etapa 02. Ejemplos completos sintéticos y
 calendario en `tests/fixtures/synthetic/stage03.ts`. Los mapeos son configuración,
 no código evaluable. Un nombre de curso ambiguo se rechaza; no se infiere su ID.
+Para corregirlo, administración vuelve a seleccionar el mismo original y completa
+**Resolución administrativa del nombre** con JSON como
+`{"externalId":"1","name":"Curso compartido","cycle":"27-1","reason":"Motivo contrastado"}`.
+ID y ciclo deben coincidir con la instancia seleccionada. La API deniega esta
+facultad a coordinadores y rechaza actor/versión enviados por cliente: los asigna
+desde la sesión y el trabajo. La revisión administrativa muestra nombre exacto,
+hash y decisión auditada. No se renombra ni sobrescribe el original rechazado;
+la decisión crea otra propuesta, y reenviar la misma decisión reutiliza su versión.
 
 Crear los cursos esperados con ID interno propio, ID externo leído del nombre,
 nombre y carreras autorizadas. No se admite otra instancia con el mismo ID externo
@@ -93,6 +101,13 @@ El trabajo sobrevive al cierre **después de aceptar todos los bytes en servidor
 un envío interrumpido antes de ese punto requiere seleccionar nuevamente el archivo.
 Los archivos inválidos no impiden publicar otros válidos del lote. Toda incidencia
 bloqueante exige revisión; un coordinador no ve identidades de otra carrera.
+Una calificación inválida conserva su valor original, estado `invalida` e incidencia
+`calificacion_invalida`; permite confirmar y aparece en resultados/exportación
+de la carrera autorizada. Identidades pendientes, duplicados y problemas
+estructurales siguen bloqueados. No se convierte texto, vacío o guion en cero.
+La casilla de sustitución corresponde únicamente a la propuesta revisada:
+cambiar trabajo, página de revisión, corte o carrera la limpia. Las respuestas
+antiguas de otras previsualizaciones no cambian la propuesta ni su confirmación.
 
 Los trabajos y filas se paginan de 100 en 100. La exportación recorre todas las
 páginas de una carrera y versión fija; revalida membresía en cada llamada. CSV

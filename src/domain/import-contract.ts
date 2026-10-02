@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
+import { courseFilenameResolutionSchema } from "./academic";
+
+export const filenameResolutionSchema = courseFilenameResolutionSchema
+  .omit({ approvedBy: true, version: true })
+  .extend({
+    name: z.string().trim().min(1).max(180),
+    reason: z.string().trim().min(1).max(1000),
+  });
 
 export const keySchema = z
   .string()
@@ -65,7 +73,12 @@ export const operationSchemas = {
     .strictObject({
       cutId: keySchema,
       files: z
-        .array(descriptorSchema.extend({ courseId: keySchema }))
+        .array(
+          descriptorSchema.extend({
+            courseId: keySchema,
+            filenameResolution: filenameResolutionSchema.optional(),
+          }),
+        )
         .min(1)
         .max(20),
     })

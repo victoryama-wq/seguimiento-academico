@@ -452,15 +452,14 @@ export function courseFilename(original: string) {
   return { original, externalId: match[1]!, name: match[2]!, cycle: match[3]! };
 }
 
+export const courseFilenameResolutionSchema = z.strictObject({
+  ...audit,
+  externalId: text.regex(/^\d+$/),
+  name: text,
+  cycle: text.regex(/^\d{2}-\d+$/),
+});
 export function resolveCourseFilename(original: string, decision: unknown) {
-  const resolution = z
-    .strictObject({
-      ...audit,
-      externalId: text.regex(/^\d+$/),
-      name: text,
-      cycle: text.regex(/^\d{2}-\d+$/),
-    })
-    .parse(decision);
+  const resolution = courseFilenameResolutionSchema.parse(decision);
   return { original, ...resolution };
 }
 

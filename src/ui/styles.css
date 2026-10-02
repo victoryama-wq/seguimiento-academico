@@ -503,3 +503,5 @@ footer {
 .table-scroll { max-width: 100%; overflow-x: auto; }
 .table-scroll table { border-collapse: collapse; width: 100%; }
 .table-scroll th, .table-scroll td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+.filename-audit { min-width: 0; overflow-wrap: anywhere; }
+.filename-audit pre { max-width: 100%; white-space: pre-wrap; }

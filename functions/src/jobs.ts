@@ -7,6 +7,7 @@ import {
   catalogSchema,
   contextSchema,
   courseFilename,
+  resolveCourseFilename,
   resolveAffiliations,
   supplementSchema,
 } from "../../src/domain/academic";
@@ -23,6 +24,7 @@ import {
   type jobStatus,
   type sourceKind,
   type descriptorSchema,
+  type filenameResolutionSchema,
 } from "../../src/domain/import-contract";
 import {
   admin,
@@ -67,6 +69,7 @@ export type Job = {
   cutId: string | null;
   courseId: string | null;
   file: z.infer<typeof descriptorSchema>;
+  filenameResolution?: z.infer<typeof filenameResolutionSchema>;
   uid: string;
   status: z.infer<typeof jobStatus>;
   attempt: number;
@@ -106,6 +109,9 @@ export function jobView(job: Job) {
   };
 }
 type Artifact = {
+  filename?:
+    | ReturnType<typeof resolveCourseFilename>
+    | ReturnType<typeof courseFilename>;
   data: unknown;
   source: unknown;
   issues: { code: string; refs: string[] }[];
@@ -253,7 +259,13 @@ async function report(
   const course = (
     await db.doc(`courses/${job.courseId}`).get()
   ).data() as Course;
-  const fileCourse = courseFilename(job.file.name);
+  const fileCourse = job.filenameResolution
+    ? resolveCourseFilename(job.file.name, {
+        ...job.filenameResolution,
+        approvedBy: job.uid,
+        version: job.id,
+      })
+    : courseFilename(job.file.name);
   if (
     fileCourse.cycle !== cut.cycleId ||
     fileCourse.externalId !== course.externalId
@@ -359,6 +371,7 @@ async function report(
     await batch.commit();
   }
   return {
+    filename: fileCourse,
     data: {
       mapping: parsed.mapping,
       audits,
@@ -433,7 +446,11 @@ export async function processJob(id: string) {
       tx.update(ref, {
         status: "ready",
         artifact: path,
-        blocking: artifact.issues.length > 0,
+        // Una nota inválida es un estado publicable, no una identidad sin resolver.
+        // Todo código nuevo/desconocido sigue bloqueando por defecto.
+        blocking: artifact.issues.some(
+          (issue) => issue.code !== "calificacion_invalida",
+        ),
         error: null,
         lease: 0,
       });
@@ -497,6 +514,14 @@ export async function previewJob(
   const artifact = job.artifact ? await jsonFile<Artifact>(job.artifact) : null;
   return {
     ...page,
+    filename:
+      member.role === "admin" && job.kind === "report"
+        ? {
+            original: job.file.name,
+            sha256: job.file.sha256,
+            resolution: artifact?.filename ?? null,
+          }
+        : null,
     job: jobView(job),
     blocking: job.blocking,
     issues:

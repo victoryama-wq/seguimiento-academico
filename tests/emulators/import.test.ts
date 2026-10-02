@@ -520,6 +520,215 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
     );
   });
 
+  it("publica notas inválidas sin perder originales ni exponer la otra carrera; identidad y estructura siguen bloqueadas", async () => {
+    const cutId = "corte-notas";
+    await api(
+      "createCut",
+      { cycleId: "27-1", id: cutId, date: "2026-09-21" },
+      sessions.admin,
+    );
+    const mapping = {
+      identity: { header: "Correo" },
+      columns: ["Numero", "Cero", "Guion", "Vacio", "Texto"].map((header) => ({
+        selector: { header },
+        kind: "activity",
+        activityId: header,
+      })),
+    };
+    const content =
+      "Correo,Numero,Cero,Guion,Vacio,Texto\n000SINT01@example.invalid,8,0,-,,texto-A\n000SINT02@example.invalid,7,0,-,,texto-B\n";
+    const [job] = await batch(
+      sessions.a,
+      [
+        {
+          name: "1 Curso compartido 27-1.csv",
+          content,
+          mapping,
+          courseId: "compartido",
+        },
+      ],
+      cutId,
+    );
+    expect((await waitJob(job!.id)).blocking).toBe(false);
+    await api("publish", { jobId: job!.id, replace: false }, sessions.a);
+    for (const [session, careerId, own, other, number] of [
+      [sessions.a, "laf-plan-1", "A", "B", "8"],
+      [sessions.b, "arq-plan-1", "B", "A", "7"],
+    ] as const) {
+      const input = { cutId, courseId: "compartido", careerId };
+      const result = (await api("results", input, session)) as {
+        rows: { values: { state: string; raw: unknown }[]; issues: string[] }[];
+      };
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]!.values.map((v) => v.raw)).toEqual([
+        number,
+        "0",
+        "-",
+        "",
+        `texto-${own}`,
+      ]);
+      expect(result.rows[0]!.values.map((v) => v.state)).toEqual([
+        "numerica",
+        "numerica",
+        "guion",
+        "vacia",
+        "invalida",
+      ]);
+      expect(result.rows[0]!.issues).toContain("calificacion_invalida");
+      const preview = await api(
+        "preview",
+        { jobId: job!.id, careerId },
+        session,
+      );
+      expect(JSON.stringify(preview)).not.toContain(`texto-${other}`);
+      const exported = (await api("export", input, session)) as { csv: string };
+      expect(exported.csv).toContain(`texto-${own}`);
+      expect(exported.csv).toContain("invalida");
+      expect(exported.csv).not.toContain(`texto-${other}`);
+      expect(JSON.stringify(result)).not.toContain(`texto-${other}`);
+    }
+    await expect(
+      api(
+        "export",
+        { cutId, courseId: "compartido", careerId: "arq-plan-1" },
+        sessions.a,
+      ),
+    ).rejects.toThrow("PERMISSION_DENIED");
+    for (const [bad, status] of [
+      ["Correo,Nota\n,8\n", "ready"],
+      ["Correo,Nota\n000SINT01@example.invalid,8,extra\n", "invalid"],
+    ]) {
+      const [invalid] = await batch(
+        sessions.a,
+        [
+          {
+            name: "1 Curso compartido 27-1.csv",
+            content: bad!,
+            mapping: moodleMapping,
+            courseId: "compartido",
+          },
+        ],
+        cutId,
+      );
+      const staged = await waitJob(invalid!.id, status);
+      if (status === "ready") expect(staged.blocking).toBe(true);
+      await expect(
+        api("publish", { jobId: invalid!.id, replace: true }, sessions.a),
+      ).rejects.toThrow("FAILED_PRECONDITION");
+    }
+  });
+
+  it("resuelve un nombre ambiguo con actor real, conserva el rechazo y reenvía sin duplicados", async () => {
+    const cutId = "corte-nombre";
+    await api(
+      "createCut",
+      { cycleId: "27-1", id: cutId, date: "2026-09-21" },
+      sessions.admin,
+    );
+    const name = "99 1 Curso compartido 27-1.csv";
+    const file = { ...descriptor(name, reportCsv), courseId: "compartido" };
+    const create = async (files: unknown[], session = sessions.admin) =>
+      (
+        (await api("createBatch", { cutId, files }, session)) as {
+          jobs: { id: string }[];
+        }
+      ).jobs[0]!.id;
+    const upload = async (jobId: string) =>
+      api(
+        "upload",
+        { jobId, base64: Buffer.from(reportCsv).toString("base64") },
+        sessions.admin,
+      );
+    const rejected = await create([file]);
+    await upload(rejected);
+    await waitJob(rejected, "invalid");
+    const filenameResolution = {
+      externalId: "1",
+      name: "Curso compartido",
+      cycle: "27-1",
+      reason: "Instancia contrastada con catálogo sintético",
+    };
+    const resolved = { ...file, filenameResolution };
+    await expect(create([resolved], sessions.a)).rejects.toThrow(
+      "PERMISSION_DENIED",
+    );
+    for (const invalid of [
+      { externalId: "99" },
+      { cycle: "28-1" },
+      { approvedBy: people.admin },
+      { version: "falsa" },
+      { reason: "" },
+    ])
+      await expect(
+        create([
+          {
+            ...file,
+            filenameResolution: { ...filenameResolution, ...invalid },
+          },
+        ]),
+      ).rejects.toThrow("INVALID_ARGUMENT");
+    const id = await create([resolved]);
+    expect(id).not.toBe(rejected);
+    await upload(id);
+    const staged = await waitJob(id);
+    expect(staged.blocking).toBe(false);
+    const preview = (await api("preview", { jobId: id }, sessions.admin)) as {
+      filename: unknown;
+    };
+    expect(preview.filename).toEqual({
+      original: name,
+      sha256: file.sha256,
+      resolution: {
+        original: name,
+        ...filenameResolution,
+        approvedBy: people.admin,
+        version: id,
+      },
+    });
+    expect(
+      await api("preview", { jobId: id, careerId: "laf-plan-1" }, sessions.a),
+    ).toMatchObject({
+      filename: null,
+    });
+    await api("publish", { jobId: id, replace: false }, sessions.admin);
+    const pointer = (
+      await stores().db.doc(`cuts/${cutId}/courses/compartido`).get()
+    ).data();
+    expect(await create([resolved])).toBe(id);
+    await upload(id);
+    await api("publish", { jobId: id, replace: false }, sessions.admin);
+    expect(
+      (await stores().db.doc(`cuts/${cutId}/courses/compartido`).get()).data(),
+    ).toEqual(pointer);
+    expect(
+      (
+        await stores()
+          .db.collection("publications")
+          .where("cutId", "==", cutId)
+          .get()
+      ).size,
+    ).toBe(1);
+    expect(
+      (await stores().db.doc(`jobs/${rejected}`).get()).data()!.status,
+    ).toBe("invalid");
+    for (const jobId of [rejected, id])
+      expect(
+        (
+          await stores().bucket.file(`originals/${jobId}/source`).download()
+        )[0].toString(),
+      ).toBe(reportCsv);
+    const artifact = JSON.parse(
+      (
+        await stores()
+          .bucket.file(staged.artifact as string)
+          .download()
+      )[0].toString(),
+    ) as { filename: unknown };
+    expect(artifact.filename).toEqual(
+      (preview.filename as { resolution: unknown }).resolution,
+    );
+  });
+
   it("fuentes de un corte cerrado no cambian; una corrección crea revisión independiente", async () => {
     const before = (await stores().db.doc("cuts/corte-1").get()).data()!;
     await api("closeCut", { cutId: "corte-1" }, sessions.admin);

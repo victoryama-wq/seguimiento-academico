@@ -28,17 +28,18 @@ y [decisiones](decisiones.md). Las capturas y el audit están en
 ## Verificaciones
 
 Entorno local: Windows, Node 22.22.0 y Java 21, proyecto demo con datos sintéticos.
+La tabla recoge la repetición completa para las correcciones del PR #2.
+La instalación limpia y el audit pertenecen a la entrega inicial; esta revisión
+no cambia paquetes ni lockfile y conserva las 14 alertas documentadas.
 
 | Comando ejecutado | Resultado local |
 | --- | --- |
-| `npm ci` | Éxito; lockfile reproducible, 14 alertas pendientes. |
 | `npm run lint` | Éxito, sin avisos de lint. |
 | `npm run typecheck` | Éxito en aplicación y Functions. |
 | `npm run test:unit` | 171 pruebas aprobadas, 7 archivos. |
 | `npm run build` | Web y Functions compiladas; advertencia de bundle conservada. |
-| `npm run test:emulators` | 26 pruebas aprobadas, 2 archivos; incluye las 11 de acceso anteriores. |
-| `npm run test:e2e` | 12 pruebas aprobadas de Chromium, escritorio y móvil. |
-| `npm audit --json` | Salida 1 por 14 alertas: 10 altas y 4 moderadas, sin remediación automática. |
+| `npm run test:emulators` | 28 pruebas aprobadas, 2 archivos; incluye las 11 de acceso anteriores. |
+| `npm run test:e2e` | 18 pruebas aprobadas de Chromium, escritorio y móvil. |
 
 Los enlaces del CI automático se consignan en el PR,
 asociados a su último commit. `ci` debe exigir ambos jobs; una ejecución manual
@@ -49,6 +50,23 @@ ESM de fixtures Admin bajo Playwright, y salida de bootstrap durante rollback
 asíncrono. Se repiten las suites completas, sin omitir pruebas, cambiar dependencias
 ni reducir las comprobaciones para obtener éxito.
 
+## Correcciones verificadas del PR #2
+
+| Conversación | Corrección y regresión |
+| --- | --- |
+| [Calificaciones inválidas](https://github.com/victoryama-wq/seguimiento-academico/pull/2#discussion_r4169189783) | Solo la incidencia de calificación permite publicación; las demás bloquean por defecto. Integración del archivo al worker, publicación, resultados y CSV para dos carreras: número, cero, guion, vacío y texto inválido conservados. Se comprueba aislamiento y rechazo de identidad vacía/estructura desigual. |
+| [Confirmación independiente](https://github.com/victoryama-wq/seguimiento-academico/pull/2#discussion_r4169189791) | Casilla vinculada a trabajo y versión anterior; cambio de revisión la limpia. E2E en escritorio/móvil, para reportes y padrón, con dos sustituciones y respuestas reales retenidas/liberadas fuera de orden. Ninguna versión se publica accidentalmente. |
+| [Resolución del nombre](https://github.com/victoryama-wq/seguimiento-academico/pull/2#discussion_r4169189800) | Contrato, API, worker y formulario administrativo usan el resolver aprobado. Pruebas de rechazo inicial, decisión autorizada, ID/ciclo incompatibles, suplantación de actor/versión, publicación y reenvío idempotente. Original, hash, motivo, actor real y versión auditados; se conserva el trabajo inválido. E2E de resolución y publicación desde la interfaz. |
+
+La primera ejecución ampliada de emuladores detectó una omisión en la prueba:
+la consulta del coordinador no seleccionaba carrera. Se corrigió la llamada,
+manteniendo el rechazo del servidor, y se repitió íntegramente la suite.
+El E2E móvil detectó que el texto largo de auditoría interceptaba el botón de
+publicación. Se corrigió su ajuste de líneas en la interfaz y se repitió E2E
+sin forzar clics, omitir pruebas ni aumentar tiempos para ocultar el problema.
+Las evidencias nuevas son pruebas sintéticas reproducibles; las capturas adjuntas
+de la entrega inicial no se presentan como capturas de estas correcciones.
+
 ## Límites y pendientes
 
 - Únicamente emuladores con datos ficticios. Sin credenciales reales, conciliación
@@ -56,7 +74,7 @@ ni reducir las comprobaciones para obtener éxito.
 - [14 alertas de dependencias](dependencias-y-bundle.md): 10 altas y 4 moderadas;
   no se ejecuta `audit fix`, ni degradaciones u overrides. El SDK Admin ahora tiene
   uso real en emuladores; requiere revisión específica antes de nube.
-- Bundle web de aproximadamente 803 kB minificado, advertencia de Vite visible;
+- Bundle web de aproximadamente 806 kB minificado, advertencia de Vite visible;
   carga diferida y medición en dispositivos pendientes.
 - Aviso `MaxListenersExceededWarning` de la ruta Storage/teeny-request observado
   en emuladores; traza y valoración separadas en el informe de dependencias.
