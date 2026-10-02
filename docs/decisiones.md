@@ -48,3 +48,91 @@ fuentes privadas, excepciones auditadas, fechas de baja cuando existan, escalas 
 umbrales. Ningún vacío se resolvió inventando datos. No se implementó etapa 02.
 
 Evidencia y vínculo de entrega: `docs/entrega-etapa-01.md`; PR pendiente de remoto.
+
+## Etapa 02 · 2026-10-02 · decisiones técnicas
+
+- Rama exclusiva desde `origin/main` en `518f09a515d197ef051eb627137fc0ca1a1f252a`.
+  La etapa 01 ya está en GitHub con CI aprobado y main protegida. Los comentarios
+  anteriores sobre remoto pendiente describen el estado histórico de etapa 01.
+- Parser Node SheetJS CE 0.20.3 del CDN oficial, fijado en lockfile; alternativa
+  ExcelJS descartada por falta de ODS. Licencia, mantenimiento, avisos y límites
+  documentados en `dependencias-y-bundle.md`. No se añade al bundle del navegador.
+- Lectura acotada previa a interpretar hojas: 8 MiB, 32 MiB expandidos, 256 entradas
+  ZIP, 10 000 filas, 256 columnas, 200 000 celdas. Son límites técnicos iniciales,
+  no estimaciones del tamaño real ni capacidad del piloto.
+- Dominio puro separado de adaptadores. Los originales permanecen junto a los
+  valores normalizados y las incidencias. No hay persistencia ni publicación en
+  esta etapa; la autorización de una aprobación corresponde al futuro backend.
+- Los IDs de actividad son explícitos y versionados en mapeos aprobados. Textos
+  desconocidos requieren revisión. Los encabezados duplicados ligan el mapeo al
+  hash de fuente para no reutilizar posiciones en otra importación.
+- Duplicados de reporte, incluso idénticos, quedan retenidos hasta una resolución
+  auditada. Alternativa de conservar la primera fila descartada: oculta conflictos.
+- Suplementos apuntan a inscripción específica y conservan historial. No se
+  deduplican personas eliminando sus inscripciones. Varias bases pueden resolverse
+  por decisión administrativa explícita, válida solo para el corte indicado.
+- Fechas civiles sin zona local: ISO, DD/MM/AAAA y seriales enteros 1900/1904.
+  CSV UTF-8 con delimitador explícito; coma decimal queda como incidencia hasta
+  aprobar un mapeo regional. Fórmulas se conservan pero no se toman como nota.
+- El README separa parsers/normalización/clasificación/resolución (etapa 02) de
+  indicadores y panel académico (etapa 04). No se implementa etapa 03.
+
+### Reglas académicas y conciliación pendientes
+
+No se alteró `requisitos.md`. Calendarios reales, catálogo completo, selección de
+actividades, bajas privadas (incluidas las tres informadas), excepciones auditadas,
+escalas y umbrales siguen pendientes de fuentes/decisiones autorizadas. Ningún
+fixture sustituye una conciliación de los libros piloto. Bajas sin fecha no se
+aplican retrospectivamente: solo al corte confirmado explícitamente en la entrada.
+
+Entrega y vínculo de revisión: `entrega-etapa-02.md` y PR de esta rama.
+
+## Correcciones del PR #1 · 2026-10-02
+
+- **Origen y seguimiento separados:** `prepareRoster` conserva `cycle` del campo
+  mapeado o, sin ese mapeo, del grupo reconocido. El cuarto argumento solo fija
+  `trackingCycle`; nunca completa el origen. Los conflictos se retienen para
+  revisión y las excepciones se contrastan con el origen y el corte de destino.
+- **Época por fuente:** normalizar a fecha civil antes de combinar archivos.
+  Conservar serial/fecha original, época, hash, nombre, parser, hoja y fila en la
+  inscripción. Se elimina `calendar.epoch`: un calendario académico no determina
+  la codificación de todos los libros. El dominio rechaza como incidencia un
+  serial recibido sin época propia; no supone 1900 silenciosamente.
+- **Suplementos deterministas:** se rechazan todas las operaciones conectadas
+  por consumo/producción de IDs dentro del mismo lote, incluso altas encadenadas
+  y ciclos. La alternativa de aplicar la primera corrección y dejar un sufijo
+  pendiente se descarta porque depende del orden. Se conservan originales y
+  operaciones rechazadas; los cambios independientes mantienen su historial.
+  Resolver una cadena requiere una corrección directa aprobada contra el original.
+- **Regresiones de recorrido:** libros sintéticos 1900/1904 mezclados, serial
+  44803, tres zonas horarias, ODS/XLSX/CSV y excepciones entre ciclos, además de
+  todas las permutaciones del lote de tres operaciones. No cambia una regla
+  académica ni se introducen datos reales.
+
+La investigación de CI distingue evidencia del commit de checks reconocidos por
+el PR; una ejecución manual no cierra el pendiente de `pull_request`. No se cambian
+permisos ni protecciones para eludirlo. Evidencia actualizada en el informe del
+[PR #1](https://github.com/victoryama-wq/seguimiento-academico/pull/1).
+
+## Tres conversaciones de revisión del PR #1 · 2026-10-02
+
+- Las bajas solo se comparan cuando la matrícula de la inscripción está
+  normalizada y no es `null`. Una identidad faltante conserva su incidencia,
+  originales y falta de afiliación resuelta. No cambia la vigencia por fecha o
+  corte de las bajas válidas ni la prioridad docente.
+- El CSV cuenta cada celda al cerrarla, antes de almacenarla, incluyendo el
+  encabezado y los vacíos. Rechaza el exceso de 200 000 durante la lectura.
+  Un separador que implica una columna adicional al ancho del encabezado falla
+  inmediatamente; una fila corta falla al terminarla. Los saltos y delimitadores
+  citados siguen siendo contenido de la celda. No se elevan límites.
+- Moodle construye un `Map` de identidad a filas en una sola pasada. La
+  clasificación consulta ese índice y mantiene el orden anterior, docentes,
+  originales, incidencias y grupos completos de duplicados/conflictos. Las
+  identidades no resueltas no se agrupan entre sí. La agrupación es lineal en
+  filas; comparar originales sigue siendo proporcional a las celdas recorridas.
+- El reporte sintético de 9 999 filas (10 000 con encabezado) verifica conservación
+  de todas las filas y resoluciones auditadas sin aserciones de tiempo. No es una
+  prueba de carga de 45/230 cursos ni evidencia de rendimiento del futuro servidor.
+
+Estas decisiones corrigen implementación y límites técnicos; no añaden reglas
+académicas. Continúan las limitaciones de datos privados, dependencias y bundle.

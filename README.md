@@ -1,8 +1,11 @@
-# Seguimiento académico · etapa 01
+# Seguimiento académico · etapa 02
 
 Base local en español con React, TypeScript estricto y Firebase Emulator Suite.
 No contiene expedientes ni indicadores calculados. La pantalla inicial presenta
 estados reales de conexión y el trabajo académico pendiente de configuración.
+La etapa 02 añade parsers ODS/XLSX/CSV, normalización, clasificación académica y
+resolución de incidencias mediante funciones y mapeos auditables. El cálculo de
+indicadores y el panel académico corresponden a la **etapa 04**.
 
 ## Requisitos y arranque
 
@@ -50,14 +53,15 @@ proyectos reales ni configuración parcial. En Linux CI Playwright usa
 El workflow incluido ejecuta instalación limpia, lint, tipos, unidades, build,
 permisos/Functions y Chromium; el check agregador `ci` exige ambos jobs. No despliega.
 Un workflow presente no equivale a una ejecución remota exitosa; ver evidencia local
-y pendientes en `docs/entrega-etapa-01.md`.
+y pendientes en `docs/entrega-etapa-02.md`. La etapa 01 tiene CI remoto aprobado
+en `518f09a515d197ef051eb627137fc0ca1a1f252a`.
 
 ## Estructura
 
 | Ruta | Responsabilidad |
 | --- | --- |
-| `src/domain` | Contratos iniciales en Zod; tipos derivados sin convertir identidades. |
-| `src/importing` | Frontera reservada para parsers; todavía no acepta archivos. |
+| `src/domain` | Contratos Zod y reglas puras de identidad, grupos, afiliaciones, calificaciones y resoluciones. |
+| `src/importing` | Lectura Node de archivos con límites, mapeos y borradores; sin endpoints ni carga nube. |
 | `src/infrastructure` | Configuración validada y conexión explícita de los cuatro SDK a emuladores. |
 | `src/ui` | Panel, navegación, estados vacíos/carga/error y diseño adaptable. |
 | `functions/src` | Diagnóstico técnico compilable, sin acceso a datos. |
@@ -90,16 +94,21 @@ Guardar archivos privados fuera del repositorio o en `private/` / `local-data/`
 libros, logs y artefactos de pruebas. Los fixtures sintéticos están expresamente
 permitidos. `.gitignore` no sustituye revisar el diff antes de publicar.
 
-## Alcance pendiente
+## Alcance y pendientes
 
-- Etapa 02: parsers ODS/XLSX/CSV, normalización de identidad/grupos, resolución de
-  afiliaciones, cálculo de métricas y pruebas completas de reglas académicas.
+- Etapa 02 implementada en funciones independientes de UI/Firebase:
+  parsers, normalización, clasificación y resolución auditada de incidencias.
+  Uso, límites y mapeos: `src/importing/README.md`.
+- Etapa 04: cálculo de indicadores, selección de actividades y panel académico.
 - Autenticación de usuarios en interfaz, membresías, administración y autorización
   por coordinación; importación real, persistencia, publicación e idempotencia.
 - Gestión de ciclos/cortes, selecciones, historial, filtros, bitácora y exportación.
 - Reconciliación con archivos privados, excepciones y bajas autorizadas.
 - Prueba de carga 45/230 cursos, costos, retención, recuperación y nube real.
-- Remoto GitHub, PR, CI remoto, protección de rama y proyecto Firebase de destino.
+- Proyecto Firebase de destino pendiente; GitHub público y main protegida ya
+  configurados. Esta rama requiere revisión por PR, sin integración automática.
+- Dependencias y bundle: `docs/dependencias-y-bundle.md`; sin degradaciones
+  automáticas, `audit fix --force` ni aumento del umbral para ocultar avisos.
 
 Las pantallas de navegación explican lo pendiente; no contienen formularios de
 gestión simulados. El esquema y el diseño no prueban por sí solos inmutabilidad,
