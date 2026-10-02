@@ -78,3 +78,27 @@ corrección independiente, altas encadenadas, ciclos y destinos ya existentes.
 El commit exacto, resultado y enlace del CI reconocido por el PR se registran en
 su descripción, actualizada después de la publicación. Un run manual no se
 presenta como solución del disparo automático pendiente.
+
+### Diagnóstico del disparo automático
+
+La API de permisos indicaba Actions habilitado y el workflow activo, pero la
+página de Actions, consultada con la sesión del propietario, mostraba
+`Workflows aren't being run on this repository` y el botón
+`Enable Actions on this repository`. No había ejecuciones esperando aprobación.
+El PR y sus eventos pertenecen al propietario y a ramas del mismo repositorio;
+no proceden de un fork. La autenticación de publicación usa GitHub CLI del
+propietario, sin `GITHUB_TOKEN` de un workflow.
+
+Se habilitaron las ejecuciones mediante ese control de GitHub, que confirmó
+`Actions Enabled`. No se cambiaron el YAML, los permisos del token, las políticas
+de aprobación ni la protección de `main`. La publicación de esta documentación
+permite comprobar nuevamente el evento `pull_request` de sincronización con el
+último commit. El resultado se verifica en los checks del PR; la habilitación
+por sí sola no prueba que CI haya pasado. No se conoce qué operación previa
+originó esa deshabilitación.
+
+Las seis verificaciones locales se repitieron para la corrección del código:
+151 unidades, 11 pruebas de emuladores y 8 E2E aprobadas, además de lint,
+typecheck y build. La instalación limpia y el audit de la tabla anterior
+corresponden a la entrega inicial de etapa 02; no se repitieron para esta
+corrección y el lockfile permanece sin cambios.
