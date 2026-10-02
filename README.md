@@ -1,122 +1,82 @@
-# Seguimiento académico · etapa 02
+# Seguimiento académico · etapa 03
 
-Base local en español con React, TypeScript estricto y Firebase Emulator Suite.
-No contiene expedientes ni indicadores calculados. La pantalla inicial presenta
-estados reales de conexión y el trabajo académico pendiente de configuración.
-La etapa 02 añade parsers ODS/XLSX/CSV, normalización, clasificación académica y
-resolución de incidencias mediante funciones y mapeos auditables. El cálculo de
-indicadores y el panel académico corresponden a la **etapa 04**.
+React, TypeScript estricto y Firebase Emulator Suite, en español. La etapa 02
+conserva parsers ODS/XLSX/CSV, normalización, clasificación y resoluciones auditadas.
+La etapa 03 añade acceso institucional, fuentes privadas y carga persistente por
+lotes. **Indicadores y panel analítico corresponden a etapa 04.** No se despliega
+ni se conecta un proyecto Firebase real.
 
-## Requisitos y arranque
+## Arranque y comprobaciones
 
-- Node **22.12 o posterior de la rama 22**, npm incluido con Node y Java **21**.
-- Internet durante `npm ci`, instalación de Chromium y primera descarga de los
-  emuladores. No se necesita cuenta Firebase, proyecto real ni credenciales.
-- Puertos locales disponibles: Auth 9099, Firestore 8080, Storage 9199, Functions
-  5001 y hub 4400. Vite usa 5173 en desarrollo y 4173 en E2E.
+Node 22.12 o posterior de la rama 22, npm y Java 21. Internet para instalar el
+lockfile, Chromium y los emuladores por primera vez. Sin cuenta Firebase ni secretos.
 
 ```sh
 npm ci
-npm run build
-npx --no-install playwright install chromium
-npm run emulators
-```
-
-En otra terminal, desde esta misma carpeta:
-
-```sh
-npm run dev
-```
-
-Abrir la dirección que indica Vite. `.env.example` documenta los valores por defecto;
-no es necesario copiarla. Con los emuladores apagados se muestra un error recuperable.
-Los procesos de desarrollo se detienen con Ctrl+C. No se exportan datos del emulador
-y cada ejecución de pruebas inicia un entorno limpio.
-
-## Verificación
-
-```sh
 npm run lint
 npm run typecheck
 npm run test:unit
 npm run build
+npx --no-install playwright install chromium
 npm run test:emulators
 npm run test:e2e
 ```
 
-Ejecutar los dos últimos comandos **secuencialmente**, con `npm run emulators`
-detenido. Cada uno inicia y termina Auth, Firestore, Storage y Functions mediante
-`firebase emulators:exec --project demo-seguimiento-ci`. No admite puertos ocupados,
-proyectos reales ni configuración parcial. En Linux CI Playwright usa
-`npx --no-install playwright install --with-deps chromium`.
+Los dos últimos comandos son **secuenciales** y arrancan entornos limpios con
+`demo-seguimiento-ci`. No reutilizan procesos ni credenciales del equipo. Puertos:
+Auth 9099, Firestore 8080, Storage 9199, Functions 5001, hub 4400 y Vite E2E 4173.
+En Linux CI se instala Chromium con `--with-deps`. El check `ci` exige calidad e
+integración; el workflow no se relajó y no despliega.
 
-El workflow incluido ejecuta instalación limpia, lint, tipos, unidades, build,
-permisos/Functions y Chromium; el check agregador `ci` exige ambos jobs. No despliega.
-Un workflow presente no equivale a una ejecución remota exitosa; ver evidencia local
-y pendientes en `docs/entrega-etapa-02.md`. La etapa 01 tiene CI remoto aprobado
-en `518f09a515d197ef051eb627137fc0ca1a1f252a`.
+Para explorar: `npm run build`, `npm run emulators` y, en otra terminal, `npm run dev`.
+`.env.example` documenta los valores; no es necesario copiarla. Los emuladores
+apagados producen un error recuperable. No hay fallback a nube.
+
+## Acceso y fuentes
+
+La interfaz inicia sesión con Firebase Auth; no permite seleccionar un rol al
+registrarse. `memberships/{uid}` es la autoridad del servidor. Administración
+asigna o revoca roles/carreras a cuentas existentes. Un claim o campo enviado por
+el navegador no concede privilegios. El procedimiento privilegiado inicial y la
+preparación sintética están en [operación de etapa 03](docs/operacion-etapa-03.md).
+
+Administración publica padrón, catálogo, suplemento, bajas y excepciones; configura
+calendarios, cursos esperados y cortes. Cada corte fija sus versiones de fuentes.
+El coordinador envía hasta 20 reportes por lote y revisa únicamente sus carreras.
+Un curso compartido se procesa una vez; su original es privado para administración
+y procesador. Confirmar una nueva versión requiere validar y aceptar expresamente
+la sustitución. Las versiones anteriores y cortes cerrados se conservan.
+
+Los trabajos aceptados continúan en Functions al cerrar el navegador. La interfaz
+muestra estados por archivo, permite recuperar trabajos, paginar y exportar una
+carrera de una versión fija. Incidencias ambiguas bloquean publicación hasta una
+corrección o mapeo auditado; nunca se adivinan afiliaciones.
 
 ## Estructura
 
 | Ruta | Responsabilidad |
 | --- | --- |
-| `src/domain` | Contratos Zod y reglas puras de identidad, grupos, afiliaciones, calificaciones y resoluciones. |
-| `src/importing` | Lectura Node de archivos con límites, mapeos y borradores; sin endpoints ni carga nube. |
-| `src/infrastructure` | Configuración validada y conexión explícita de los cuatro SDK a emuladores. |
-| `src/ui` | Panel, navegación, estados vacíos/carga/error y diseño adaptable. |
-| `functions/src` | Diagnóstico técnico compilable, sin acceso a datos. |
-| `tests/unit` | Esquemas, fechas civiles y rechazo de configuraciones inseguras. |
-| `tests/emulators` | Reglas reales, sesión Auth emulada y contrato de Functions. |
-| `tests/e2e` | Chromium de escritorio/móvil, conexión, navegación, error y teclado. |
-| `tests/fixtures/synthetic` | Datos ficticios y marcados; nunca fuentes privadas. |
+| `src/domain` | Reglas académicas puras y contratos Zod de operaciones. |
+| `src/importing` | Parsers Node compartidos con Functions, sin reglas duplicadas en UI. |
+| `src/infrastructure` | SDK explícitamente conectado a emuladores y validación de respuestas. |
+| `src/ui` | Acceso, administración, carga, previsualización y exportación. |
+| `functions/src` | Autorización, trabajos, staging, transacciones y almacenamiento privado. |
+| `scripts/bootstrap-admin.mjs` | Asignación inicial privilegiada, solo en entorno demo. |
+| `tests/unit`, `tests/emulators`, `tests/e2e` | Dominio/parser, permisos/transacciones y tres identidades sintéticas. |
+| `tests/fixtures/synthetic` | Fuentes ficticias reproducibles; ningún expediente real. |
 
-## Acceso y entorno
+## Evidencia y límites
 
-Toda lectura/escritura cliente en Firestore y Storage está denegada, incluso con
-sesión o claims. Esto es el cierre inicial de etapa 01, **no una implementación de
-roles operativos**. La sesión sintética de integración se crea en Auth emulado y
-no desbloquea expedientes. Solo el diagnóstico sin datos permite una llamada anónima.
+- [Entrega y criterios](docs/entrega-etapa-03.md), [modelo implementado](docs/modelo-datos.md)
+  y [decisiones](docs/decisiones.md).
+- [Dependencias y bundle](docs/dependencias-y-bundle.md): 14 alertas pendientes,
+  sin actualizaciones automáticas ni aumento del umbral de Vite.
+- Sin conciliación con archivos privados, usuarios reales, prueba de carga de
+  45/230 cursos, costos medidos, recuperación/retención aprobadas ni validación nube.
+- El mapeo se confirma como JSON por archivo; ZIP de lotes no está implementado.
+  No hay indicadores, bitácora, comparaciones o panel analítico de etapas posteriores.
+- Guardar fuentes privadas fuera del repositorio. Se ignoran `private/`,
+  `local-data/`, `.env`, credenciales, libros, logs y resultados temporales.
+  Revisar el diff antes de publicar; `.gitignore` no sustituye esa revisión.
 
-La aplicación rechaza `VITE_FIREBASE_MODE` diferente de `emulator` y proyectos que
-no empiezan por `demo-`. Los ejecutores de pruebas fijan `demo-seguimiento-ci` y
-comprueban los puertos/configuración antes de arrancar. Las pruebas de integración
-validan las variables de entorno antes de sembrar. No existe fallback a nube.
-El ejecutor usa un perfil temporal de Firebase CLI, elimina tokens heredados y
-bloquea credenciales ADC locales para que no se reutilice la sesión del equipo.
-
-La futura nube requerirá configuración, identidades, membresías, autorización
-servidor y reglas verificadas, proyecto de destino y autorización de publicación.
-`firebase.json` describe Hosting únicamente como configuración de base: no contiene
-comandos automáticos de despliegue ni credenciales.
-
-Guardar archivos privados fuera del repositorio o en `private/` / `local-data/`
-(ignorados). También se ignoran `.env`, credenciales habituales, exportaciones,
-libros, logs y artefactos de pruebas. Los fixtures sintéticos están expresamente
-permitidos. `.gitignore` no sustituye revisar el diff antes de publicar.
-
-## Alcance y pendientes
-
-- Etapa 02 implementada en funciones independientes de UI/Firebase:
-  parsers, normalización, clasificación y resolución auditada de incidencias.
-  Uso, límites y mapeos: `src/importing/README.md`.
-- Etapa 04: cálculo de indicadores, selección de actividades y panel académico.
-- Autenticación de usuarios en interfaz, membresías, administración y autorización
-  por coordinación; importación real, persistencia, publicación e idempotencia.
-- Gestión de ciclos/cortes, selecciones, historial, filtros, bitácora y exportación.
-- Reconciliación con archivos privados, excepciones y bajas autorizadas.
-- Prueba de carga 45/230 cursos, costos, retención, recuperación y nube real.
-- Proyecto Firebase de destino pendiente; GitHub público y main protegida ya
-  configurados. Esta rama requiere revisión por PR, sin integración automática.
-- Dependencias y bundle: `docs/dependencias-y-bundle.md`; sin degradaciones
-  automáticas, `audit fix --force` ni aumento del umbral para ocultar avisos.
-
-Las pantallas de navegación explican lo pendiente; no contienen formularios de
-gestión simulados. El esquema y el diseño no prueban por sí solos inmutabilidad,
-relaciones ni aislamiento por coordinación: esas operaciones no existen todavía.
-
-Ver `docs/requisitos.md`, `docs/modelo-datos.md` y `docs/decisiones.md` antes de ampliar.
-
-Compatibilidad consultada: [Vite](https://vite.dev/guide/),
-[Emulator Suite](https://firebase.google.com/docs/emulator-suite/install_and_configure),
-[Functions local](https://firebase.google.com/docs/functions/local-emulator).
-Las versiones exactas están en los manifiestos y el lockfile raíz.
+La rama se entrega mediante PR independiente. No se declara lista para producción.

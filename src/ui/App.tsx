@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { checkEnvironment } from "../infrastructure/firebase";
+import { AccessWorkspace } from "./AccessWorkspace";
 
 const sections = [
   "Panel",
@@ -62,7 +63,7 @@ export function App() {
         </nav>
         <div className="sidebar-note">
           <span className="status-dot" />
-          Desarrollo local<p>Etapa 01 · Base de la aplicación</p>
+          Desarrollo local<p>Etapa 03 · Acceso e importación</p>
         </div>
       </aside>
       <div className="workspace">
@@ -91,7 +92,7 @@ export function App() {
             {connection === "ready" && (
               <p role="status">
                 <span className="status-dot" />
-                Conexión local verificada · Sin sesión iniciada
+                Conexión local verificada
               </p>
             )}
             {connection === "error" && (
@@ -112,91 +113,7 @@ export function App() {
               </div>
             )}
           </div>
-          {section === "Panel" ? (
-            <>
-              <section className="empty-card" aria-labelledby="empty-title">
-                <div className="empty-illustration" aria-hidden="true">
-                  <div />
-                  <div />
-                  <div />
-                  <span>—</span>
-                </div>
-                <p className="eyebrow">EL PUNTO DE PARTIDA</p>
-                <h2 id="empty-title">Aún no hay un corte disponible</h2>
-                <p>
-                  El panel mostrará resultados cuando se configure un ciclo y se
-                  publique un corte con fuentes validadas.
-                </p>
-                <button
-                  className="primary-button"
-                  onClick={() => setSection("Ciclos y cortes")}
-                >
-                  Ver preparación del ciclo <span aria-hidden="true">→</span>
-                </button>
-                <small>No hay datos académicos cargados.</small>
-              </section>
-              <section
-                className="preparation"
-                aria-labelledby="preparation-title"
-              >
-                <div className="section-heading">
-                  <h2 id="preparation-title">Antes del primer corte</h2>
-                  <span>Por configurar</span>
-                </div>
-                <div className="preparation-grid">
-                  <article>
-                    <span className="step">01</span>
-                    <h3>Ciclo y calendario</h3>
-                    <p>
-                      Definir el periodo académico y las fechas de los cortes.
-                    </p>
-                  </article>
-                  <article>
-                    <span className="step">02</span>
-                    <h3>Fuentes y actividades</h3>
-                    <p>
-                      Validar padrón, catálogo y actividades incluidas por
-                      curso.
-                    </p>
-                  </article>
-                  <article>
-                    <span className="step">03</span>
-                    <h3>Acceso autorizado</h3>
-                    <p>
-                      Asignar responsables y permisos para cada coordinación.
-                    </p>
-                  </article>
-                </div>
-              </section>
-            </>
-          ) : (
-            <section
-              className="empty-card details"
-              aria-labelledby="section-title"
-            >
-              <p className="eyebrow">POR CONFIGURAR</p>
-              <h2 id="section-title">
-                {section === "Ciclos y cortes"
-                  ? "El calendario se definirá con el primer ciclo"
-                  : section === "Fuentes"
-                    ? "Todavía no se han incorporado fuentes"
-                    : "Los accesos están pendientes de configuración"}
-              </h2>
-              <p>
-                {section === "Ciclos y cortes"
-                  ? "Las fechas y selecciones de actividades requieren confirmación académica. La gestión de ciclos se incorporará en una etapa posterior."
-                  : section === "Fuentes"
-                    ? "La carga de archivos y la revisión de incidencias se incorporarán en etapas posteriores. No se han procesado archivos privados."
-                    : "La autenticación y las membresías se incorporarán en una etapa posterior. En esta base, el acceso a Firestore y Storage está bloqueado."}
-              </p>
-              <button
-                className="secondary-button"
-                onClick={() => setSection("Panel")}
-              >
-                Volver al panel
-              </button>
-            </section>
-          )}
+          {connection === "ready" && <AccessWorkspace section={section} />}
           <footer>
             Seguimiento académico{" "}
             <span>Base local · Sin conexión a producción</span>

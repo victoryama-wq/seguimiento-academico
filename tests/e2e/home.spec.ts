@@ -9,14 +9,14 @@ test("pantalla inicial sin cifras inventadas, conexión real y navegación", asy
   ).toBeVisible();
   await expect(page.getByText("ENTORNO EMULADO")).toBeVisible();
   await expect(page.getByRole("status")).toHaveText(
-    "Conexión local verificada · Sin sesión iniciada",
+    "Conexión local verificada",
     { timeout: 20_000 },
   );
   await expect(
-    page.getByRole("heading", { name: "Aún no hay un corte disponible" }),
+    page.getByRole("heading", { name: "Acceso institucional" }),
   ).toBeVisible();
   await expect(
-    page.getByText("No hay datos académicos cargados."),
+    page.getByText("Inicia sesión con una cuenta habilitada por administración."),
   ).toBeVisible();
   await expect(page.getByText(/\d+\s*%/)).toHaveCount(0);
   expect(
@@ -28,21 +28,21 @@ test("pantalla inicial sin cifras inventadas, conexión real y navegación", asy
     path: testInfo.outputPath("panel.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Ver preparación del ciclo" }).click();
+  await page.getByRole("button", { name: "Ciclos y cortes", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Ciclos y cortes", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
   await expect(
-    page.getByText("Todavía no se han incorporado fuentes"),
+    page.getByRole("heading", { name: "Acceso institucional" }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Configuración", exact: true })
     .click();
   await expect(
-    page.getByText("Los accesos están pendientes de configuración"),
+    page.getByRole("heading", { name: "Acceso institucional" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Volver al panel" }).click();
+  await page.getByRole("button", { name: "Panel", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Panel académico" }),
   ).toBeVisible();

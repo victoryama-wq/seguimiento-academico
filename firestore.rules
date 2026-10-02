@@ -1,7 +1,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Etapa 01: sin acceso a expedientes, incluso con sesión o claims.
+    function member() { return get(/databases/$(database)/documents/memberships/$(request.auth.uid)).data; }
+    function enabled() { return request.auth != null && member().active == true; }
+    function admin() { return enabled() && member().role == 'admin'; }
+    match /memberships/{uid} {
+      allow get: if enabled() && (request.auth.uid == uid || admin());
+      allow list: if admin();
+      allow write: if false;
+    }
+    match /jobs/{jobId}/attempts/{attempt}/rows/{rowId} {
+      allow read: if admin() || (enabled()
+        && member().role == 'coordinator'
+        && resource.data.careerId in member().careers
+        && get(/databases/$(database)/documents/jobs/$(jobId)).data.status == 'published'
+        && get(/databases/$(database)/documents/jobs/$(jobId)).data.token == attempt);
+      allow write: if false;
+    }
+    // Los clientes no mutan fuentes, trabajos ni versiones. Las operaciones
+    // pasan por Functions con identidad/alcance y transacciones propios.
+    match /jobs/{id} { allow read: if admin(); }
+    match /sources/{id} { allow read: if admin(); }
+    match /publications/{id} { allow read: if admin(); }
+    match /accessAudit/{id} { allow read: if admin(); }
+    match /cycles/{id} { allow read: if admin(); }
+    match /courses/{id} { allow read: if admin(); }
+    match /cuts/{id} { allow read: if admin(); }
     match /{document=**} {
       allow read, write: if false;
     }

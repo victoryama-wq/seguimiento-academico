@@ -42,10 +42,11 @@ function createServices() {
     config.functions.host,
     config.functions.port,
   );
-  return { functions };
+  return { functions, auth, db, storage };
 }
 
 let services: ReturnType<typeof createServices> | undefined;
+export function firebaseServices() { return services ??= createServices(); }
 export async function checkEnvironment(): Promise<void> {
   services ??= createServices();
   const health = httpsCallable(services.functions, "environmentStatus", {

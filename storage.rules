@@ -1,6 +1,17 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function admin() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/memberships/$(request.auth.uid)).data.active == true
+        && firestore.get(/databases/(default)/documents/memberships/$(request.auth.uid)).data.role == 'admin';
+    }
+    match /originals/{jobId}/source { allow read: if admin(); }
+    match /derived/{jobId}/{file} { allow read: if admin(); }
+    match /exports/{uid}/{file} {
+      // Exportación también pasa por Functions: una revocación cambia su alcance.
+      allow read: if admin();
+    }
     // Los originales compartidos tampoco son legibles por su cargador.
     match /{path=**} {
       allow read, write: if false;

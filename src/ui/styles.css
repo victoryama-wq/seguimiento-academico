@@ -486,3 +486,20 @@ footer {
     font-size: 9px;
   }
 }
+:root { color-scheme: light; }
+.access-card { background: white; border: 1px solid #dce4e3; border-radius: 16px; padding: 24px; }
+.access-card form { display: grid; gap: 16px; max-width: 720px; }
+.access-card label { display: grid; gap: 6px; margin: 12px 0; font-size: .9rem; }
+.access-card input, .access-card select, .access-card textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid #a5b7b4; border-radius: 6px; font: inherit; background: white; color: #1d3532; }
+.access-card input[type=checkbox] { width: auto; justify-self: start; }
+.access-card textarea { min-height: 100px; resize: vertical; }
+.access-card button { padding: 10px 16px; border: 1px solid #236959; border-radius: 6px; color: #174c3f; background: #f2f8f5; cursor: pointer; }
+.access-card button:disabled { opacity: .55; cursor: default; }
+.admin-form, .upload-item, .preview { margin-top: 20px; padding: 16px; border: 1px solid #dce4e3; border-radius: 8px; }
+.admin-form summary { cursor: pointer; font-weight: 600; }
+.job-list { list-style: none; padding: 0; }
+.job-list li { padding: 16px 0; border-bottom: 1px solid #dce4e3; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.table-scroll { max-width: 100%; overflow-x: auto; }
+.table-scroll table { border-collapse: collapse; width: 100%; }
+.table-scroll th, .table-scroll td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
