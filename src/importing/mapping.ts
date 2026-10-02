@@ -192,6 +192,15 @@ export function parseMoodle(table: Table, mappingInput: unknown) {
   const accepted: typeof parsed = [],
     teachers: typeof parsed = [],
     unresolved: typeof parsed = [];
+  // Índice construido una vez; no recorrer el reporte completo por identidad.
+  const byIdentity = new Map<string, typeof parsed>();
+  for (const row of parsed) {
+    const id = row.person.normalized;
+    if (id === null) continue;
+    const matches = byIdentity.get(id);
+    if (matches) matches.push(row);
+    else byIdentity.set(id, [row]);
+  }
   const processed = new Set<string>();
   for (const row of parsed) {
     const id = row.person.normalized;
@@ -201,7 +210,7 @@ export function parseMoodle(table: Table, mappingInput: unknown) {
     }
     if (processed.has(id)) continue;
     processed.add(id);
-    const matches = parsed.filter((r) => r.person.normalized === id);
+    const matches = byIdentity.get(id)!;
     // Normaliza solo identidad para comparar; los demás originales se conservan en su totalidad.
     const fingerprints = new Set(
       matches.map((r) =>

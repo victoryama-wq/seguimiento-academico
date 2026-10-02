@@ -207,22 +207,23 @@ function csvRows(text: string, delimiter: string): string[][] {
   let row: string[] = [],
     cell = "",
     quoted = false,
-    closed = false;
+    closed = false,
+    cells = 0;
   const pushCell = () => {
+    if (++cells > LIMITS.cells) throw new Error("Demasiadas celdas CSV");
+    if (row.length >= LIMITS.columns)
+      throw new Error("Demasiadas columnas CSV");
     row.push(cell);
     cell = "";
     closed = false;
-    if (row.length > LIMITS.columns) throw new Error("Demasiadas columnas CSV");
   };
   const pushRow = () => {
     pushCell();
+    if (result.length && row.length !== result[0]!.length)
+      throw new Error("CSV con filas desiguales");
+    if (result.length >= LIMITS.rows) throw new Error("Demasiadas filas CSV");
     result.push(row);
     row = [];
-    if (
-      result.length > LIMITS.rows ||
-      result.length * result[0]!.length > LIMITS.cells
-    )
-      throw new Error("Demasiadas filas CSV");
   };
   for (let i = 0; i < text.length; i++) {
     const c = text[i]!;
@@ -234,8 +235,12 @@ function csvRows(text: string, delimiter: string): string[][] {
         quoted = false;
         closed = true;
       } else cell += c;
-    } else if (c === delimiter) pushCell();
-    else if (c === "\r" || c === "\n") {
+    } else if (c === delimiter) {
+      pushCell();
+      // El separador confirma otra celda: no leerla si ya excede el ancho.
+      if (result.length && row.length >= result[0]!.length)
+        throw new Error("CSV con filas desiguales");
+    } else if (c === "\r" || c === "\n") {
       if (c === "\r" && text[i + 1] === "\n") i++;
       pushRow();
     } else if (c === '"' && !cell && !closed) quoted = true;
@@ -246,8 +251,7 @@ function csvRows(text: string, delimiter: string): string[][] {
   }
   if (quoted) throw new Error("CSV truncado");
   if (cell || row.length || closed) pushRow();
-  if (!result.length || result.some((r) => r.length !== result[0]!.length))
-    throw new Error("CSV con filas desiguales");
+  if (!result.length) throw new Error("CSV con filas desiguales");
   return result;
 }
 

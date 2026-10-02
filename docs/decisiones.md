@@ -113,3 +113,26 @@ La investigación de CI distingue evidencia del commit de checks reconocidos por
 el PR; una ejecución manual no cierra el pendiente de `pull_request`. No se cambian
 permisos ni protecciones para eludirlo. Evidencia actualizada en el informe del
 [PR #1](https://github.com/victoryama-wq/seguimiento-academico/pull/1).
+
+## Tres conversaciones de revisión del PR #1 · 2026-10-02
+
+- Las bajas solo se comparan cuando la matrícula de la inscripción está
+  normalizada y no es `null`. Una identidad faltante conserva su incidencia,
+  originales y falta de afiliación resuelta. No cambia la vigencia por fecha o
+  corte de las bajas válidas ni la prioridad docente.
+- El CSV cuenta cada celda al cerrarla, antes de almacenarla, incluyendo el
+  encabezado y los vacíos. Rechaza el exceso de 200 000 durante la lectura.
+  Un separador que implica una columna adicional al ancho del encabezado falla
+  inmediatamente; una fila corta falla al terminarla. Los saltos y delimitadores
+  citados siguen siendo contenido de la celda. No se elevan límites.
+- Moodle construye un `Map` de identidad a filas en una sola pasada. La
+  clasificación consulta ese índice y mantiene el orden anterior, docentes,
+  originales, incidencias y grupos completos de duplicados/conflictos. Las
+  identidades no resueltas no se agrupan entre sí. La agrupación es lineal en
+  filas; comparar originales sigue siendo proporcional a las celdas recorridas.
+- El reporte sintético de 9 999 filas (10 000 con encabezado) verifica conservación
+  de todas las filas y resoluciones auditadas sin aserciones de tiempo. No es una
+  prueba de carga de 45/230 cursos ni evidencia de rendimiento del futuro servidor.
+
+Estas decisiones corrigen implementación y límites técnicos; no añaden reglas
+académicas. Continúan las limitaciones de datos privados, dependencias y bundle.

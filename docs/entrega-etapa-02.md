@@ -29,7 +29,7 @@ Instalación limpia con `npm ci`, usando el lockfile actualizado; salida 0.
 | --- | --- |
 | `npm run lint` | Aprobado, sin warnings. |
 | `npm run typecheck` | Aprobado en web/dominio/tests y Functions. |
-| `npm run test:unit` | **151/151**, cinco archivos; incluye 26 regresiones nuevas del recorrido de fuentes/afiliación/suplemento. |
+| `npm run test:unit` | **168/168**, seis archivos; conserva las 26 regresiones de fuentes/afiliación/suplemento y añade 17 para las tres conversaciones de revisión. |
 | `npm run build` | Aprobado web y Functions; advertencia de bundle documentada. |
 | `npm run test:emulators` | **11/11**, Auth/Firestore/Storage/Functions demo reales. |
 | `npm run test:e2e` | **8/8**, Chromium escritorio/móvil con emuladores limpios. |
@@ -102,3 +102,27 @@ Las seis verificaciones locales se repitieron para la corrección del código:
 typecheck y build. La instalación limpia y el audit de la tabla anterior
 corresponden a la entrega inicial de etapa 02; no se repitieron para esta
 corrección y el lockfile permanece sin cambios.
+
+## Tres conversaciones pendientes atendidas
+
+Base de esta corrección: `9ebb0054de4a530e4da70074d080f23f6ddcb1fa`.
+Evidencia en `tests/unit/review-regressions.test.ts`, solo datos sintéticos:
+
+| Conversación | Corrección y regresión |
+| --- | --- |
+| [Bajas e identidad nula](https://github.com/victoryama-wq/seguimiento-academico/pull/1#discussion_r4167261585) | Comparación condicionada a identidad no nula. Cuatro identidades inválidas mantienen incidencia y ninguna baja; tres valores no textuales se rechazan en la frontera. Bajas válidas con/sin fecha conservan auditoría, ambas inscripciones y separación de otra persona. |
+| [Límite de celdas CSV](https://github.com/victoryama-wq/seguimiento-academico/pull/1#discussion_r4167261596) | Conteo acumulado por celda antes de almacenarla; rechazo temprano de filas anchas/cortas. Se prueban encabezado estrecho con 1 000 filas de 256 columnas, 200 000 celdas exactas, celda 200 001, EOF, vacíos y texto citado con delimitadores/saltos. Un sufijo truncado demuestra que se falla antes de seguir leyendo filas/celdas inválidas. |
+| [Agrupación Moodle](https://github.com/victoryama-wq/seguimiento-academico/pull/1#discussion_r4167261605) | Índice `Map` construido una vez; elimina `parsed.filter` por identidad. Un archivo de 9 999 filas prueba identidades únicas, docentes, faltantes, duplicados, conflictos, conservación de originales y resoluciones auditadas. También prueba docentes duplicados/conflictivos. Sin umbrales de tiempo. |
+
+Antes de corregir código, la suite nueva reprodujo nueve fallos (cuatro de bajas
+y cinco de lectura CSV). Después de corregir, las 17 pruebas nuevas y las 151
+anteriores pasan. La revisión del algoritmo confirma una sola construcción del
+índice Moodle y consultas directas; el caso grande comprueba semántica y
+conservación, no pretende establecer una garantía temporal.
+
+Se ejecutaron y aprobaron los seis comandos del contrato sobre esta corrección:
+lint, typecheck, 168/168 unidades, build, 11/11 emuladores y 8/8 E2E. También pasó
+`git diff --check`. El commit final y la ejecución automática reconocida por el
+PR se registran en su informe después de verificarlos. Las conversaciones solo
+se resuelven tras comprobar esa evidencia. No cambia el workflow, lockfile, reglas Firebase, UI,
+ciclos/épocas/suplementos ni la protección de `main`.

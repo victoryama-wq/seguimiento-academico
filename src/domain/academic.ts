@@ -231,6 +231,7 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
       problems.push("fecha_desconocida");
     const withdrawal = context.withdrawals.find(
       (w) =>
+        person.normalized !== null &&
         identity(w.identity).normalized === person.normalized &&
         (w.effectiveDate
           ? w.effectiveDate <= context.cutDate
