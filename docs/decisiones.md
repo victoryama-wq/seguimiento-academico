@@ -86,3 +86,30 @@ fixture sustituye una conciliación de los libros piloto. Bajas sin fecha no se
 aplican retrospectivamente: solo al corte confirmado explícitamente en la entrada.
 
 Entrega y vínculo de revisión: `entrega-etapa-02.md` y PR de esta rama.
+
+## Correcciones del PR #1 · 2026-10-02
+
+- **Origen y seguimiento separados:** `prepareRoster` conserva `cycle` del campo
+  mapeado o, sin ese mapeo, del grupo reconocido. El cuarto argumento solo fija
+  `trackingCycle`; nunca completa el origen. Los conflictos se retienen para
+  revisión y las excepciones se contrastan con el origen y el corte de destino.
+- **Época por fuente:** normalizar a fecha civil antes de combinar archivos.
+  Conservar serial/fecha original, época, hash, nombre, parser, hoja y fila en la
+  inscripción. Se elimina `calendar.epoch`: un calendario académico no determina
+  la codificación de todos los libros. El dominio rechaza como incidencia un
+  serial recibido sin época propia; no supone 1900 silenciosamente.
+- **Suplementos deterministas:** se rechazan todas las operaciones conectadas
+  por consumo/producción de IDs dentro del mismo lote, incluso altas encadenadas
+  y ciclos. La alternativa de aplicar la primera corrección y dejar un sufijo
+  pendiente se descarta porque depende del orden. Se conservan originales y
+  operaciones rechazadas; los cambios independientes mantienen su historial.
+  Resolver una cadena requiere una corrección directa aprobada contra el original.
+- **Regresiones de recorrido:** libros sintéticos 1900/1904 mezclados, serial
+  44803, tres zonas horarias, ODS/XLSX/CSV y excepciones entre ciclos, además de
+  todas las permutaciones del lote de tres operaciones. No cambia una regla
+  académica ni se introducen datos reales.
+
+La investigación de CI distingue evidencia del commit de checks reconocidos por
+el PR; una ejecución manual no cierra el pendiente de `pull_request`. No se cambian
+permisos ni protecciones para eludirlo. Evidencia actualizada en el informe del
+[PR #1](https://github.com/victoryama-wq/seguimiento-academico/pull/1).

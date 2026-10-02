@@ -29,7 +29,7 @@ Instalación limpia con `npm ci`, usando el lockfile actualizado; salida 0.
 | --- | --- |
 | `npm run lint` | Aprobado, sin warnings. |
 | `npm run typecheck` | Aprobado en web/dominio/tests y Functions. |
-| `npm run test:unit` | **125/125**, cuatro archivos; 104 pruebas nuevas sobre las 21 iniciales. |
+| `npm run test:unit` | **151/151**, cinco archivos; incluye 26 regresiones nuevas del recorrido de fuentes/afiliación/suplemento. |
 | `npm run build` | Aprobado web y Functions; advertencia de bundle documentada. |
 | `npm run test:emulators` | **11/11**, Auth/Firestore/Storage/Functions demo reales. |
 | `npm run test:e2e` | **8/8**, Chromium escritorio/móvil con emuladores limpios. |
@@ -59,3 +59,22 @@ La cobertura nueva de etapa 02 está en las unidades de dominio y parsers.
   No se aplicaron `audit fix --force`, overrides ni degradaciones automáticas.
 
 La entrega requiere revisión independiente del PR. No se fusiona ni se despliega.
+
+## Corrección de la revisión del PR #1
+
+Se conserva el ciclo de origen (mapeado o derivado del grupo), separado de
+`trackingCycle`; discrepancias no se rellenan. Las fechas se normalizan con la
+época del archivo y los originales/procedencia acompañan a cada inscripción.
+El dominio ya no recibe una época global del calendario. Los suplementos
+encadenados se rechazan íntegramente antes de aplicar cambios, conservando las
+correcciones independientes e historial con resultado determinista.
+
+`tests/unit/roster-regressions.test.ts` recorre archivos→lectura→mapeo→borradores→
+afiliación, incluidas excepciones entre ciclos, libros 1900 y 1904 mezclados,
+44803→2026-08-31, discrepancias e incidencias. Recorre también archivos→borradores→
+suplemento→afiliación y compara todas las permutaciones de un lote con cadena y
+corrección independiente, altas encadenadas, ciclos y destinos ya existentes.
+
+El commit exacto, resultado y enlace del CI reconocido por el PR se registran en
+su descripción, actualizada después de la publicación. Un run manual no se
+presenta como solución del disparo automático pendiente.

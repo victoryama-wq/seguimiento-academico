@@ -52,7 +52,6 @@ export const context: AcademicContext = {
   ],
   calendar: {
     cycle: "27-1",
-    epoch: "1900",
     dates: {
       "2026-08-31": "base",
       "2026-08-29": "especial",

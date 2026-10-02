@@ -3,9 +3,34 @@ import { civilDateSchema } from "./schemas";
 
 export type Issue = { code: string; refs: string[] };
 const text = z.string().trim().min(1);
+export const academicCycleSchema = text.regex(/^\d{2}-\d+$/);
+const originalCellValue = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
 export const provenanceSchema = z.strictObject({
   sourceVersion: text,
   row: z.number().int().positive(),
+  source: z
+    .strictObject({
+      originalName: text,
+      sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      bytes: z.number().int().positive(),
+      parserVersion: text,
+      sheet: text,
+      epoch: z.enum(["1900", "1904"]),
+    })
+    .optional(),
+  originals: z
+    .strictObject({
+      cycle: originalCellValue,
+      cycleBasis: z.enum(["mapped", "group"]),
+      group: z.string(),
+      date: originalCellValue,
+    })
+    .optional(),
 });
 export function identity(raw: unknown) {
   if (typeof raw !== "string")
@@ -94,7 +119,9 @@ export const enrollmentInputSchema = z.strictObject({
   group: z.string(),
   date: z.union([z.string(), z.number()]),
   careerId: text,
-  cycle: text,
+  // Ciclo de origen de la inscripción; nunca sustituirlo por el del corte.
+  cycle: academicCycleSchema,
+  trackingCycle: academicCycleSchema.optional(),
   modality: z.string().default(""),
   shift: z.string().default(""),
   provenance: provenanceSchema,
@@ -112,7 +139,6 @@ const catalogSchema = z.array(
 );
 const calendarSchema = z.strictObject({
   cycle: text,
-  epoch: z.enum(["1900", "1904"]),
   dates: z.record(
     civilDateSchema,
     z.enum(["base", "especial", "practica", "excluida"]),
@@ -171,8 +197,16 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
     const person = identity(row.identity);
     const catalog = context.catalog.find((c) => c.id === row.careerId);
     const parsed = group(row.group, catalog?.architecture ?? false);
-    const date = civilDate(row.date, context.calendar.epoch);
+    // Un serial requiere la época de su propia fuente, no la del calendario.
+    const date =
+      typeof row.date === "number" && !row.provenance.source
+        ? null
+        : civilDate(row.date, row.provenance.source?.epoch);
     const problems = [...parsed.issues];
+    if (typeof row.date === "number" && !row.provenance.source)
+      problems.push("fecha_sin_epoca_de_origen");
+    if (row.trackingCycle && row.trackingCycle !== context.cycle)
+      problems.push("ciclo_seguimiento_discrepante");
     if (!person.normalized) problems.push("identidad_faltante");
     if (!catalog?.coordination) problems.push("carrera_sin_coordinacion");
     if (catalog && parsed.career && parsed.career !== catalog.abbreviation)
@@ -312,11 +346,17 @@ export function applySupplement(
   supplementInput: unknown,
 ) {
   const original = z.array(enrollmentInputSchema).parse(originalInput);
-  const changes = supplementSchema.parse(supplementInput);
+  // Orden canónico solo para la salida; no decide qué corrección prevalece.
+  const changes = supplementSchema.parse(supplementInput).sort((a, b) => {
+    const left = JSON.stringify(a),
+      right = JSON.stringify(b);
+    return left < right ? -1 : left > right ? 1 : 0;
+  });
   const active = [...original];
   const history: { previous: AcademicEnrollment; changeId: string }[] = [];
   const issues: Issue[] = [];
   const rejected = new Set<string>();
+  const chained = new Set<string>();
   for (const change of changes) {
     if (
       changes.filter(
@@ -327,10 +367,30 @@ export function applySupplement(
       ).length > 1
     )
       rejected.add(change.id);
+    // Si otra operación produce/consume este ID, el lote necesita una revisión
+    // conjunta. Rechazar TODOS los extremos evita aplicar prefijos de cadenas,
+    // ciclos o renombrados según el orden de llegada.
+    if (
+      changes.some(
+        (c) =>
+          c !== change &&
+          (c.replacesId === change.enrollment.id ||
+            change.replacesId === c.enrollment.id),
+      )
+    ) {
+      chained.add(change.id);
+    }
   }
   if (new Set(original.map((r) => r.id)).size !== original.length)
     throw new Error("Inscripciones originales duplicadas");
   for (const change of changes) {
+    if (chained.has(change.id) && !rejected.has(change.id)) {
+      issues.push({
+        code: "suplemento_encadenado_requiere_resolucion",
+        refs: [change.id],
+      });
+      continue;
+    }
     const target = active.findIndex((r) => r.id === change.replacesId);
     if (
       rejected.has(change.id) ||

@@ -16,9 +16,17 @@ rol antes de construirlas. Una cadena `approvedBy` no constituye autenticación.
    indicar columna cero-basada si se repite. Registra el mapa sin cambiar nombres
    originales. Campos faltantes, fórmulas, errores e identidad no textual son
    incidencias. No aprueba automáticamente el significado de una columna.
-3. `prepareRoster(table, mapa, version, ciclo)` produce inscripciones con ID
+3. `prepareRoster(table, mapa, version, cicloSeguimiento)` produce inscripciones con ID
    fuente/fila. Retiene todos los originales y las incidencias; no convierte
    números a matrículas ni elimina otras inscripciones de la misma persona.
+   `cycle` es el ciclo de **origen**: se lee de `mapa.cycle` cuando está mapeado;
+   si no existe ese mapeo se obtiene de la estructura reconocida del grupo.
+   Discrepancias, campos mapeados inválidos o ausencia de ambos datos se retienen
+   como incidencias; el ciclo de seguimiento nunca se usa para rellenarlos.
+   `trackingCycle` conserva el cuarto argumento y se contrasta con el corte.
+   La fecha se convierte a civil usando `table.source.epoch` antes de combinar
+   fuentes. Cada inscripción conserva hash, archivo, hoja, parser, época y valores
+   originales de ciclo/grupo/fecha en su procedencia, además de `records`.
 4. `resolveAffiliations(inscripciones, contexto)` valida entradas con Zod. El
    contexto incluye catálogo con plan y versión, calendario por ciclo, bajas,
    excepciones y resoluciones auditadas de base por corte. Devuelve todas las
@@ -29,6 +37,13 @@ rol antes de construirlas. Una cadena `approvedBy` no constituye autenticación.
    versión, autor, motivo e inscripción objetivo explícita (`replacesId`). Conserva
    historial y las demás inscripciones. Conflictos/reintentos no suman duplicados;
    un cambio de identidad requiere resolución. Nunca unir personas por nombre.
+   Las operaciones que consumen o producen IDs de otras operaciones del lote se
+   rechazan juntas con `suplemento_encadenado_requiere_resolucion`: esto incluye
+   A→B→C, alta→corrección, ciclos y renombrados hacia un ID modificado por otra
+   operación. No se aplica un prefijo de la cadena. Las correcciones independientes
+   sí se aplican con historial; resultados, incidencias y auditoría tienen orden
+   canónico, independiente de la permutación del lote. La resolución posterior
+   debe presentar una corrección directa aprobada contra la fotografía original.
 6. `parseMoodle(table, mapa)` requiere aprobar el tipo de **cada** columna y un
    ID explícito por actividad. `suggestColumn` solo ayuda a revisar: no confirma.
    Categorías, totales y fecha de descarga se conservan fuera de las actividades.
@@ -52,6 +67,8 @@ const mapa = {
   careerId: { header: "Carrera" }, group: { header: "Grupo" },
   modality: { header: "Modalidad" }, shift: { header: "Turno" },
   date: { header: "Fecha de inscripción" },
+  // Opcional si el ciclo se obtiene de un grupo reconocido:
+  // cycle: { header: "Ciclo de origen" },
 };
 const table = readTable(bytes, "padron.xlsx");
 const preview = prepareRoster(table, mapa, "padron-v1", "27-1");
@@ -91,6 +108,11 @@ lotes, XLS, macros ni adjuntos arbitrarios. CSV exige UTF-8 y delimitador
 explícito (coma por defecto); no se adivina la configuración regional.
 
 Las fechas son civiles ISO o DD/MM/AAAA, o seriales enteros con época explícita;
+el calendario de seguimiento no define una época de Excel. `resolveAffiliations`
+solo interpreta un serial si la inscripción trae `provenance.source.epoch`;
+sin ella genera una incidencia. `prepareRoster` entrega fechas civiles, de modo
+que 46265 (1900) y 44803 (1904) se pueden combinar como 2026-08-31, conservando
+ambos seriales y sus épocas en los originales.
 no se acepta el falso 29/02/1900 de Excel. Notas con coma decimal requieren un
 mapeo futuro aprobado; actualmente son incidencias y no se convierten. Fórmulas
 y errores nunca se ejecutan ni se usan como calificaciones válidas. Los valores
