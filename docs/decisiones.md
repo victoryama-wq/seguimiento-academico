@@ -48,3 +48,41 @@ fuentes privadas, excepciones auditadas, fechas de baja cuando existan, escalas 
 umbrales. Ningún vacío se resolvió inventando datos. No se implementó etapa 02.
 
 Evidencia y vínculo de entrega: `docs/entrega-etapa-01.md`; PR pendiente de remoto.
+
+## Etapa 02 · 2026-10-02 · decisiones técnicas
+
+- Rama exclusiva desde `origin/main` en `518f09a515d197ef051eb627137fc0ca1a1f252a`.
+  La etapa 01 ya está en GitHub con CI aprobado y main protegida. Los comentarios
+  anteriores sobre remoto pendiente describen el estado histórico de etapa 01.
+- Parser Node SheetJS CE 0.20.3 del CDN oficial, fijado en lockfile; alternativa
+  ExcelJS descartada por falta de ODS. Licencia, mantenimiento, avisos y límites
+  documentados en `dependencias-y-bundle.md`. No se añade al bundle del navegador.
+- Lectura acotada previa a interpretar hojas: 8 MiB, 32 MiB expandidos, 256 entradas
+  ZIP, 10 000 filas, 256 columnas, 200 000 celdas. Son límites técnicos iniciales,
+  no estimaciones del tamaño real ni capacidad del piloto.
+- Dominio puro separado de adaptadores. Los originales permanecen junto a los
+  valores normalizados y las incidencias. No hay persistencia ni publicación en
+  esta etapa; la autorización de una aprobación corresponde al futuro backend.
+- Los IDs de actividad son explícitos y versionados en mapeos aprobados. Textos
+  desconocidos requieren revisión. Los encabezados duplicados ligan el mapeo al
+  hash de fuente para no reutilizar posiciones en otra importación.
+- Duplicados de reporte, incluso idénticos, quedan retenidos hasta una resolución
+  auditada. Alternativa de conservar la primera fila descartada: oculta conflictos.
+- Suplementos apuntan a inscripción específica y conservan historial. No se
+  deduplican personas eliminando sus inscripciones. Varias bases pueden resolverse
+  por decisión administrativa explícita, válida solo para el corte indicado.
+- Fechas civiles sin zona local: ISO, DD/MM/AAAA y seriales enteros 1900/1904.
+  CSV UTF-8 con delimitador explícito; coma decimal queda como incidencia hasta
+  aprobar un mapeo regional. Fórmulas se conservan pero no se toman como nota.
+- El README separa parsers/normalización/clasificación/resolución (etapa 02) de
+  indicadores y panel académico (etapa 04). No se implementa etapa 03.
+
+### Reglas académicas y conciliación pendientes
+
+No se alteró `requisitos.md`. Calendarios reales, catálogo completo, selección de
+actividades, bajas privadas (incluidas las tres informadas), excepciones auditadas,
+escalas y umbrales siguen pendientes de fuentes/decisiones autorizadas. Ningún
+fixture sustituye una conciliación de los libros piloto. Bajas sin fecha no se
+aplican retrospectivamente: solo al corte confirmado explícitamente en la entrada.
+
+Entrega y vínculo de revisión: `entrega-etapa-02.md` y PR de esta rama.

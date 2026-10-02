@@ -22,7 +22,7 @@ export const civilDateSchema = z
 export const personSchema = z.strictObject({
   id,
   matriculaOriginal: sourceText,
-  // Etapa 02 definirá el parser/normalizador; no coaccionar números a texto.
+  // academic.identity normaliza texto; nunca coaccionar números a matrícula.
   matriculaNormalizada: sourceText,
 });
 

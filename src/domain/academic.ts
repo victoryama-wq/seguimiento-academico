@@ -1,0 +1,419 @@
+import { z } from "zod";
+import { civilDateSchema } from "./schemas";
+
+export type Issue = { code: string; refs: string[] };
+const text = z.string().trim().min(1);
+export const provenanceSchema = z.strictObject({
+  sourceVersion: text,
+  row: z.number().int().positive(),
+});
+export function identity(raw: unknown) {
+  if (typeof raw !== "string")
+    return { original: raw, normalized: null, teacher: false };
+  const normalized = raw.trim().split("@")[0]!.trim().toLowerCase();
+  return {
+    original: raw,
+    normalized: normalized || null,
+    teacher: /^tup-d\d+$/.test(normalized),
+  };
+}
+
+// No Date local ni coerción de identificadores numéricos.
+export function civilDate(
+  raw: unknown,
+  epoch: "1900" | "1904" = "1900",
+): string | null {
+  let value: string;
+  if (typeof raw === "number") {
+    if (
+      !Number.isInteger(raw) ||
+      raw < 0 ||
+      raw > 100000 ||
+      (epoch === "1900" && raw === 60)
+    )
+      return null;
+    const offset = epoch === "1904" ? raw : raw > 60 ? raw - 1 : raw;
+    value = new Date(
+      Date.UTC(
+        epoch === "1904" ? 1904 : 1899,
+        epoch === "1904" ? 0 : 11,
+        epoch === "1904" ? 1 : 31,
+      ) +
+        offset * 86400000,
+    )
+      .toISOString()
+      .slice(0, 10);
+  } else if (typeof raw === "string") {
+    value = raw.trim();
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    if (match) value = `${match[3]}-${match[2]}-${match[1]}`;
+  } else return null;
+  return civilDateSchema.safeParse(value).success ? value : null;
+}
+
+const schedules: Record<string, readonly [string, string]> = {
+  "11": ["Escolarizado", "Matutino"],
+  "12": ["Escolarizado", "Vespertino"],
+  "23": ["Ejecutivo", "Matutino"],
+  "24": ["Ejecutivo", "Vespertino"],
+  "53": ["Virtual", "Sabatino Matutino"],
+  "48": ["Escolarizado", "Nocturno"],
+};
+export function group(raw: string, architecture: boolean) {
+  const normalized = raw
+    .trim()
+    .toUpperCase()
+    .replace(/\bCOMPUB\b/g, "CONPUB");
+  const special = /C\.A$/.test(normalized);
+  const match = /^(\d{2}-\d+) ([A-Z]+) (\d{2}) (\d{2})([A-Z]|C\.A)$/.exec(
+    normalized,
+  );
+  const issues: string[] = [];
+  if (!match) issues.push("grupo_ilegible");
+  const code = match?.[3];
+  const schedule = code ? schedules[code] : undefined;
+  if (match && !schedule) issues.push("codigo_desconocido");
+  if (code === "48" && !architecture) issues.push("48_fuera_arquitectura");
+  return {
+    original: raw,
+    normalized,
+    special,
+    cycle: match?.[1] ?? null,
+    career: match?.[2] ?? null,
+    grade: match?.[4] ?? null,
+    section: match?.[5] ?? null,
+    modality: schedule?.[0] ?? null,
+    shift: schedule?.[1] ?? null,
+    issues,
+  };
+}
+
+export const enrollmentInputSchema = z.strictObject({
+  id: text,
+  identity: z.string(),
+  group: z.string(),
+  date: z.union([z.string(), z.number()]),
+  careerId: text,
+  cycle: text,
+  modality: z.string().default(""),
+  shift: z.string().default(""),
+  provenance: provenanceSchema,
+});
+export type AcademicEnrollment = z.infer<typeof enrollmentInputSchema>;
+const catalogSchema = z.array(
+  z.strictObject({
+    id: text,
+    plan: text,
+    abbreviation: text,
+    coordination: text.nullable(),
+    architecture: z.boolean(),
+    kind: z.enum(["carrera", "ingles", "clinicos", "deportes", "practica"]),
+  }),
+);
+const calendarSchema = z.strictObject({
+  cycle: text,
+  epoch: z.enum(["1900", "1904"]),
+  dates: z.record(
+    civilDateSchema,
+    z.enum(["base", "especial", "practica", "excluida"]),
+  ),
+});
+const audit = { version: text, approvedBy: text, reason: text };
+const contextSchema = z.strictObject({
+  cycle: text,
+  cutId: text,
+  cutDate: civilDateSchema,
+  catalogVersion: text,
+  catalog: catalogSchema,
+  calendar: calendarSchema,
+  withdrawals: z.array(
+    z.strictObject({
+      ...audit,
+      identity: text,
+      effectiveDate: civilDateSchema.nullable(),
+      confirmedCutId: text,
+    }),
+  ),
+  exceptions: z.array(
+    z.strictObject({
+      ...audit,
+      enrollmentId: text,
+      originalCycle: text,
+      targetCycle: text,
+      cutId: text,
+      baseEnrollmentId: text,
+    }),
+  ),
+  baseResolutions: z
+    .array(
+      z.strictObject({
+        ...audit,
+        identity: text,
+        cutId: text,
+        baseEnrollmentId: text,
+      }),
+    )
+    .default([]),
+});
+export type AcademicContext = z.infer<typeof contextSchema>;
+
+export function resolveAffiliations(input: unknown, contextInput: unknown) {
+  const rows = z.array(enrollmentInputSchema).parse(input);
+  const context = contextSchema.parse(contextInput);
+  if (context.calendar.cycle !== context.cycle)
+    throw new Error("Calendario de otro ciclo");
+  if (new Set(context.catalog.map((c) => c.id)).size !== context.catalog.length)
+    throw new Error("Catálogo ambiguo");
+  if (new Set(rows.map((r) => r.id)).size !== rows.length)
+    throw new Error("ID de inscripción repetido: resolver antes de clasificar");
+  const issues: Issue[] = [];
+  const classified = rows.map((row) => {
+    const person = identity(row.identity);
+    const catalog = context.catalog.find((c) => c.id === row.careerId);
+    const parsed = group(row.group, catalog?.architecture ?? false);
+    const date = civilDate(row.date, context.calendar.epoch);
+    const problems = [...parsed.issues];
+    if (!person.normalized) problems.push("identidad_faltante");
+    if (!catalog?.coordination) problems.push("carrera_sin_coordinacion");
+    if (catalog && parsed.career && parsed.career !== catalog.abbreviation)
+      problems.push("carrera_discrepante");
+    if (row.modality && row.modality !== parsed.modality)
+      problems.push("modalidad_discrepante");
+    if (row.shift && row.shift !== parsed.shift)
+      problems.push("turno_discrepante");
+    if (parsed.cycle && parsed.cycle !== row.cycle)
+      problems.push("ciclo_grupo_discrepante");
+    const exceptions = context.exceptions.filter(
+      (e) =>
+        e.enrollmentId === row.id &&
+        e.originalCycle === row.cycle &&
+        e.targetCycle === context.cycle &&
+        e.cutId === context.cutId,
+    );
+    if (exceptions.length > 1) problems.push("excepcion_ambigua");
+    if (row.cycle !== context.cycle && exceptions.length !== 1)
+      problems.push("ciclo_sin_excepcion");
+    if (!date || !context.calendar.dates[date])
+      problems.push("fecha_desconocida");
+    const withdrawal = context.withdrawals.find(
+      (w) =>
+        identity(w.identity).normalized === person.normalized &&
+        (w.effectiveDate
+          ? w.effectiveDate <= context.cutDate
+          : w.confirmedCutId === context.cutId),
+    );
+    let kind:
+      | "docente"
+      | "baja"
+      | "excluida"
+      | "base"
+      | "especial"
+      | "practica"
+      | "por_resolver";
+    if (person.teacher) kind = "docente";
+    else if (withdrawal) kind = "baja";
+    else if (
+      catalog &&
+      ["ingles", "clinicos", "deportes"].includes(catalog.kind)
+    )
+      kind = "excluida";
+    else if (date && context.calendar.dates[date] === "excluida")
+      kind = "excluida";
+    else if (catalog?.kind === "practica") kind = "practica";
+    else if (parsed.special) kind = "especial";
+    else
+      kind = date
+        ? (context.calendar.dates[date] ?? "por_resolver")
+        : "por_resolver";
+    if (exceptions.length === 1 && kind !== "especial")
+      problems.push("excepcion_no_especial");
+    for (const code of problems) issues.push({ code, refs: [row.id] });
+    return {
+      ...row,
+      person,
+      parsed,
+      date,
+      kind,
+      problems,
+      catalog,
+      withdrawal,
+      exception: exceptions.length === 1 ? exceptions[0] : undefined,
+    };
+  });
+  const persons = [
+    ...new Set(
+      classified
+        .map((r) => r.person.normalized)
+        .filter((p): p is string => p !== null),
+    ),
+  ].map((person) => {
+    const enrollments = classified.filter(
+      (r) => r.person.normalized === person,
+    );
+    const bases = enrollments.filter(
+      (r) => r.kind === "base" && r.problems.length === 0,
+    );
+    const candidates = enrollments.filter((r) => r.kind === "base");
+    const specials = enrollments.filter((r) => r.kind === "especial");
+    let baseId =
+      bases.length === 1 && candidates.length === 1 ? bases[0]!.id : null;
+    const resolutions = context.baseResolutions.filter(
+      (r) =>
+        identity(r.identity).normalized === person && r.cutId === context.cutId,
+    );
+    const resolution =
+      resolutions.length === 1 &&
+      bases.some((b) => b.id === resolutions[0]!.baseEnrollmentId)
+        ? resolutions[0]!
+        : null;
+    if (resolution) baseId = resolution.baseEnrollmentId;
+    if (resolutions.length && !resolution) {
+      baseId = null;
+      issues.push({
+        code: "resolucion_base_invalida",
+        refs: enrollments.map((r) => r.id),
+      });
+    }
+    if (candidates.length > 1 && !resolution)
+      issues.push({ code: "varias_bases", refs: candidates.map((r) => r.id) });
+    if (!baseId && specials.length)
+      issues.push({
+        code: "sin_grupo_base_confirmado",
+        refs: specials.map((r) => r.id),
+      });
+    for (const row of specials)
+      if (row.exception && row.exception.baseEnrollmentId !== baseId) {
+        issues.push({
+          code: "excepcion_base_no_resuelta",
+          refs: [row.id, row.exception.baseEnrollmentId],
+        });
+        baseId = null;
+      }
+    return {
+      identity: person,
+      baseEnrollmentId: baseId,
+      enrollmentIds: enrollments.map((r) => r.id),
+      resolution,
+    };
+  });
+  return { context, enrollments: classified, persons, issues };
+}
+
+const supplementSchema = z.array(
+  z.strictObject({
+    ...audit,
+    id: text,
+    replacesId: text.nullable(),
+    enrollment: enrollmentInputSchema,
+  }),
+);
+export function applySupplement(
+  originalInput: unknown,
+  supplementInput: unknown,
+) {
+  const original = z.array(enrollmentInputSchema).parse(originalInput);
+  const changes = supplementSchema.parse(supplementInput);
+  const active = [...original];
+  const history: { previous: AcademicEnrollment; changeId: string }[] = [];
+  const issues: Issue[] = [];
+  const rejected = new Set<string>();
+  for (const change of changes) {
+    if (
+      changes.filter(
+        (c) =>
+          c.id === change.id ||
+          (change.replacesId !== null && c.replacesId === change.replacesId) ||
+          c.enrollment.id === change.enrollment.id,
+      ).length > 1
+    )
+      rejected.add(change.id);
+  }
+  if (new Set(original.map((r) => r.id)).size !== original.length)
+    throw new Error("Inscripciones originales duplicadas");
+  for (const change of changes) {
+    const target = active.findIndex((r) => r.id === change.replacesId);
+    if (
+      rejected.has(change.id) ||
+      (change.replacesId && target === -1) ||
+      active.some((r, i) => r.id === change.enrollment.id && i !== target)
+    ) {
+      issues.push({ code: "suplemento_conflictivo", refs: [change.id] });
+      continue;
+    }
+    if (target >= 0) {
+      const previous = active[target]!;
+      if (
+        identity(previous.identity).normalized !==
+        identity(change.enrollment.identity).normalized
+      ) {
+        issues.push({
+          code: "cambio_identidad_requiere_resolucion",
+          refs: [change.id],
+        });
+        continue;
+      }
+      history.push({ previous, changeId: change.id });
+      active[target] = change.enrollment;
+    } else active.push(change.enrollment);
+  }
+  return { active, history, changes, issues };
+}
+
+export function grade(raw: unknown) {
+  if (
+    raw === "" ||
+    raw === null ||
+    raw === undefined ||
+    (typeof raw === "string" && raw.trim() === "")
+  )
+    return { state: "vacia" as const, raw };
+  if (typeof raw === "string" && raw.trim() === "-")
+    return { state: "guion" as const, raw };
+  if (
+    (typeof raw === "number" && Number.isFinite(raw)) ||
+    (typeof raw === "string" &&
+      /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw.trim()) &&
+      Number.isFinite(Number(raw)))
+  )
+    return { state: "numerica" as const, raw, value: Number(raw) };
+  return { state: "invalida" as const, raw };
+}
+
+export function courseFilename(original: string) {
+  const match =
+    /^(\d+)\s+(.+?)\s+(\d{2}-\d+)(?:[-_ ](?:calificaciones|grades))?\.(ods|xlsx|csv)$/i.exec(
+      original,
+    );
+  if (!match || /^\d+\s/.test(match[2]!) || /\b\d{2}-\d+\b/.test(match[2]!))
+    throw new Error(
+      "Nombre de curso ambiguo: confirmar ID, nombre y ciclo mediante mapeo revisado",
+    );
+  return { original, externalId: match[1]!, name: match[2]!, cycle: match[3]! };
+}
+
+export function resolveCourseFilename(original: string, decision: unknown) {
+  const resolution = z
+    .strictObject({
+      ...audit,
+      externalId: text.regex(/^\d+$/),
+      name: text,
+      cycle: text.regex(/^\d{2}-\d+$/),
+    })
+    .parse(decision);
+  return { original, ...resolution };
+}
+
+export function courseCollisions(
+  courses: { externalId: string; cycle: string; instanceId: string }[],
+): Issue[] {
+  const groups = new Map<string, Set<string>>();
+  for (const c of courses) {
+    const key = `${c.cycle}/${c.externalId}`;
+    const set = groups.get(key) ?? new Set<string>();
+    set.add(c.instanceId);
+    groups.set(key, set);
+  }
+  return [...groups]
+    .filter(([, ids]) => ids.size > 1)
+    .map(([key, ids]) => ({ code: "colision_id_curso", refs: [key, ...ids] }));
+}
