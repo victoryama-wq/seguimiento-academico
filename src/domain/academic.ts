@@ -127,7 +127,7 @@ export const enrollmentInputSchema = z.strictObject({
   provenance: provenanceSchema,
 });
 export type AcademicEnrollment = z.infer<typeof enrollmentInputSchema>;
-const catalogSchema = z.array(
+export const catalogSchema = z.array(
   z.strictObject({
     id: text,
     plan: text,
@@ -145,7 +145,7 @@ const calendarSchema = z.strictObject({
   ),
 });
 const audit = { version: text, approvedBy: text, reason: text };
-const contextSchema = z.strictObject({
+export const contextSchema = z.strictObject({
   cycle: text,
   cutId: text,
   cutDate: civilDateSchema,
@@ -334,7 +334,7 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
   return { context, enrollments: classified, persons, issues };
 }
 
-const supplementSchema = z.array(
+export const supplementSchema = z.array(
   z.strictObject({
     ...audit,
     id: text,
@@ -452,15 +452,14 @@ export function courseFilename(original: string) {
   return { original, externalId: match[1]!, name: match[2]!, cycle: match[3]! };
 }
 
+export const courseFilenameResolutionSchema = z.strictObject({
+  ...audit,
+  externalId: text.regex(/^\d+$/),
+  name: text,
+  cycle: text.regex(/^\d{2}-\d+$/),
+});
 export function resolveCourseFilename(original: string, decision: unknown) {
-  const resolution = z
-    .strictObject({
-      ...audit,
-      externalId: text.regex(/^\d+$/),
-      name: text,
-      cycle: text.regex(/^\d{2}-\d+$/),
-    })
-    .parse(decision);
+  const resolution = courseFilenameResolutionSchema.parse(decision);
   return { original, ...resolution };
 }
 

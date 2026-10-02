@@ -1,12 +1,13 @@
 # Pendientes de dependencias y bundle
 
-Actualización: 2026-10-02, America/Cancun. Esta etapa añade únicamente SheetJS CE
-0.20.3; el diff del lockfile no cambia las versiones previamente instaladas.
+Actualización etapa 03: 2026-10-02, America/Cancun. Se declaran en Functions
+SheetJS CE 0.20.3 y Zod 4.3.6, ya fijados en el lockfile raíz. No se cambian versiones
+de paquetes; npm también ajusta un marcador de desarrollo de `@pkgjs/parseargs`.
 
 ## Resultado de herramientas
 
 `npm audit --json` y `npm ci` mantienen **14 entradas: 10 altas y 4 moderadas**.
-Respuesta completa: [npm-audit.json](evidencias/etapa-02/npm-audit.json).
+Respuesta actual: [npm-audit.json](evidencias/etapa-03/npm-audit.json).
 Tres entradas son directas y once transitivas. Las metavulnerabilidades propagadas
 no equivalen a catorce avisos independientes. `npm audit` devuelve salida 1 por
 los avisos, mientras que la instalación limpia termina con salida 0.
@@ -25,13 +26,14 @@ los avisos, mientras que la instalación limpia termina con salida 0.
 | pac-proxy-agent | Alta | Transitiva | Desarrollo: proxy-agent → pac-proxy-agent | firebase-tools 14.23.0 |
 | get-uri | Alta | Transitiva | Desarrollo: pac-proxy-agent → get-uri | firebase-tools 14.23.0 |
 | basic-ftp | Alta | Transitiva | Desarrollo: get-uri → basic-ftp | firebase-tools 14.23.0 |
-| gaxios | Moderada | Transitiva | Desarrollo: firebase-tools → gaxios; Functions opcional: firebase-admin → @google-cloud/storage → gaxios | firebase-tools 14.23.0 |
-| uuid | Moderada | Transitiva | Desarrollo y Functions opcional: las rutas anteriores → gaxios → uuid | firebase-tools 14.23.0 |
+| gaxios | Moderada | Transitiva | Desarrollo: firebase-tools → gaxios; Functions: firebase-admin → @google-cloud/storage → gaxios | firebase-tools 14.23.0 |
+| uuid | Moderada | Transitiva | Desarrollo y Functions: las rutas anteriores → gaxios → uuid | firebase-tools 14.23.0 |
 
 Las rutas son representativas. El uso declarado no demuestra ejecución del código
 vulnerable ni explotación en el navegador. Se conservan las rutas de etapa 01;
-el único nodo nuevo del lockfile es `xlsx`. No se ha realizado una auditoría
-exhaustiva de alcanzabilidad en esta etapa.
+la etapa 03 utiliza ahora el SDK Admin para Auth, Firestore y Storage. No se ha
+realizado una auditoría exhaustiva de alcanzabilidad; su uso es efectivo en las
+Functions emuladas y no debe describirse como una integración solo futura.
 
 ## Valoración y pendiente
 
@@ -68,11 +70,22 @@ formato duplicaría semántica compleja de hojas/fechas.
 ## Bundle
 
 `npm run build` pasa y conserva la advertencia de Vite para chunks mayores de
-500 kB minificados. Archivo: **dist/assets/index-BbyLDZop.js**, **774 279 bytes**
-en disco; Vite muestra **774,27 kB**, gzip estimado **231,81 kB**. El parser nuevo
-no aumenta este bundle: no hay importación desde la UI. No se subió el umbral.
+500 kB minificados. Revisión PR #2: **dist/assets/index-DdChR5_k.js**, **806 051 bytes**
+en disco; Vite muestra **806,05 kB**, gzip estimado **240,98 kB**. La UI de acceso
+e importación aumenta el archivo respecto de los 774 279 bytes de etapa 02.
+SheetJS permanece en Node, sin importación desde la UI. No se subió el umbral.
 
 Valoración: la carga inicial de SDK/UI puede aumentar transferencia, análisis y
 ejecución en redes o dispositivos limitados. No se midieron LCP/INP ni impacto
 real en dispositivos. Pendiente analizar composición y carga diferida en un PR
 posterior; el tamaño no se presenta como una medición de rendimiento.
+
+## Advertencia adicional observada en emuladores
+
+En la suite ampliada aparece `MaxListenersExceededWarning` sobre un `PassThrough`
+(listeners `error`/`close`). Una repetición con `NODE_OPTIONS=--trace-warnings`
+sitúa la llamada a pipeline en
+`@google-cloud/storage/node_modules/teeny-request/build/src/index.js:194`.
+Las 26 pruebas pasan; no se oculta el aviso ni se aumenta `setMaxListeners`.
+Esta traza no demuestra una fuga sostenida: queda pendiente medir recursos y
+revisar el comportamiento del SDK antes de una prueba de carga/piloto real.

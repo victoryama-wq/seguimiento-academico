@@ -1,104 +1,101 @@
-# Modelo de datos · etapa 01
+# Modelo implementado · etapa 03
 
-Este documento diseña la persistencia posterior. **No hay importaciones, publicaciones
-ni datos académicos persistidos por la aplicación en esta etapa.** Los contratos
-ejecutables iniciales están en `src/domain/schemas.ts`; las relaciones, transacciones
-y políticas descritas aquí aún no se implementan. Las reglas actuales deniegan toda
-lectura/escritura cliente. Firebase Auth y Storage se prueban solo con emuladores.
+La persistencia se verifica en emuladores. Este documento sustituye las rutas
+propuestas en etapa 01 por las rutas ejecutables actuales. Los esquemas académicos
+puros y parsers de etapa 02 se compilan también para Functions sin duplicarlos.
+No hay agregados, indicadores, comparaciones o bitácora de etapa 04.
 
-## Identidad, inscripciones y autorización
+## Autoridad y colecciones
 
-| Colección / clave propuesta | Contenido y relaciones |
+| Ruta Firestore | Contenido / invariante |
 | --- | --- |
-| `persons/{personId}` | Identidad estable interna, matrícula original y normalizada textual. La unicidad institucional se resolverá por matrícula normalizada; nunca se unirá por nombre. Índice de identidad administrado exclusivamente por servidor. |
-| `rosterVersions/{versionId}` | Ciclo, procedencia, autor, hash del original, versión anterior y estado de validación/publicación. Publicaciones inmutables. |
-| `rosterVersions/{versionId}/enrollments/{enrollmentId}` | `personId`, fila de origen, carrera/plan, grupo y fecha originales, fecha civil interpretada, modalidad/turno originales y derivados, clasificación y afiliación base resuelta o nula. Una persona conserva tantas inscripciones como fuentes válidas tenga. |
-| `catalogVersions/{versionId}/programs/{programId}` | Carrera, plan, abreviatura, coordinación y procedencia. No fusionar planes por parecido del nombre. |
-| `exceptionVersions/{versionId}/entries/{entryId}` | Altas/correcciones/bajas auditadas: aprobador, motivo, fuente sustituida, ciclo original y fecha de efecto nullable. No inventar fechas ni codificar matrículas reales. |
-| `memberships/{uid}` | Rol autorizado, coordinaciones asignadas, estado, asignador y versión. Solo administración mediante backend confiable podrá cambiarlas; nunca un rol enviado por el navegador. |
+| `memberships/{uid}` | role admin/coordinator, active, careers. Servidor y reglas consultan esta autoridad; ignoran claims de rol. |
+| `accessAudit/{id}` | UID afectado, nueva membresía, aprobador y fecha; solo servidor escribe, administración lee. |
+| `bootstrap/initial-admin` | Marcador de asignación privilegiada inicial, transaccional e inmutable desde cliente. |
+| `cycles/{id}` | Calendario civil explícito y punteros a versiones de fuentes actuales. |
+| `courses/{id}` | Instancia interna, ciclo, ID externo, nombre y carreras; inmutable en la API actual. |
+| `courseExternalIds/{hash}` | Reserva transaccional del ID externo/ciclo: impide unir instancias por una colisión. No es el ID interno Moodle. |
+| `cuts/{id}` | Ciclo, fecha civil, fuentes exactas, calendario, estado open/closed, padre/motivo de revisión y autor/cierre. |
+| `jobs/{hash}` | Descriptor original, mapeo, autor, fechas, estado, intentos, lease, token del intento, versión esperada y artefacto validado. Metadatos completos privados. |
+| `jobs/{hash}/attempts/{token}/rows/{fila}` | Staging de filas con matrícula original, carrera afiliada, estados/valores de actividades e incidencias. Hasta 100 filas por consulta y 128 KiB por fila. |
+| `sources/{hash}` | Publicación inmutable de fuente administrativa: original, artefacto, aprobador, versión anterior y procedencia. |
+| `publications/{jobId}` | Versión inmutable del reporte y referencias exactas de fuentes, token de staging, corte/curso, autor/fecha y revisión. |
+| `cuts/{id}/courses/{courseId}` | Único puntero activo a publicación/revisión de la instancia; se cambia mediante transacción. |
 
-`personId` y `enrollmentId` son distintos. Las claves no exponen matrículas ni correos
-en URLs o rutas Storage. El contrato inicial permite afiliaciones nulas para que los
-casos sin resolver no se atribuyan arbitrariamente. La resolución académica pertenece
-a etapa 02. Se conservarán matrícula y valores fuente incluso después de normalizar.
+Inscripciones y personas siguen siendo entidades distintas dentro de los artefactos
+académicos privados. No se deduplican inscripciones por matrícula. Se conservan
+origen, seguimiento, época de cada archivo, fecha civil, originales y procedencia.
+La proyección de cada reporte se asigna por afiliación resuelta; el cargador no
+define la carrera del estudiante. Casos sin base resuelta bloquean publicación.
 
-## Ciclos, cortes, cursos y publicaciones
+## Almacenamiento privado
 
-| Colección / clave propuesta | Contenido y relaciones |
+| Ruta Storage | Contenido |
 | --- | --- |
-| `cycles/{cycleId}` | Nombre, fechas civiles de inicio/fin y calendario configurable. `27-1` es ciclo de prueba documentado, no selección activa automática. |
-| `cycles/{cycleId}/cuts/{cutId}` | Fecha civil, estado, referencias exactas de padrón, catálogo y excepciones, publicación vigente y fecha de cierre. |
-| `courseInstances/{instanceId}` | Identificador interno propio, ciclo, nombre original, número leído del nombre y Moodle ID opcional independiente. Dos instancias con el mismo número requieren incidencia, no una unión automática. |
-| `courseInstances/{instanceId}/activities/{activityId}` | Identidad estable, encabezado original, tipo actividad/categoría/total y mapeo aprobado entre fuentes. Escala desconocida nullable. |
-| `courseVersions/{versionId}` | Tupla `cycleId + cutId + courseInstanceId`, revisión, importación fuente y selección explícita de actividades. El número del nombre no constituye la instancia. |
-| `publications/{publicationId}` | Manifiesto inmutable de versiones y selecciones, autor/fecha, versión esperada del corte y estado preparado/publicado. |
-| `publications/{publicationId}/courses/{instanceId}` | Referencia de versión publicada por curso. Evita un array creciente de cursos en un único documento. |
+| `originals/{jobId}/source` | Bytes exactos; nombre y hash en metadatos privados. Escritura condicional `ifGenerationMatch: 0`; repetición exige hash idéntico. |
+| `derived/{jobId}/{token}.json` | Fuente interpretada o manifiesto académico, parser, mapeos, auditorías, incidencias y exclusiones. Nunca expuesto íntegro a coordinadores. |
+| `exports/{uid}/{hash}.csv` | Página de carrera y versión fija, con texto protegido contra fórmulas; descarga mediada por Functions y membresía vigente. |
 
-Claves compuestas se derivarán en servidor de una representación canónica de tuplas
-(no concatenación ambigua). Cada revisión tendrá ID propio; la identidad lógica
-del curso sigue siendo ciclo + corte + instancia. La reimportación de igual hash y
-tupla será idempotente. Un hash nuevo crea una propuesta de revisión, nunca suma dos
-versiones activas. Publicar exigirá transacción de versión esperada sobre el puntero
-vigente, y solo derivados ya preparados. Un cierre hará inmutable su fotografía;
-corregir requiere otra revisión con autor, motivo y referencia a la anterior.
+Sin URLs públicas, tokens de descarga persistidos ni matrícula en rutas. Solo
+administración puede leer directamente originales/derivados/exportaciones. Todas
+las escrituras cliente se deniegan; el servidor verifica identidad, esquema y
+alcance porque Admin SDK no depende de esas reglas. No hay borrado o retención
+automáticos, incluidos intentos incompletos.
 
-## Observaciones, procesamiento y trazabilidad
+## Estados y publicación
 
-| Colección / clave propuesta | Contenido y relaciones |
-| --- | --- |
-| `imports/{importId}` | Original privado, SHA-256, bytes, nombre, usuario, fecha, parser y versión; clave de idempotencia, estado persistente por archivo, errores limitados al alcance del lector. |
-| `imports/{importId}/mappings/{mappingId}` | Mapeo confirmado de columnas, curso, actividades y decisiones de previsualización; versión y autor. |
-| `jobs/{jobId}` | Intentos, fase, progreso, control de concurrencia, lease y resultado. Reintentar no duplica efectos. El navegador no es dueño de la ejecución aceptada. |
-| `courseVersions/{versionId}/grades/{observationId}` | Persona + instancia + actividad + versión/corte, referencias de inscripciones elegibles, valor original, estado numérico/guion/vacío/inválido e incidencia opcional. |
-| `issues/{issueId}` | Fuente/fila/campo, tipo, estado y resolución auditada. El documento completo es privado al procesador/administración. Proyecciones por alcance evitan filtrar matrículas ajenas. |
-| `caseNotes/{noteId}/revisions/{revisionId}` | Persona/curso/corte, observación, responsable, fecha de contacto, siguiente acción, estado, autor y cambios. Nunca altera una calificación importada. |
-| `scopes/{coordinationId}/publications/{publicationId}/results/{resultId}` | Proyecciones autorizables y paginables por afiliación del estudiante, independientes del cargador del original compartido. |
-| `scopes/{coordinationId}/publications/{publicationId}/aggregates/{aggregateId}` | Contadores D, N, Z, G, V, E por conjunto de filtros y selección publicada. Personas únicas se cuentan por identidad, no sumando matrículas por curso. |
+```mermaid
+stateDiagram-v2
+  [*] --> awaiting_upload: descriptor validado
+  awaiting_upload --> queued: bytes y hash aceptados
+  queued --> processing: claim transaccional
+  processing --> ready: staging completo
+  processing --> invalid: contenido o mapeo inválido
+  processing --> queued: fallo temporal e intento menor a 3
+  processing --> failed: intentos agotados
+  processing --> queued: recuperación de lease vencido
+  ready --> published: confirmación sin bloqueos y CAS
+```
 
-Los estados de calificación se conservan separados. `0` es numérico, `-` no indica
-entrega ni atraso, vacío no es guion. Los esquemas no calculan indicadores. En etapas
-posteriores se comprobará `D = N + G + V + E`, `Z <= N`, y `D=0` no mostrará 0 %.
-Solo actividades seleccionadas participan; categorías y totales quedan fuera.
+`ready` puede tener incidencias bloqueantes: validado estructuralmente no significa
+aprobado. El worker consulta estado persistido, no confía en el orden de eventos.
+Cada intento tiene UUID y lease; un worker anterior no puede cambiar el resultado
+de un intento nuevo. Filas parciales quedan privadas y no se activan.
 
-La comparación requerirá un universo común explícito de estudiantes, cursos y
-actividades. Bajas, incorporaciones y cambios de afiliación/selección se informan
-por separado. Sin correspondencia estable será «no comparable».
+Idempotencia de reporte: hash de representación canónica de corte, instancia,
+fuentes fijadas, hash de bytes y mapeo. Fuente administrativa: ciclo, tipo y descriptor.
+Reenviar la misma identidad de trabajo reutiliza su estado. Contenido/mapeo distinto
+produce otra propuesta. La confirmación lee corte, membresía y versión esperada
+dentro de la transacción; crea publicación y cambia puntero y estado juntos.
+Una confirmación repetida es un no-op. Una propuesta obsoleta devuelve conflicto;
+no hay overwrite forzado. No se crean agregados ni se suman versiones.
 
-## Storage y límites
+La fotografía de fuentes se fija **al crear el corte**, abierto o cerrado. Cambiar
+padrón/catalogo/suplemento/excepciones no reescribe esa fotografía. Cerrar compite
+transaccionalmente con publicar y no puede deshacerse; repetir cierre no modifica
+su fecha. Una corrección crea otro corte con padre cerrado y motivo.
 
-- Rutas previstas: `originals/{importId}/{sourceVersionId}/source` y
-  `exports/{exportId}/result`. El nombre original queda en metadatos privados.
-- Originales compartidos: administrador/procesador, nunca lectura por ser cargador.
-  No persistir URLs públicas o tokens de descarga reutilizables en proyecciones.
-- No guardar libros, listas completas de estudiantes ni cortes enteros en un
-  documento Firestore. Observaciones/inscripciones/incidencias son documentos
-  separados. No diseñar cerca del límite de 1 MiB por documento de Firestore.
-- Listas futuras con `limit` y cursor estable; límite inicial propuesto 50 por
-  página. No descargar la institución completa al cliente. El límite se validará
-  con el piloto; no se han medido rendimiento ni costos.
-- Límites de archivo, filas, actividades por libro, concurrencia y exportación
-  se definirán y probarán al implementar importación. ZIP no está admitido ahora.
-- Fechas académicas `YYYY-MM-DD` sin cambio de día por zona; instantes de auditoría
-  como Timestamp UTC, presentados según `America/Cancun`.
-- Retención y eliminación de originales pendientes de aprobación; no hay borrado
-  automático ni estimación inventada de capacidad.
+## Consultas y permisos
 
-## Índices y fronteras de confianza
+La API valida entradas Zod, identidad Auth y membresía activa en cada operación.
+En mutaciones transaccionales vuelve a leer la membresía para evitar cambios de
+rol entre prevalidación y escritura. Administración puede gestionar fuentes,
+calendarios, cursos, cortes y permisos; coordinadores solo cursos que intersectan
+sus carreras. Preview, resultados y exportaciones consultan una carrera autorizada.
+Las incidencias sin afiliación y docentes no se distribuyen por identidad supuesta.
 
-`firestore.indexes.json` está vacío porque esta etapa no hace consultas académicas.
-Se proponen, para crear junto a sus consultas y pruebas en etapas posteriores:
+Reglas Firestore permiten membresía propia y, tras publicar, filas filtradas por
+carrera y token activo de esa publicación. Niegan listados de expedientes sin
+filtro y filas ajenas; el staging solo pasa por API autorizada. El reemplazo mantiene
+las publicaciones históricas consultables en su mismo alcance. Revocar membresía
+deniega incluso con un token Auth previamente emitido.
 
-| Ámbito | Índice compuesto previsto |
-| --- | --- |
-| Inscripciones de una versión | `personId`, `classification`, `__name__` |
-| Cursos de ciclo | `cycleId`, `parsedCourseNumber`, `__name__` |
-| Importaciones | `cycleId`, `cutId`, `status`, `createdAt`, `__name__` |
-| Resultados bajo un alcance | `programId`, `baseGroupId`, `courseInstanceId`, `__name__` |
-| Incidencias autorizadas | `status`, `kind`, `createdAt`, `__name__` |
+Jobs: `cutId == ...` y `__name__`, cursor de documento. Filas: `careerId == ...`
+y `__name__`, cursor; 100 por página. Los índices simples automáticos cubren estas
+consultas; no se añadieron filtros arbitrarios ni índices compuestos. Antes de nube
+deben comprobarse en el proyecto real. `overview` limita 100 ciclos/cortes y 500
+cursos y requiere ampliar navegación histórica antes de excederlos.
 
-No se implementan todavía combinaciones arbitrarias de filtros. Antes de permitir
-consultas se probarán lecturas permitidas/denegadas, originales, exportaciones y
-accesos cruzados. El backend con SDK Admin deberá verificar identidad, membresía,
-alcance, versión y esquema independientemente de las reglas cliente. La etapa 01
-no importa el SDK Admin en Functions ni abre un endpoint de datos: solo expone
-diagnóstico técnico, rechazado fuera del entorno demo completo.
+Retención, respaldo, costos y prueba de carga 45/230 cursos siguen pendientes.
+Los estados numérica/guion/vacía/inválida se conservan; no se calcula cobertura,
+aprobación, atraso docente o comparación entre poblaciones.

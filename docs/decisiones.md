@@ -136,3 +136,66 @@ permisos ni protecciones para eludirlo. Evidencia actualizada en el informe del
 
 Estas decisiones corrigen implementación y límites técnicos; no añaden reglas
 académicas. Continúan las limitaciones de datos privados, dependencias y bundle.
+
+## Etapa 03 · 2026-10-02 · decisiones técnicas
+
+- Base integrada `3963f46d5513e3918774edfcb219d8d4cf102744`; rama exclusiva
+  `etapa-03-acceso-e-importacion`. No se cambian reglas académicas aprobadas.
+- Membresías Firestore consultadas por servidor y reglas, sin autoridad derivada
+  de claims/payload. La revocación se comprueba con el mismo token. Bootstrap es
+  privilegiado y solo local; autoasignación pública de roles no existe.
+- Una callable con operaciones discriminadas y Zod; autorizar también dentro de
+  transacciones. Originals solo Admin/procesador; coordinador recibe proyección
+  por afiliación, incluida una versión compartida por varias carreras.
+- Reutilizar el mismo código de parsers/dominio al compilar Functions. SheetJS y
+  Zod se declaran en el workspace con las versiones ya fijadas; sin copiar reglas
+  ni actualizar dependencias. No incorporar SheetJS al bundle web.
+- La fuente de decisiones acepta excepciones entre ciclos y resoluciones de base
+  con los mismos contratos de etapa 02. El servidor fija aprobador y versión;
+  las decisiones por filas de Moodle conservan originales y auditoría privada.
+- Eventos Firestore persistentes con reintentos, claim/lease y staging por token.
+  Los eventos pueden repetirse o llegar desordenados: diseño según
+  [garantías de eventos](https://firebase.google.com/docs/functions/firestore-events)
+  y [reintentos](https://firebase.google.com/docs/functions/retries). Máximo tres
+  intentos, publicación transaccional y un único puntero activo por corte/instancia.
+- Original inmutable con precondición de generación, más hash verificado. No
+  publicar filas hasta terminar staging; abortar conflicto de versión esperada.
+  Correcciones conservan historial y requieren propuesta nueva/confirmación.
+- Fijar las fuentes al crear el corte, para reproducibilidad incluso durante su
+  preparación. Revisiones de cortes cerrados tienen padre y motivo; no reabrir.
+- Límites 20 archivos/40 MiB por lote, 8 MiB por archivo y límites del parser
+  de etapa 02. Transferencia callable base64; no implementar ZIP ni resumible por
+  bloques en esta etapa. Progreso por fase persistida, no porcentaje de bytes.
+- Páginas de 100 filas/trabajos y exportación de carrera completa sobre versión
+  fija. Texto CSV protegido contra fórmulas; originales exactos retenidos. No
+  persistir URLs de descarga públicas ni incluir matrículas en rutas.
+- Fixtures SDK Admin cargadas mediante entradas CommonJS nativas: evita el fallo
+  de enlace ESM `jose` bajo el transformador Playwright en Node 22. No se degrada
+  una dependencia ni se omite una suite. Bootstrap cierra la transacción antes de
+  rechazar una repetición, evitando salir durante rollback asíncrono del SDK.
+
+### Reglas académicas y pendientes
+
+Se conservan origen/seguimiento, épocas 1900/1904, suplementos deterministas,
+identidades nulas, docentes/bajas, duplicados y mapeos auditables. No se infieren
+escalas, fechas, carreras o actividades. No hay conciliación con archivos reales.
+Dependencias, bundle, carga 45/230 cursos, retención, costos, recuperación y nube
+continúan pendientes. Indicadores y panel corresponden a etapa 04.
+
+### Correcciones de revisión del PR #2
+
+- Solo `calificacion_invalida` es incidencia publicable; cualquier código distinto
+  o desconocido bloquea por defecto. Se conserva la incidencia en la fila y el
+  estado/valor original en resultados y exportación del alcance autorizado.
+- La confirmación de sustitución se vincula a ID de propuesta y versión anterior.
+  Cada nueva revisión invalida la selección; un contador de solicitudes impide
+  que respuestas fuera de orden reemplacen la propuesta actual. Se aplica a
+  reportes y fuentes administrativas, sin cambiar la transacción de publicación.
+- `filenameResolution` usa el contrato del resolver académico aprobado. Solo
+  administración puede adjuntarla; servidor valida ID/ciclo contra la instancia
+  y fija actor de sesión/versión de trabajo. La identidad del trabajo incorpora
+  nombre original y decisión cuando hay resolución. Esto permite corregir un
+  original ya rechazado, conservar ambos trabajos y reutilizar el reenvío exacto.
+  Nombre, hash, decisión, motivo, actor y versión quedan disponibles en revisión
+  administrativa y artefacto privado. No se atribuye este permiso al cargador.
+- No se introducen reglas académicas nuevas ni cambios de dependencias/workflow.
