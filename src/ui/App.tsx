@@ -63,7 +63,7 @@ export function App() {
         </nav>
         <div className="sidebar-note">
           <span className="status-dot" />
-          Desarrollo local<p>Etapa 03 · Acceso e importación</p>
+          Desarrollo local<p>Etapa 04 · Panel e indicadores</p>
         </div>
       </aside>
       <div className="workspace">

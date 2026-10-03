@@ -1,10 +1,13 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
   useState,
   type FormEvent,
 } from "react";
+const Dashboard = lazy(() => import("./Dashboard"));
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -274,10 +277,9 @@ export function AccessWorkspace({ section }: { section: string }) {
           )}
           {section === "Fuentes" && <Imports overview={overview} />}
           {section === "Panel" && (
-            <p>
-              Acceso verificado. En «Fuentes» puedes importar y revisar
-              archivos. Los indicadores corresponden a la etapa 04.
-            </p>
+            <Suspense fallback={<p role="status">Cargando panel…</p>}>
+              <Dashboard overview={overview} />
+            </Suspense>
           )}
         </>
       )}

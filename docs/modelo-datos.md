@@ -1,9 +1,10 @@
-# Modelo implementado · etapa 03
+# Modelo implementado · etapas 03 y 04
 
 La persistencia se verifica en emuladores. Este documento sustituye las rutas
 propuestas en etapa 01 por las rutas ejecutables actuales. Los esquemas académicos
 puros y parsers de etapa 02 se compilan también para Functions sin duplicarlos.
-No hay agregados, indicadores, comparaciones o bitácora de etapa 04.
+Etapa 04 agrega indicadores autorizados al consultar. Comparaciones y bitácora
+permanecen fuera de alcance.
 
 ## Autoridad y colecciones
 
@@ -21,6 +22,9 @@ No hay agregados, indicadores, comparaciones o bitácora de etapa 04.
 | `sources/{hash}` | Publicación inmutable de fuente administrativa: original, artefacto, aprobador, versión anterior y procedencia. |
 | `publications/{jobId}` | Versión inmutable del reporte y referencias exactas de fuentes, token de staging, corte/curso, autor/fecha y revisión. |
 | `cuts/{id}/courses/{courseId}` | Único puntero activo a publicación/revisión de la instancia; se cambia mediante transacción. |
+| `cuts/{id}/activitySelections/{courseId}` | Selección vigente ligada al reporte publicado. Solo API administrativa, corte abierto, CAS sobre revisión anterior. |
+| `activitySelectionHistory/{hash}` | Actividades, versión, docentes explícitos o inferidos del archivo, motivo, actor real, revisión anterior y fecha. Historial inmutable. |
+| `metricSnapshots/{hash}` | Índice privado: UID, huella de membresía, corte y ruta del manifiesto en Storage. Sin filas ni documento institucional gigante. |
 
 Inscripciones y personas siguen siendo entidades distintas dentro de los artefactos
 académicos privados. No se deduplican inscripciones por matrícula. Se conservan
@@ -34,7 +38,8 @@ define la carrera del estudiante. Casos sin base resuelta bloquean publicación.
 | --- | --- |
 | `originals/{jobId}/source` | Bytes exactos; nombre y hash en metadatos privados. Escritura condicional `ifGenerationMatch: 0`; repetición exige hash idéntico. |
 | `derived/{jobId}/{token}.json` | Fuente interpretada o manifiesto académico, parser, mapeos, auditorías, incidencias y exclusiones. Nunca expuesto íntegro a coordinadores. |
-| `exports/{uid}/{hash}.csv` | Página de carrera y versión fija, con texto protegido contra fórmulas; descarga mediada por Functions y membresía vigente. |
+| `exports/{uid}/{hash}.csv` | Página de carrera (etapa 03) o alcance filtrado completo con manifiesto fijo (etapa 04), texto protegido contra fórmulas y membresía vigente. |
+| `metricSnapshots/{hash}.json` | Manifiesto capturado transaccionalmente: fuentes, punteros de publicación, selecciones y cursos autorizados. Solo servidor; no contiene filas académicas. |
 
 Sin URLs públicas, tokens de descarga persistidos ni matrícula en rutas. Solo
 administración puede leer directamente originales/derivados/exportaciones. Todas
@@ -68,7 +73,8 @@ Reenviar la misma identidad de trabajo reutiliza su estado. Contenido/mapeo dist
 produce otra propuesta. La confirmación lee corte, membresía y versión esperada
 dentro de la transacción; crea publicación y cambia puntero y estado juntos.
 Una confirmación repetida es un no-op. Una propuesta obsoleta devuelve conflicto;
-no hay overwrite forzado. No se crean agregados ni se suman versiones.
+no hay overwrite forzado. La publicación no suma versiones; el panel agrega solo
+la versión referenciada por su manifiesto.
 
 La fotografía de fuentes se fija **al crear el corte**, abierto o cerrado. Cambiar
 padrón/catalogo/suplemento/excepciones no reescribe esa fotografía. Cerrar compite
@@ -97,5 +103,20 @@ deben comprobarse en el proyecto real. `overview` limita 100 ciclos/cortes y 500
 cursos y requiere ampliar navegación histórica antes de excederlos.
 
 Retención, respaldo, costos y prueba de carga 45/230 cursos siguen pendientes.
-Los estados numérica/guion/vacía/inválida se conservan; no se calcula cobertura,
-aprobación, atraso docente o comparación entre poblaciones.
+Los estados numérica/guion/vacía/inválida se conservan. Etapa 04 calcula N/D y G/D
+sobre actividades seleccionadas; no aprobación, atraso docente ni comparación.
+
+## Consultas de etapa 04
+
+`dashboard` y `exportDashboard` reciben corte, filtros, vista y un manifiesto
+opcional. Este fija versiones y selección; el alcance sigue sujeto a la membresía
+vigente, comprobada nuevamente antes de responder. La captura transaccional se
+escribe como objeto inmutable en Storage antes de crear el índice privado, para
+no superar el límite de documento Firestore con cientos de mapeos. Un reintento
+reutiliza su hash. Ninguna regla cliente permite leer o escribir estas rutas.
+
+Las filas se consultan por carrera en páginas de 200; el servidor agrega y entrega
+25 elementos por página. La exportación usa el mismo manifiesto y todo el alcance
+filtrado. El cierre fija `frozenCourseIds`, además de las fuentes ya fijadas, para
+que cursos posteriores no cambien los esperados de un corte cerrado. Los cierres
+históricos sin ese campo no se reescriben.

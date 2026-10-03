@@ -4,6 +4,10 @@ Actualización etapa 03: 2026-10-02, America/Cancun. Se declaran en Functions
 SheetJS CE 0.20.3 y Zod 4.3.6, ya fijados en el lockfile raíz. No se cambian versiones
 de paquetes; npm también ajusta un marcador de desarrollo de `@pkgjs/parseargs`.
 
+Etapa 04 (2026-10-03): dependencias y lockfile sin cambios. Las 14 alertas de la
+auditoría adjunta de etapa 03 siguen pendientes; no se presenta esa auditoría como
+un nuevo análisis de vulnerabilidades ni se aplican actualizaciones automáticas.
+
 ## Resultado de herramientas
 
 `npm audit --json` y `npm ci` mantienen **14 entradas: 10 altas y 4 moderadas**.
@@ -70,10 +74,11 @@ formato duplicaría semántica compleja de hojas/fechas.
 ## Bundle
 
 `npm run build` pasa y conserva la advertencia de Vite para chunks mayores de
-500 kB minificados. Revisión PR #2: **dist/assets/index-DdChR5_k.js**, **806 051 bytes**
-en disco; Vite muestra **806,05 kB**, gzip estimado **240,98 kB**. La UI de acceso
-e importación aumenta el archivo respecto de los 774 279 bytes de etapa 02.
-SheetJS permanece en Node, sin importación desde la UI. No se subió el umbral.
+500 kB minificados. Etapa 04: **dist/assets/index-D6QlFC8q.js**, **809 776 bytes**
+en disco; Vite muestra **809,77 kB**, gzip estimado **242,31 kB**. El panel se carga
+diferido en **dist/assets/Dashboard-BpGX_MrX.js**, **13 442 bytes** (13,44 kB;
+gzip estimado 4,39 kB). El principal de PR #2 era 806 051 bytes. SheetJS permanece
+en Node, sin importación desde la UI. No se subió el umbral.
 
 Valoración: la carga inicial de SDK/UI puede aumentar transferencia, análisis y
 ejecución en redes o dispositivos limitados. No se midieron LCP/INP ni impacto
@@ -86,6 +91,7 @@ En la suite ampliada aparece `MaxListenersExceededWarning` sobre un `PassThrough
 (listeners `error`/`close`). Una repetición con `NODE_OPTIONS=--trace-warnings`
 sitúa la llamada a pipeline en
 `@google-cloud/storage/node_modules/teeny-request/build/src/index.js:194`.
-Las 26 pruebas pasan; no se oculta el aviso ni se aumenta `setMaxListeners`.
+En esa comprobación pasaron las 26 pruebas; no se oculta el aviso ni se aumenta
+`setMaxListeners`. El aviso reaparece en la suite ampliada de etapa 04.
 Esta traza no demuestra una fuga sostenida: queda pendiente medir recursos y
 revisar el comportamiento del SDK antes de una prueba de carga/piloto real.

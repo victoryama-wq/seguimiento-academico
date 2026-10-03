@@ -199,3 +199,37 @@ continúan pendientes. Indicadores y panel corresponden a etapa 04.
   Nombre, hash, decisión, motivo, actor y versión quedan disponibles en revisión
   administrativa y artefacto privado. No se atribuye este permiso al cargador.
 - No se introducen reglas académicas nuevas ni cambios de dependencias/workflow.
+
+## Etapa 04 · 2026-10-03 · decisiones técnicas
+
+- Administración aprueba la selección global del curso/corte, porque los cursos
+  compartidos afectan varias coordinaciones. Coordinadores consultan/exportan su
+  alcance. No se usa un rol enviado por el navegador para conceder facultades.
+- Selección vinculada a versión publicada, con comparación de revisión previa,
+  historial inmutable y reenvío idempotente. Reemplazar reporte invalida la
+  selección para la versión nueva. Cerrar corte congela además los cursos esperados.
+- Fotografías privadas por usuario y huella de membresía capturan atómicamente
+  fuentes, punteros y selecciones. Paginación y exportación usan esa misma versión;
+  revocar carreras invalida fotografías previas. Nuevas colecciones deniegan
+  acceso directo mediante las reglas generales existentes.
+- El manifiesto se guarda inmutable en Storage antes de publicar su índice privado
+  en Firestore. Así los mapeos de cientos de cursos no se concentran en un documento
+  sujeto al límite de 1 MiB. El hash permite reintentos sin duplicar manifiestos.
+- Agregación bajo demanda en servidor; páginas de lectura 200 y de respuesta 25.
+  No se envían todos los registros de la institución al navegador. El piloto debe
+  medir el costo de recorrer el universo y decidir materialización de agregados.
+- Exportación completa del filtro, con metadatos y denominadores; límite explícito
+  de 8 MiB. Texto de fórmula neutralizado sin cambiar originales privados.
+- Conteos de personas mediante matrícula normalizada única; observación única por
+  instancia/persona/actividad. Inscripciones especiales se conservan sin duplicar D.
+  El estado de registro se calcula por estudiante sobre su universo filtrado.
+- Docentes identificados por filas del archivo o asignación administrativa auditada;
+  múltiples docentes comparten observaciones sin duplicar el total institucional.
+- Panel cargado de forma diferida. No se cambian paquetes ni comprobaciones de CI.
+
+### Reglas académicas y pendientes
+
+No cambia la interpretación aprobada de guion, cero, vacío, inválido, bajas,
+inscripciones o grupo base. No se crea una regla de atribución provisional ni
+se infieren escalas, mínimos aprobatorios, vencimientos o entregas. Conserva
+pendientes de datos reales, dependencias, bundle, piloto, capacidad y retención.
