@@ -68,7 +68,42 @@ No se versionan node_modules, compilados, logs, traces ni `.env` locales: se
 regeneran con el lockfile y comandos del README. No se omite ningún archivo privado
 necesario para las pruebas sintéticas.
 
-## Límites y pendientes conservados
+## Corrección de revisión del PR #3
+
+- Las exclusiones del reporte se examinan antes de descartar un curso sin filas
+  medibles. El padrón usa el catálogo autorizado del alcance, sin depender de que
+  la matrícula tenga observaciones. `000BAJA` conserva su baja y las procedencias
+  del reporte y padrón; D=0, cobertura=null y cero estudiantes medidos.
+- Una condición común por persona, calculada con inscripciones autorizadas, se
+  aplica a detalles, exclusiones del reporte y padrón. `con_especial` conserva
+  únicamente personas con inscripción clasificada especial; `solo_base` elimina
+  a esas personas, también de sus otras inscripciones. Una identidad sin
+  inscripciones autorizadas no se presenta como base por defecto al usar el filtro.
+- Los filtros de grupo/modalidad/turno usan la base confirmada o la información de
+  la inscripción excluida, sin inventar afiliación. Las fuentes se conservan.
+- La ruta privada del CSV incorpora su contenido, además de manifiesto/filtros/
+  vista. La corrección puede producir un archivo nuevo sin sobrescribir el anterior;
+  reintentar el contenido idéntico reutiliza la misma ruta.
+- Regresiones en `metrics-exclusions.test.ts`: administración y ambos coordinadores,
+  filtros combinados, accesos cruzados, procedencia, preservación de exportación
+  previa y concordancia de exclusionesCount/páginas/CSV (52 filas, 25+25+2).
+  La inscripción de inglés del fixture se verifica con un curso esperado sintético
+  adicional; así se comprueba el filtro por persona sobre sus otras inscripciones.
+  El cálculo general sigue N=4, D=7 y dos personas. E2E amplía la navegación de
+  coordinación para comprobar baja y ambos filtros especiales en escritorio/móvil.
+
+Verificación local final de la corrección (2026-10-03): `lint`, `typecheck` y `build`
+pasan; `test:unit` 179/179; `test:emulators` 43/43 en cinco archivos (76,78 s);
+`test:e2e` 24/24 en escritorio y móvil. Se mantienen las advertencias documentadas,
+sin cambios de dependencias, umbrales o workflow. El CI automático y SHA final se
+consignan en el PR. Los resultados del apartado anterior corresponden a la entrega
+inicial `5ef5b391`.
+
+Capturas nuevas de la baja con dos procedencias, D=0 y ausencia de porcentajes:
+[escritorio](evidencias/etapa-04/revision-pr3/baja-escritorio.png) y
+[móvil](evidencias/etapa-04/revision-pr3/baja-movil.png), solo datos sintéticos.
+
+## Límites y pendientes conservados, sin cambios
 
 - Únicamente emuladores demo. Sin conciliación de archivos privados, piloto ni nube.
 - 14 alertas de dependencias previamente documentadas, sin cambiar versiones,

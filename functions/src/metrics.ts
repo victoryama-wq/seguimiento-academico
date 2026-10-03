@@ -291,6 +291,49 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
     (!f.group || f.group === group) &&
     (!f.modality || f.modality === modality) &&
     (!f.shift || f.shift === shift);
+  // Una condición por persona, calculada solo con sus inscripciones autorizadas.
+  // No depende de la fila examinada ni de que conserve observaciones elegibles.
+  const personScope = new Map(
+    academic.persons.map((person) => {
+      const owned = person.enrollmentIds
+        .map((id) => enrollments.get(id)!)
+        .filter((e) => allowed(member, e.careerId));
+      const base = owned.find((e) => e.id === person.baseEnrollmentId);
+      return [
+        person.identity,
+        { owned, base, special: owned.some((e) => e.kind === "especial") },
+      ] as const;
+    }),
+  );
+  const scopedPerson = (id: string) => {
+    const normalized = identity(id).normalized;
+    return normalized ? personScope.get(normalized) : undefined;
+  };
+  const specialMatch = (id: string) => {
+    if (!f.special) return true;
+    const person = scopedPerson(id);
+    return (
+      !!person?.owned.length &&
+      (f.special === "con_especial") === person.special
+    );
+  };
+  const exclusionDimensionsMatch = (id: string, careerId: string | null) => {
+    if (!f.group && !f.modality && !f.shift) return true;
+    const person = scopedPerson(id);
+    const candidates = person?.base
+      ? [person.base]
+      : (person?.owned ?? []).filter(
+          (e) => !careerId || e.careerId === careerId,
+        );
+    return candidates.some((e) =>
+      dimMatch(
+        e.parsed.normalized,
+        e.parsed.modality ?? "",
+        e.parsed.shift ?? "",
+      ),
+    );
+  };
+  const sourceCareers = new Set<string>();
   for (const entry of entries) {
     const { course, job } = entry;
     if (
@@ -324,6 +367,8 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
         : !teachers.includes(f.teacher))
     )
       continue;
+    for (const careerId of course.careers.filter(careerMatches))
+      sourceCareers.add(careerId);
     const activities = selection?.activities ?? [];
     const courseDetails: typeof details = [];
     if (job?.token) {
@@ -351,11 +396,8 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
             )
           )
             continue;
-          const owned = person!.enrollmentIds
-            .map((id) => enrollments.get(id)!)
-            .filter((e) => allowed(member, e.careerId));
-          const special = owned.some((e) => e.kind === "especial");
-          if (f.special && (f.special === "con_especial") !== special) continue;
+          const { owned, special } = scopedPerson(row.identity)!;
+          if (!specialMatch(row.identity)) continue;
           let values = row.values.filter((v) =>
             activities.includes(v.activityId),
           );
@@ -396,10 +438,30 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
         }
       }
     }
+    const courseExclusions: typeof exclusions = [];
+    for (const excluded of artifact?.excluded ?? []) {
+      if (
+        (excluded.careerId
+          ? !careerMatches(excluded.careerId)
+          : member.role !== "admin") ||
+        !studentMatch(excluded.identity) ||
+        !specialMatch(excluded.identity) ||
+        !exclusionDimensionsMatch(excluded.identity, excluded.careerId) ||
+        f.registration
+      )
+        continue;
+      courseExclusions.push({
+        ...excluded,
+        courseId: course.id,
+        provenance: `${job!.id}:fila:${excluded.row}`,
+      });
+    }
     const rowFilter =
       f.student || f.group || f.modality || f.shift || f.special;
-    if (rowFilter && !courseDetails.length) continue;
+    if (rowFilter && !courseDetails.length && !courseExclusions.length)
+      continue;
     details.push(...courseDetails);
+    exclusions.push(...courseExclusions);
     if (entry.received) received++;
     if (entry.validated) validated++;
     courses.push({
@@ -429,48 +491,18 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
           ? "sin_actividades_seleccionadas"
           : "medido",
     });
-    for (const excluded of artifact?.excluded ?? []) {
-      if (
-        excluded.careerId
-          ? !careerMatches(excluded.careerId)
-          : member.role !== "admin"
-      )
-        continue;
-      if (
-        !studentMatch(excluded.identity) ||
-        f.group ||
-        f.modality ||
-        f.shift ||
-        f.special ||
-        f.registration
-      )
-        continue;
-      exclusions.push({
-        ...excluded,
-        courseId: course.id,
-        provenance: `${job!.id}:fila:${excluded.row}`,
-      });
-    }
   }
   // Inscripciones especiales/excluidas e incidencias del padrón: no añaden observaciones.
   for (const e of academic.enrollments) {
     if (
       !careerMatches(e.careerId) ||
       !studentMatch(e.identity) ||
-      !courses.some((c) =>
-        entries
-          .find((v) => v.course.id === c.id)!
-          .course.careers.includes(e.careerId),
-      )
+      !specialMatch(e.identity) ||
+      !sourceCareers.has(e.careerId)
     )
       continue;
     if (e.kind === "base" && !e.problems.length) continue;
-    const p = e.person.normalized
-      ? persons.get(e.person.normalized)
-      : undefined;
-    const base = p?.baseEnrollmentId
-      ? enrollments.get(p.baseEnrollmentId)
-      : undefined;
+    const base = scopedPerson(e.identity)?.base;
     if (
       !dimMatch(
         base?.parsed.normalized ?? e.parsed.normalized,
@@ -479,8 +511,7 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
       )
     )
       continue;
-    if ((f.special === "solo_base" && e.kind === "especial") || f.registration)
-      continue;
+    if (f.registration) continue;
     exclusions.push({
       identity: e.identity,
       careerId: e.careerId,
@@ -810,7 +841,9 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
       "resource-exhausted",
       "Exportación mayor de 8 MiB: acota los filtros.",
     );
-  const path = `exports/${uid}/${hash(canonical({ snapshot: snap.id, filters: f, view: input.view }))}.csv`;
+  // Una corrección de consulta puede cambiar el CSV del mismo manifiesto.
+  // Conservar el anterior y reutilizar solo una exportación de contenido idéntico.
+  const path = `exports/${uid}/${hash(canonical({ snapshot: snap.id, filters: f, view: input.view, content: hash(csv) }))}.csv`;
   await saveImmutable(path, Buffer.from(csv), "text/csv; charset=utf-8");
   return { csv, snapshotId: snap.id, path };
 }

@@ -58,3 +58,23 @@ El CSV incluye filtros, vista, fecha civil, definiciones, N/G/V/E/Z/D, porcentaj
 personas únicas, cursos y universo, agrupaciones, observaciones y exclusiones.
 Texto susceptible de fórmula recibe apóstrofo; el original exacto permanece
 en el dato estructurado y almacenamiento privado.
+
+## Regresiones de exclusiones de PR #3
+
+Con el fixture original, consultar `000BAJA` devuelve dos trazabilidades distintas:
+fila del reporte compartido y fila del padrón. Ambas explican la baja, pero ninguna
+añade una observación: N=G=V=E=Z=D=0, cobertura=null, estudiantes medidos=0. Es igual
+al combinar carrera LAF, grupo base, modalidad y turno registrados. Coordinador B
+no recibe esas trazabilidades; solicitar explícitamente la carrera ajena se deniega.
+
+`con_especial` incluye 000SINT01 (D=4) y su inscripción especial; no incluye 000BAJA.
+`solo_base` no incluye ninguna inscripción de 000SINT01: institución mide solo
+000SINT02 (D=3); coordinador A tiene D=0 y conserva la baja; B mide D=3.
+Para comprobar también la inscripción de inglés ya existente se añade únicamente
+un curso esperado sintético de esa carrera: administración puede conservarla con
+`con_especial`, nunca con `solo_base`. No agrega actividades a D.
+
+La ampliación de paginación crea 26 bajas sintéticas en otro corte: 26 exclusiones
+de reporte más 26 de padrón = 52 procedencias. Páginas 25+25+2, exclusionesCount=52
+y 52 filas de trazabilidad en CSV, sin calificaciones incorporadas al denominador.
+El fixture pequeño original conserva D=7, N=4 y dos personas antes y después.

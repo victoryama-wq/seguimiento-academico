@@ -102,6 +102,46 @@ test("dos coordinadores navegan por teclado, conservan filtros y exportan su alc
     path: info.outputPath("panel-coordinacion-a.png"),
     fullPage: true,
   });
+  const student = page.getByRole("textbox", {
+    name: "Matrícula del estudiante",
+    exact: true,
+  });
+  await student.fill("000BAJA");
+  await page
+    .getByRole("button", { name: "Aplicar filtros", exact: true })
+    .click();
+  await expect(page.getByTestId("count-D")).toHaveText("0");
+  await page
+    .getByRole("button", { name: "Exclusiones e incidencias", exact: true })
+    .click();
+  await expect(page.locator(".metrics table tbody tr")).toHaveCount(2);
+  await expect(page.locator(".metrics table")).toContainText("000BAJA");
+  await expect(page.locator(".metrics table")).toContainText("baja");
+  await expect(page.locator(".metrics table")).toContainText(":fila:");
+  await expect(page.getByTestId("metric-totals")).toContainText("Sin datos");
+  await page.screenshot({
+    path: info.outputPath("baja-filtrada.png"),
+    fullPage: true,
+  });
+  await student.fill("");
+  const special = page.getByRole("combobox", {
+    name: "Caso especial",
+    exact: true,
+  });
+  await special.selectOption("con_especial");
+  await page
+    .getByRole("button", { name: "Aplicar filtros", exact: true })
+    .click();
+  await expect(page.getByTestId("count-D")).toHaveText("4");
+  await expect(page.locator(".metrics table")).toContainText("000SINT01");
+  await expect(page.locator(".metrics table")).not.toContainText("000BAJA");
+  await special.selectOption("solo_base");
+  await page
+    .getByRole("button", { name: "Aplicar filtros", exact: true })
+    .click();
+  await expect(page.getByTestId("count-D")).toHaveText("0");
+  await expect(page.locator(".metrics table")).toContainText("000BAJA");
+  await expect(page.locator(".metrics table")).not.toContainText("000SINT01");
   const b = await browser.newContext({
     ...devices[
       info.project.name === "mobile-chromium" ? "Pixel 7" : "Desktop Chrome"

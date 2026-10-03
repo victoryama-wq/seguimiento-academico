@@ -1,5 +1,9 @@
 # Capturas sintéticas · etapa 04
 
+La tabla siguiente conserva las capturas de la entrega inicial `5ef5b391`.
+La corrección de filtros del PR #3 se documenta al final, sin sustituir la evidencia
+histórica.
+
 Generadas por la suite E2E completa contra Auth, Firestore, Storage y Functions
 emulados, el 2026-10-03. Todas las identidades y datos son ficticios. Los hash
 visibles son identificadores de versiones de esas fixtures; cambian al recrearlas.
@@ -16,3 +20,12 @@ visibles son identificadores de versiones de esas fixtures; cambian al recrearla
 La suite también comprueba carga visible, error recuperable, teclado y coincidencia
 de exportación con el filtro mostrado. Las capturas no sustituyen el CI ni una
 conciliación de datos privados.
+
+## Corrección de exclusiones · PR #3
+
+`000BAJA` filtrado junto con grupo: dos filas de procedencia (reporte/padrón),
+D=0, cero estudiantes medidos y cobertura «Sin datos». E2E verifica además los
+filtros con_especial y solo_base sobre el mismo grupo.
+
+- [Escritorio](revision-pr3/baja-escritorio.png).
+- [Móvil](revision-pr3/baja-movil.png).

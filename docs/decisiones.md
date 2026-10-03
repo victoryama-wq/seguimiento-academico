@@ -233,3 +233,18 @@ No cambia la interpretación aprobada de guion, cero, vacío, inválido, bajas,
 inscripciones o grupo base. No se crea una regla de atribución provisional ni
 se infieren escalas, mínimos aprobatorios, vencimientos o entregas. Conserva
 pendientes de datos reales, dependencias, bundle, piloto, capacidad y retención.
+
+### Revisión PR #3 · coherencia de exclusiones y filtros
+
+La condición de caso especial pertenece a la persona en el alcance autorizado,
+no a la fila que se está mostrando. Se reutiliza en observaciones, exclusiones de
+reporte e inscripciones del padrón. La ausencia de observaciones elegibles no elimina
+la trazabilidad coincidente ni incorpora notas excluidas a D. Las exclusiones del
+padrón se vinculan al catálogo autorizado del filtro, sin inferir presencia en un
+reporte concreto. Grupo y modalidad se filtran con atributos conservados y base
+confirmada cuando exista dentro del alcance.
+
+Una exportación corregida conserva la anterior: su ruta incorpora huella del CSV,
+manifiesto y filtros. Reintentos idénticos reutilizan archivo; no se modifica el
+original ni el corte. Esta corrección no cambia clasificación académica, permisos,
+dependencias ni workflow.
