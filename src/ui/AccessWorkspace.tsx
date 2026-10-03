@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+const History = lazy(() => import("./History"));
 const Dashboard = lazy(() => import("./Dashboard"));
 import {
   onAuthStateChanged,
@@ -274,6 +275,11 @@ export function AccessWorkspace({ section }: { section: string }) {
                 </>
               )}
             </>
+          )}
+          {section === "Historial y seguimiento" && (
+            <Suspense fallback={<p role="status">Cargando historial…</p>}>
+              <History overview={overview} />
+            </Suspense>
           )}
           {section === "Fuentes" && <Imports overview={overview} />}
           {section === "Panel" && (

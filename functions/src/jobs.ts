@@ -55,6 +55,7 @@ export type Cut = {
   parentId: string | null;
   reason: string | null;
   frozenCourseIds?: string[];
+  closurePath?: string;
 };
 export type Course = {
   id: string;
@@ -217,7 +218,20 @@ async function administrative(job: Job, bytes: Buffer): Promise<Artifact> {
   return { data, source: table.source, issues: [], count: data.length };
 }
 
-export async function academicSnapshot(cut: Cut) {
+export async function academicSnapshot(
+  cut: Cut,
+): Promise<ReturnType<typeof resolveAffiliations>> {
+  if (cut.closurePath)
+    return (
+      await jsonFile<{ academic: ReturnType<typeof resolveAffiliations> }>(
+        cut.closurePath,
+      )
+    ).academic;
+  if (cut.status === "closed")
+    throw new HttpsError(
+      "failed-precondition",
+      "El corte cerrado carece de fotografía materializada; requiere conciliación explícita, no recálculo automático.",
+    );
   const loaded: Partial<Record<SourceKind, Artifact>> = {};
   for (const [kind, id] of Object.entries(cut.sources)) {
     const source = (await db.doc(`sources/${id}`).get()).data();

@@ -514,3 +514,10 @@ footer {
 .metrics small { display: block; max-width: 180px; }
 .metric-filters { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .metrics fieldset { min-width: 0; }
+.history-workspace { min-width: 0; overflow-wrap: anywhere; }
+.history-workspace section { margin-top: 24px; padding: 16px; border: 1px solid #dce4e3; border-radius: 8px; }
+.history-workspace li { margin: 12px 0; }
+.history-workspace button { margin: 4px; }
+.history-table { max-width: 100%; overflow-x: auto; }
+.history-table table { width: 100%; min-width: 520px; border-collapse: collapse; }
+.history-table th, .history-table td { padding: 10px; border-bottom: 1px solid #dce4e3; text-align: left; }
