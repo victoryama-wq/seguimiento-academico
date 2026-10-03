@@ -5,6 +5,7 @@ import { AccessWorkspace } from "./AccessWorkspace";
 const sections = [
   "Panel",
   "Ciclos y cortes",
+  "Historial y seguimiento",
   "Fuentes",
   "Configuración",
 ] as const;
@@ -63,7 +64,7 @@ export function App() {
         </nav>
         <div className="sidebar-note">
           <span className="status-dot" />
-          Desarrollo local<p>Etapa 04 · Panel e indicadores</p>
+          Desarrollo local<p>Etapa 05 · Historial y seguimiento</p>
         </div>
       </aside>
       <div className="workspace">

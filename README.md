@@ -1,4 +1,4 @@
-# Seguimiento académico · etapa 04
+# Seguimiento académico · etapa 05
 
 React, TypeScript estricto y Firebase Emulator Suite, en español. La etapa 02
 conserva parsers ODS/XLSX/CSV, normalización, clasificación y resoluciones auditadas.
@@ -6,7 +6,11 @@ La etapa 03 añade acceso institucional, fuentes privadas y carga persistente po
 lotes. La etapa 04 añade panel autorizado, selección versionada de actividades,
 conteos y exportaciones reproducibles. [Entrega](docs/entrega-etapa-04.md) y
 [cálculos manuales](docs/calculos-etapa-04.md). No se despliega
-ni se conecta un proyecto Firebase real.
+ni se conecta un proyecto Firebase real. La etapa 05 añade calendario, fotografías
+de cierre, comparación sobre universo común explícito y bitácora atribuible.
+[Operación e interpretación histórica](docs/operacion-etapa-05.md),
+[cálculos de dos cortes](docs/calculos-etapa-05.md) y
+[entrega de etapa 05](docs/entrega-etapa-05.md).
 
 ## Arranque y comprobaciones
 
@@ -91,7 +95,8 @@ Las fórmulas y el fixture de referencia están en [cálculos](docs/calculos-eta
 - Sin conciliación con archivos privados, usuarios reales, prueba de carga de
   45/230 cursos, costos medidos, recuperación/retención aprobadas ni validación nube.
 - El mapeo se confirma como JSON por archivo; ZIP de lotes no está implementado.
-  No hay bitácora ni comparaciones entre cortes de etapa 05.
+  Las correspondencias históricas también requieren revisión explícita. No se
+  infiere equivalencia entre ciclos ni entre instancias de curso diferentes.
 - Guardar fuentes privadas fuera del repositorio. Se ignoran `private/`,
   `local-data/`, `.env`, credenciales, libros, logs y resultados temporales.
   Revisar el diff antes de publicar; `.gitignore` no sustituye esa revisión.
