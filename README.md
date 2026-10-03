@@ -1,9 +1,11 @@
-# Seguimiento académico · etapa 03
+# Seguimiento académico · etapa 04
 
 React, TypeScript estricto y Firebase Emulator Suite, en español. La etapa 02
 conserva parsers ODS/XLSX/CSV, normalización, clasificación y resoluciones auditadas.
 La etapa 03 añade acceso institucional, fuentes privadas y carga persistente por
-lotes. **Indicadores y panel analítico corresponden a etapa 04.** No se despliega
+lotes. La etapa 04 añade panel autorizado, selección versionada de actividades,
+conteos y exportaciones reproducibles. [Entrega](docs/entrega-etapa-04.md) y
+[cálculos manuales](docs/calculos-etapa-04.md). No se despliega
 ni se conecta un proyecto Firebase real.
 
 ## Arranque y comprobaciones
@@ -52,6 +54,21 @@ muestra estados por archivo, permite recuperar trabajos, paginar y exportar una
 carrera de una versión fija. Incidencias ambiguas bloquean publicación hasta una
 corrección o mapeo auditado; nunca se adivinan afiliaciones.
 
+## Panel y universo medido
+
+En Panel, elegir ciclo/corte y abrir «Cursos y actividades». Administración marca
+las actividades del reporte publicado y registra el motivo; puede identificar
+docentes mediante asignación explícita. Los totales y categorías no son opciones.
+Guardar conserva revisión y actor; un reporte sustituto requiere revisar de nuevo
+su selección. Los cortes cerrados no permiten cambiarla.
+
+Resumen y detalle usan únicamente versiones publicadas y carreras autorizadas.
+Cambiar vista, filtrar y abrir detalle conserva la fotografía; «Actualizar
+versiones» consulta las publicaciones y selecciones actuales. Exportar entrega todo
+el alcance filtrado de esa misma fotografía, aunque la tabla esté paginada.
+Sin archivo o sin selección se informa ausencia de datos, sin porcentajes ficticios.
+Las fórmulas y el fixture de referencia están en [cálculos](docs/calculos-etapa-04.md).
+
 ## Estructura
 
 | Ruta | Responsabilidad |
@@ -59,7 +76,7 @@ corrección o mapeo auditado; nunca se adivinan afiliaciones.
 | `src/domain` | Reglas académicas puras y contratos Zod de operaciones. |
 | `src/importing` | Parsers Node compartidos con Functions, sin reglas duplicadas en UI. |
 | `src/infrastructure` | SDK explícitamente conectado a emuladores y validación de respuestas. |
-| `src/ui` | Acceso, administración, carga, previsualización y exportación. |
+| `src/ui` | Acceso, administración, carga, previsualización, panel y exportación. |
 | `functions/src` | Autorización, trabajos, staging, transacciones y almacenamiento privado. |
 | `scripts/bootstrap-admin.mjs` | Asignación inicial privilegiada, solo en entorno demo. |
 | `tests/unit`, `tests/emulators`, `tests/e2e` | Dominio/parser, permisos/transacciones y tres identidades sintéticas. |
@@ -67,14 +84,14 @@ corrección o mapeo auditado; nunca se adivinan afiliaciones.
 
 ## Evidencia y límites
 
-- [Entrega y criterios](docs/entrega-etapa-03.md), [modelo implementado](docs/modelo-datos.md)
+- [Entrega y criterios de etapa 04](docs/entrega-etapa-04.md), [modelo implementado](docs/modelo-datos.md)
   y [decisiones](docs/decisiones.md).
 - [Dependencias y bundle](docs/dependencias-y-bundle.md): 14 alertas pendientes,
   sin actualizaciones automáticas ni aumento del umbral de Vite.
 - Sin conciliación con archivos privados, usuarios reales, prueba de carga de
   45/230 cursos, costos medidos, recuperación/retención aprobadas ni validación nube.
 - El mapeo se confirma como JSON por archivo; ZIP de lotes no está implementado.
-  No hay indicadores, bitácora, comparaciones o panel analítico de etapas posteriores.
+  No hay bitácora ni comparaciones entre cortes de etapa 05.
 - Guardar fuentes privadas fuera del repositorio. Se ignoran `private/`,
   `local-data/`, `.env`, credenciales, libros, logs y resultados temporales.
   Revisar el diff antes de publicar; `.gitignore` no sustituye esa revisión.

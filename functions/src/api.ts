@@ -1,6 +1,7 @@
 import { FieldPath } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { dashboard, configureMetrics } from "./metrics";
 import {
   operationSchemas,
   type Operation,
@@ -43,6 +44,12 @@ export async function academicOperation(
   const member = await membership(uid);
   const actor = uid!;
   switch (op) {
+    case "dashboard":
+      return dashboard(raw, actor, false);
+    case "exportDashboard":
+      return dashboard(raw, actor, true);
+    case "configureMetrics":
+      return configureMetrics(raw, actor);
     case "overview": {
       operationSchemas.overview.parse(raw);
       const [cycles, cuts, courses] = await Promise.all([
@@ -187,7 +194,11 @@ export async function academicOperation(
         const cut = await tx.get(ref);
         if (!cut.exists) throw missing();
         if (cut.data()?.status === "closed") return;
+        const expectedCourses = await tx.get(
+          db.collection("courses").where("cycleId", "==", cut.data()!.cycleId),
+        );
         tx.update(ref, {
+          frozenCourseIds: expectedCourses.docs.map((d) => d.id).sort(),
           status: "closed",
           closedBy: actor,
           closedAt: Date.now(),

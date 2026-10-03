@@ -54,6 +54,7 @@ export type Cut = {
   dates: Cycle["dates"];
   parentId: string | null;
   reason: string | null;
+  frozenCourseIds?: string[];
 };
 export type Course = {
   id: string;
