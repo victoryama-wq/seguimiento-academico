@@ -248,3 +248,67 @@ Una exportación corregida conserva la anterior: su ruta incorpora huella del CS
 manifiesto y filtros. Reintentos idénticos reutilizan archivo; no se modifica el
 original ni el corte. Esta corrección no cambia clasificación académica, permisos,
 dependencias ni workflow.
+
+## Etapa 05 · historial y seguimiento
+
+### Decisiones técnicas
+
+- `closures/{hash}.json` conserva manifiesto de fuentes/reportes/mapeos/selecciones,
+  catálogo de instancias y resultado completo de resolución académica. Se escribe
+  antes de comparar nuevamente la captura en una transacción y activar el puntero
+  del cierre. Publicación y selección compiten sobre el mismo documento de corte.
+  Una captura perdedora no se expone ni se elimina automáticamente.
+- Los cortes cerrados usan las afiliaciones materializadas y versiones originales.
+  Un cerrado legado sin materialización exige conciliación explícita: no se
+  inventa una fotografía mediante reglas actuales. Revisiones de corte conservan
+  padre, motivo, actor y fecha, sin sustituir ni copiar silenciosamente el original.
+- Calendario civil cada 21 días, 1–20 cortes por operación, reenvío sin duplicados.
+  Fechas editables con auditoría/CAS antes de aceptar trabajos; después, revisión.
+  Los cursos esperados determinan pendientes dentro de cada alcance autorizado.
+- Comparación solo entre fotografías del mismo ciclo y misma instancia, con
+  correspondencias de actividades explícitas, uno a uno, aprobadas por servidor
+  para administración. Se versionan; páginas/CSV fijan esa versión. Nada se infiere
+  por índice, nombre parecido o igual posición de columna.
+- Intersección normalizada de persona + instancia + pareja aprobada. Ambos extremos
+  se filtran antes de unir. N/G/V/E/Z/D se suman sobre ese mismo universo; diferencia
+  de N/D en puntos porcentuales. Bajas y cambios de universo quedan separados.
+- Política histórica: carreras de la fila histórica intersectadas con membresía
+  vigente. Ganar carrera habilita su historial; revocarla retira acceso incluso
+  con un token previo. Un destino fuera del alcance no se revela en comparación.
+- Bitácora independiente de las notas, en cortes abiertos o cerrados. Al crear un
+  caso se fija transaccionalmente una captura académica autorizada y sus carreras;
+  no se pierde su contexto si cambia el reporte. Lecturas y ediciones comprueban
+  las carreras históricas del caso contra permisos actuales. Una matrícula en el
+  padrón sin evidencia de ese curso no basta para crear un seguimiento.
+- Revisiones inmutables enlazadas, CAS de cabeza y clave de reintento por actor.
+  Mismo ID/contenido retorna la misma revisión; mismo ID con otro contenido falla.
+  Paginación por enlaces anteriores desde la cabeza consultada y exportación
+  completa de esa cabeza, con topes 10 000 revisiones/8 MiB. Fecha civil de contacto
+  separada de timestamp del sistema. El responsable no concede permisos.
+- Nuevos datos privados solo vía Functions. Reglas cliente existentes deniegan
+  colecciones nuevas y fotografías incluso al cliente administrador. Revalidación
+  de membresía en operaciones largas; no se cambian workflow ni protecciones.
+
+### Reglas académicas y pendientes
+
+Sin cambios a interpretación de guiones, ceros, vacíos, inválidos, inscripciones,
+bajas o excepciones. Sin entrega, vencimientos, escalas o mínimos no se calculan
+atrasos, aprobación ni promedios normalizados. Actividades sin pareja no implican
+equivalencia ni recuperación. Mantener dependencias, bundle, conciliación privada,
+piloto, capacidad/costos, retención/recuperación y validación nube pendientes.
+No se envían recordatorios, mensajes ni comunicaciones a responsables.
+
+### Revisión del PR #4: filtros, bajas generales y ausencia de mapeo
+
+- Decisión técnica: `activity` en comparación designa el ID del extremo anterior.
+  Servidor construye un mapa por instancia y extremo a partir de la versión de
+  correspondencias aprobada, antes del conteo y filtro de estado de registro.
+  Este selector interno no es una facultad aceptada desde el navegador; las
+  consultas siguen comprobando carreras vigentes y fotografías autorizadas.
+- Corrección de regla existente: una exclusión general autorizada por baja se
+  vincula por matrícula normalizada aunque no exista fila Moodle posterior.
+  Procedencia conservada; ausencias sin esa evidencia no se convierten en bajas.
+- Decisión técnica: ausencia fijada (`mappingId: null`) y consulta vigente
+  (propiedad omitida) son estados distintos. Páginas/CSV conservan el nulo o ID
+  observado hasta actualización explícita. No se alteran versiones cerradas,
+  fórmulas, reglas académicas ni pendientes de validación privada y nube.

@@ -1,6 +1,8 @@
 import { FieldPath } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { closeHistoricalCut, historyOperation } from "./history";
+import { historyOperations } from "../../src/domain/history-contract";
 import { dashboard, configureMetrics } from "./metrics";
 import {
   operationSchemas,
@@ -43,6 +45,8 @@ export async function academicOperation(
 ): Promise<unknown> {
   const member = await membership(uid);
   const actor = uid!;
+  if (op in historyOperations)
+    return historyOperation(op as keyof typeof historyOperations, raw, actor);
   switch (op) {
     case "dashboard":
       return dashboard(raw, actor, false);
@@ -181,30 +185,14 @@ export async function academicOperation(
           parentId: input.parentId ?? null,
           reason: input.reason ?? null,
           createdBy: actor,
+          createdAt: Date.now(),
         });
       });
       return { ok: true };
     }
     case "closeCut": {
-      admin(member);
       const input = operationSchemas.closeCut.parse(raw);
-      await db.runTransaction(async (tx) => {
-        admin(await membership(actor, tx));
-        const ref = db.doc(`cuts/${input.cutId}`);
-        const cut = await tx.get(ref);
-        if (!cut.exists) throw missing();
-        if (cut.data()?.status === "closed") return;
-        const expectedCourses = await tx.get(
-          db.collection("courses").where("cycleId", "==", cut.data()!.cycleId),
-        );
-        tx.update(ref, {
-          frozenCourseIds: expectedCourses.docs.map((d) => d.id).sort(),
-          status: "closed",
-          closedBy: actor,
-          closedAt: Date.now(),
-        });
-      });
-      return { ok: true };
+      return closeHistoricalCut(input.cutId, actor);
     }
     case "createSource": {
       admin(member);

@@ -120,3 +120,32 @@ Las filas se consultan por carrera en páginas de 200; el servidor agrega y entr
 filtrado. El cierre fija `frozenCourseIds`, además de las fuentes ya fijadas, para
 que cursos posteriores no cambien los esperados de un corte cerrado. Los cierres
 históricos sin ese campo no se reescriben.
+
+## Etapa 05: cierre materializado y seguimiento
+
+| Ruta | Contrato |
+| --- | --- |
+| `cuts/{id}.closurePath` | Puntero activado junto con closedAt/closedBy después de comparar la captura transaccional. |
+| Storage `closures/{hash}.json` | Manifiesto privado, afiliaciones completas, fuentes y reportes/mapeos/selecciones originales. |
+| `calendarAudit/{id}` | Fecha anterior/nueva, motivo, actor y registro del sistema. |
+| `comparisonMappings/{hash}` | Dos cortes, parejas de actividad por instancia, actor/motivo/previous/recordedAt. Inmutable. |
+| `comparisonPointers/{hashPareja}` | Versión vigente, cambiada mediante CAS. |
+| `followUps/{hashObjetivo}` | Persona normalizada/curso/corte, carreras históricas, captura académica inicial y cabeza de revisiones. |
+| `followUpRevisions/{hashActorReintento}` | Datos operativos, autor, registro del sistema, contacto civil, previous, snapshotId y huella de petición. |
+
+La bitácora no escribe filas de calificaciones ni fotografías. El contexto inicial
+del caso puede fijarse con el corte abierto y permanece legible tras cerrarlo,
+siempre sujeto a carreras actualmente autorizadas. Se recorre la cadena de
+revisiones por IDs inmutables, 25 por página, sin índice compuesto ni descarga de
+toda la institución al cliente. Exportar fija la cabeza revisada.
+
+Comparación reutiliza el agregador autorizado de etapa 04 en servidor con la
+fotografía cerrada; forma la intersección explícita y devuelve páginas de 25.
+Un corte cerrado legado sin closurePath no se recalcula con fuentes actuales.
+El índice privado metricSnapshots sigue autorizado por UID/huella de membresía;
+conservar el manifiesto global no conserva permisos históricos de usuarios.
+
+Los límites vigentes de consulta (500 cursos, 10 000 trabajos por corte, 100 cortes
+por calendario) son defensivos; no constituyen prueba de capacidad. Los objetos
+preparados por un cierre que aborta se conservan privados para una futura política
+de retención aprobada. No hay borrado, migración privada ni despliegue automático.

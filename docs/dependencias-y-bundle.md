@@ -95,3 +95,26 @@ En esa comprobación pasaron las 26 pruebas; no se oculta el aviso ni se aumenta
 `setMaxListeners`. El aviso reaparece en la suite ampliada de etapa 04.
 Esta traza no demuestra una fuga sostenida: queda pendiente medir recursos y
 revisar el comportamiento del SDK antes de una prueba de carga/piloto real.
+
+## Medición de etapa 05
+
+Build local: `dist/assets/index-BKb_KUAw.js`, **811 973 bytes** (Vite 811,97 kB,
+gzip estimado 242,94 kB). Historial diferido:
+`dist/assets/History-slWt2K9b.js`, **13 023 bytes** (13,02 kB; gzip 3,92 kB).
+Panel diferido: `Dashboard-Jq8BXNGY.js`, **13 442 bytes**. Continúa la advertencia
+de 500 kB; no se cambia el umbral. Posible impacto: transferencia y trabajo de
+análisis/ejecución inicial; no hay medición de experiencia real o de nube.
+
+No se modificaron dependencias ni lockfile en esta etapa. Las 14 alertas del
+informe previo siguen pendientes de remediación revisada; esto no es un nuevo
+`npm audit` ni una afirmación de que los avisos del registro no hayan cambiado.
+Se conservan pendientes de conciliación privada, piloto 45/230 y validación nube.
+
+### Revisión del PR #4
+
+Build local de las correcciones: `dist/assets/index-CCggGnaR.js`, **811 984 bytes**
+(811,98 kB; gzip estimado 242,94 kB); `History-CjMoDn0V.js`, **13 329 bytes**
+(13,32 kB; gzip 3,99 kB); `Dashboard-4oqylh9p.js`, **13 442 bytes**.
+Persiste la advertencia de 500 kB y su posible impacto en transferencia y
+análisis/ejecución inicial. Sin medición de experiencia real. No se actualizaron
+dependencias ni se ejecutó una nueva auditoría de vulnerabilidades.

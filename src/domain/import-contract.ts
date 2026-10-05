@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
 import { courseFilenameResolutionSchema } from "./academic";
+import { historyOperations } from "./history-contract";
 import { metricOperations } from "./metrics-contract";
 
 export const filenameResolutionSchema = courseFilenameResolutionSchema
@@ -44,6 +45,7 @@ export const calendarInput = z.record(
 );
 export const operationSchemas = {
   ...metricOperations,
+  ...historyOperations,
   overview: z.strictObject({}),
   assignMember: z.strictObject({ uid: keySchema, member: memberSchema }),
   createCycle: z.strictObject({ id: keySchema, dates: calendarInput }),

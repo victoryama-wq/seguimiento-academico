@@ -1,4 +1,8 @@
-import { FieldPath, type Query } from "firebase-admin/firestore";
+import {
+  FieldPath,
+  type Query,
+  type Transaction,
+} from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
@@ -46,7 +50,12 @@ type Entry = {
   received: boolean;
   validated: boolean;
 };
-type Snapshot = { uid: string; scope: string; cut: Cut; entries: Entry[] };
+export type Snapshot = {
+  uid: string;
+  scope: string;
+  cut: Cut;
+  entries: Entry[];
+};
 const missing = () => new HttpsError("not-found", "Datos no disponibles.");
 const conflict = () =>
   new HttpsError("aborted", "La versión cambió. Actualiza y revisa de nuevo.");
@@ -126,6 +135,91 @@ export async function configureMetrics(raw: unknown, uid: string) {
   return { ok: true };
 }
 
+export async function captureMetrics(
+  tx: Transaction,
+  cutId: string,
+  uid: string,
+  member: Member,
+) {
+  const scope = hash(canonical(member));
+  const current = await membership(uid, tx);
+  if (canonical(current) !== canonical(member)) denied();
+  const cut = (await tx.get(db.doc(`cuts/${cutId}`))).data() as Cut | undefined;
+  if (!cut) throw missing();
+  if (cut.closurePath) {
+    const frozen = await jsonFile<{ snapshot: Snapshot }>(cut.closurePath);
+    const data: Snapshot = {
+      uid,
+      scope,
+      cut,
+      entries: frozen.snapshot.entries
+        .filter((e) => e.course.careers.some((c) => allowed(member, c)))
+        .map((e) => ({
+          ...e,
+          course: {
+            ...e.course,
+            careers: e.course.careers.filter((c) => allowed(member, c)),
+          },
+        })),
+    };
+    return { id: hash(canonical(data)), data };
+  }
+  const courses = await tx.get(
+    db.collection("courses").where("cycleId", "==", cut.cycleId).limit(501),
+  );
+  const jobs = await tx.get(
+    db.collection("jobs").where("cutId", "==", cut.id).limit(10001),
+  );
+  if (courses.size > 500 || jobs.size > 10000)
+    throw new HttpsError(
+      "resource-exhausted",
+      "El corte excede el límite de consulta medido; no se muestran totales parciales.",
+    );
+  const entries: Entry[] = [];
+  for (const doc of courses.docs) {
+    const course = doc.data() as Course;
+    if (cut.frozenCourseIds && !cut.frozenCourseIds.includes(course.id))
+      continue;
+    if (!course.careers.some((c) => allowed(member, c))) continue;
+    const ptr = (
+      await tx.get(db.doc(`cuts/${cut.id}/courses/${course.id}`))
+    ).data();
+    const selected = (await tx.get(selectionRef(cut.id, course.id))).data() as
+      Selection | undefined;
+    const job = ptr
+      ? ((await tx.get(db.doc(`jobs/${ptr.versionId}`))).data() as
+          Job | undefined)
+      : undefined;
+    if (
+      ptr &&
+      (!job ||
+        job.status !== "published" ||
+        job.courseId !== course.id ||
+        job.cutId !== cut.id)
+    )
+      throw missing();
+    const courseJobs = jobs.docs.filter((j) => j.data().courseId === course.id);
+    entries.push({
+      course: {
+        ...course,
+        careers: course.careers.filter((c) => allowed(member, c)),
+      },
+      job: job ?? null,
+      selection: selected ?? null,
+      received: courseJobs.some((j) => j.data().status !== "awaiting_upload"),
+      validated: courseJobs.some(
+        (j) =>
+          ["ready", "published"].includes(j.data().status) &&
+          !j.data().blocking,
+      ),
+    });
+  }
+  entries.sort((a, b) => a.course.id.localeCompare(b.course.id));
+  const data: Snapshot = { uid, scope, cut, entries };
+  const id = hash(canonical(data));
+  return { id, data };
+}
+
 async function snapshot(
   input: MetricRequest,
   uid: string,
@@ -146,70 +240,10 @@ async function snapshot(
     const data = await jsonFile<Snapshot>(stored.path);
     return { id: input.snapshotId, data };
   }
-  const captured = await db.runTransaction(async (tx) => {
-    const current = await membership(uid, tx);
-    if (canonical(current) !== canonical(member)) denied();
-    const cut = (await tx.get(db.doc(`cuts/${input.cutId}`))).data() as
-      Cut | undefined;
-    if (!cut) throw missing();
-    const courses = await tx.get(
-      db.collection("courses").where("cycleId", "==", cut.cycleId).limit(501),
-    );
-    const jobs = await tx.get(
-      db.collection("jobs").where("cutId", "==", cut.id).limit(10001),
-    );
-    if (courses.size > 500 || jobs.size > 10000)
-      throw new HttpsError(
-        "resource-exhausted",
-        "El corte excede el límite de consulta medido; no se muestran totales parciales.",
-      );
-    const entries: Entry[] = [];
-    for (const doc of courses.docs) {
-      const course = doc.data() as Course;
-      if (cut.frozenCourseIds && !cut.frozenCourseIds.includes(course.id))
-        continue;
-      if (!course.careers.some((c) => allowed(member, c))) continue;
-      const ptr = (
-        await tx.get(db.doc(`cuts/${cut.id}/courses/${course.id}`))
-      ).data();
-      const selected = (
-        await tx.get(selectionRef(cut.id, course.id))
-      ).data() as Selection | undefined;
-      const job = ptr
-        ? ((await tx.get(db.doc(`jobs/${ptr.versionId}`))).data() as
-            Job | undefined)
-        : undefined;
-      if (
-        ptr &&
-        (!job ||
-          job.status !== "published" ||
-          job.courseId !== course.id ||
-          job.cutId !== cut.id)
-      )
-        throw missing();
-      const courseJobs = jobs.docs.filter(
-        (j) => j.data().courseId === course.id,
-      );
-      entries.push({
-        course: {
-          ...course,
-          careers: course.careers.filter((c) => allowed(member, c)),
-        },
-        job: job ?? null,
-        selection: selected ?? null,
-        received: courseJobs.some((j) => j.data().status !== "awaiting_upload"),
-        validated: courseJobs.some(
-          (j) =>
-            ["ready", "published"].includes(j.data().status) &&
-            !j.data().blocking,
-        ),
-      });
-    }
-    entries.sort((a, b) => a.course.id.localeCompare(b.course.id));
-    const data: Snapshot = { uid, scope, cut, entries };
-    const id = hash(canonical(data));
-    return { id, data };
-  });
+
+  const captured = await db.runTransaction((tx) =>
+    captureMetrics(tx, input.cutId, uid, member),
+  );
   // El manifiesto puede superar 1 MiB en muchos cursos: Firestore solo guarda
   // su índice de autorización. No se expone el índice antes del objeto íntegro.
   const path = `metricSnapshots/${captured.id}.json`;
@@ -235,7 +269,14 @@ async function* pages(query: Query) {
   }
 }
 
-export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
+export async function dashboard(
+  raw: unknown,
+  uid: string,
+  exporting: boolean,
+  full = false,
+  // Internal historical comparison only; never accepted from the API client.
+  activityByCourse?: ReadonlyMap<string, string>,
+) {
   const input = metricOperations.dashboard.parse(raw);
   const member = await membership(uid);
   const snap = await snapshot(input, uid, member);
@@ -411,8 +452,14 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
               "failed-precondition",
               "Observaciones incompletas o duplicadas: revisar versión publicada.",
             );
-          if (f.activity)
-            values = values.filter((v) => v.activityId === f.activity);
+          if (f.activity || activityByCourse)
+            values = values.filter(
+              (v) =>
+                v.activityId ===
+                (activityByCourse
+                  ? activityByCourse.get(course.id)
+                  : f.activity),
+            );
           const counts = emptyCounts();
           values.forEach((v) => addValue(counts, v));
           courseDetails.push({
@@ -478,7 +525,9 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
       versionId: job?.id ?? null,
       selectionId: entry.selection?.id ?? null,
       available: job ? available(job) : [],
-      activities,
+      activities: activityByCourse
+        ? activities.filter((a) => a === activityByCourse.get(course.id))
+        : activities,
       teachers,
       teacherSource: selection?.teachers
         ? "asignacion_administrativa"
@@ -685,6 +734,14 @@ export async function dashboard(raw: unknown, uid: string, exporting: boolean) {
   Object.assign(result, {
     [input.section]: items.slice(input.offset, input.offset + 25),
   });
+  if (full)
+    Object.assign(result, {
+      groups: grouped,
+      details,
+      courses,
+      exclusions,
+      next: null,
+    });
   // Revalidar la membresía al entregar/exportar una consulta larga.
   if (canonical(await membership(uid)) !== canonical(member)) denied();
   if (!exporting) return result;
