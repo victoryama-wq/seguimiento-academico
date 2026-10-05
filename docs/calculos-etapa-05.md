@@ -52,3 +52,25 @@ El fixture de paginación adicional usa 26 actividades por persona en un curso
 compartido: cada coordinación recibe 25+1 observaciones y exporta las 26 de su
 alcance. Revisar la correspondencia no cambia una consulta/exportación que fija
 el ID de la versión anterior.
+
+## Regresiones de revisión del PR #4
+
+El filtro `activity=A` identifica la actividad **del corte anterior**. Se resuelve
+por instancia: compartido A→A2 y solo-a A→A. Para 000SINT01 hay dos observaciones:
+0→0 y 6→9. En ambos extremos N=2, G=V=E=0, Z=1, D=2, cobertura=100 %;
+diferencia=0 puntos. Filtrar además compartido conserva solo 0→0, D=N=Z=1.
+Un ID posterior A2 usado como filtro anterior no tiene pareja: D=0 y cobertura
+nula. No se reutiliza la correspondencia de otro curso con el mismo ID.
+
+La variante `omitWithdrawnRow` elimina 000SINT02 del CSV posterior y conserva
+su baja en fuentes administrativas. El historial reconoce la baja general del
+padrón con su versión/fila; el universo común y el cálculo +25 puntos no cambian.
+Consultar esa persona como coordinación B da D=0 en ambos extremos, sin mejora
+calculada. A no recibe su identidad. Con `omitWithdrawalEvidence` tampoco existe
+evidencia de baja: la misma ausencia se describe como fuera del universo.
+
+En el fixture de 26 actividades, una consulta inicial sin correspondencias tiene
+D=0 y 52 cambios de actividades sin pareja (26 por extremo). Si otra sesión crea
+el mapeo, la consulta fijada con `mappingId: null` conserva esos cambios al paginar
+y exportar. Una actualización explícita obtiene 26 observaciones, paginadas 25+1.
+Los IDs no nulos siguen fijando su versión aunque administración la revise.

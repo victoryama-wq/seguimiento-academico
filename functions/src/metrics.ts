@@ -274,6 +274,8 @@ export async function dashboard(
   uid: string,
   exporting: boolean,
   full = false,
+  // Internal historical comparison only; never accepted from the API client.
+  activityByCourse?: ReadonlyMap<string, string>,
 ) {
   const input = metricOperations.dashboard.parse(raw);
   const member = await membership(uid);
@@ -450,8 +452,14 @@ export async function dashboard(
               "failed-precondition",
               "Observaciones incompletas o duplicadas: revisar versión publicada.",
             );
-          if (f.activity)
-            values = values.filter((v) => v.activityId === f.activity);
+          if (f.activity || activityByCourse)
+            values = values.filter(
+              (v) =>
+                v.activityId ===
+                (activityByCourse
+                  ? activityByCourse.get(course.id)
+                  : f.activity),
+            );
           const counts = emptyCounts();
           values.forEach((v) => addValue(counts, v));
           courseDetails.push({
@@ -517,7 +525,9 @@ export async function dashboard(
       versionId: job?.id ?? null,
       selectionId: entry.selection?.id ?? null,
       available: job ? available(job) : [],
-      activities,
+      activities: activityByCourse
+        ? activities.filter((a) => a === activityByCourse.get(course.id))
+        : activities,
       teachers,
       teacherSource: selection?.teachers
         ? "asignacion_administrativa"

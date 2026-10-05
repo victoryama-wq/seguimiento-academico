@@ -21,7 +21,8 @@ export const correspondence = z.strictObject({
 const pair = { beforeCut: key, afterCut: key };
 const comparisonRequest = z.strictObject({
   ...pair,
-  mappingId: key.optional(),
+  // Omitted: current configuration. Null: preserve the observed absence.
+  mappingId: key.nullable().optional(),
   filters: metricFilters,
   section: z.enum(["common", "changes"]).default("common"),
   offset: z.int().min(0).max(100000).default(0),

@@ -109,3 +109,12 @@ No se modificaron dependencias ni lockfile en esta etapa. Las 14 alertas del
 informe previo siguen pendientes de remediación revisada; esto no es un nuevo
 `npm audit` ni una afirmación de que los avisos del registro no hayan cambiado.
 Se conservan pendientes de conciliación privada, piloto 45/230 y validación nube.
+
+### Revisión del PR #4
+
+Build local de las correcciones: `dist/assets/index-CCggGnaR.js`, **811 984 bytes**
+(811,98 kB; gzip estimado 242,94 kB); `History-CjMoDn0V.js`, **13 329 bytes**
+(13,32 kB; gzip 3,99 kB); `Dashboard-4oqylh9p.js`, **13 442 bytes**.
+Persiste la advertencia de 500 kB y su posible impacto en transferencia y
+análisis/ejecución inicial. Sin medición de experiencia real. No se actualizaron
+dependencias ni se ejecutó una nueva auditoría de vulnerabilidades.

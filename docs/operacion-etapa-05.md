@@ -51,13 +51,30 @@ pareja de actividades aprobada. Devuelve 25 observaciones/cambios por página,
 conteos sobre el universo completo autorizado y CSV íntegro (máximo 8 MiB).
 Páginas y exportación fijan el ID de correspondencia revisado; las fotografías
 cerradas son inmutables. Filtros API reutilizan los de etapa 04; la interfaz de
-comparación ofrece matrícula y carrera, además de elegir cortes.
+comparación ofrece matrícula, carrera y actividad del corte anterior, además de
+elegir cortes. El filtro de actividad se resuelve con las correspondencias
+aprobadas de cada instancia: A puede corresponder a A2 en un curso y a A en otro.
+Se aplica antes de calcular el estado de registro y el universo común; sin pareja
+no se adopta un ID igual ni una actividad distinta.
+
+El contrato de consulta/exportación distingue tres estados de `mappingId`:
+omitirlo consulta la configuración vigente; `null` conserva la ausencia de mapeo
+observada; un ID fija esa versión inmutable. La UI conserva el estado recibido,
+incluido el nulo, al cambiar de página/sección y exportar. **Actualizar
+correspondencias** consulta expresamente la configuración vigente y reinicia la
+vista. Cambiar cortes o filtros inicia otra consulta. Crear o revisar un mapeo
+desde administración muestra explícitamente la versión recién guardada.
 
 Separar bajas, incorporaciones, cambios de afiliación, actividades sin pareja,
 exclusiones y archivos faltantes. “Fuera del universo” no supone baja cuando no
 hay evidencia de baja. Una actividad sin pareja se describe como añadida/retirada
 **o sin correspondencia**, sin deducir si se renombró. Sin denominador o mapeo,
 no comparable. [Ejemplo manual](calculos-etapa-05.md).
+
+Una baja general del padrón (`courseId: null`) sirve como evidencia por matrícula
+autorizada aunque falte la fila del reporte posterior. Conserva versión/fila de
+procedencia; no vuelve a incluir notas ni acredita recuperación. Una exclusión
+de otra identidad, de otro curso o sin evidencia de baja no permite inferirla.
 
 ## Política de acceso histórico
 

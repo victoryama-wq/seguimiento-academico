@@ -70,3 +70,57 @@ Una ejecución manual no sustituye esa evidencia.
   La creación de un objeto preparado que pierde una carrera de cierre puede dejar
   un objeto privado sin puntero; no se borra sin política de retención.
 - Sin merge, despliegue, cambio de protecciones, recordatorios ni etapa 06.
+
+## Correcciones de revisión del PR #4
+
+Base comprobada: `7454698f09de5b6ee212ab306a0f62f072d2d932`, árbol limpio.
+Se conserva la rama y el mismo PR; sin cambios de dependencias, reglas, workflow
+o protecciones. El SHA final y enlace al CI automático se registran en el PR.
+
+1. **Conversación de actividad**: selector por instancia y extremo, obtenido
+   exclusivamente de correspondencias aprobadas. `activity` identifica el corte
+   anterior; A→A2 y A→A pueden coexistir en cursos distintos. Se aplica antes de
+   conteos y estado de registro. Sin pareja, no comparable. API y CSV comprueban
+   alcance de ambos coordinadores y rechazan filtros de carrera/curso ajenos.
+2. **Conversación de baja solo en padrón**: exclusión general (`courseId: null`)
+   reconocida por matrícula autorizada sin fila Moodle posterior. Se conserva
+   procedencia versión/fila y D común vacío; sin evidencia se mantiene ausencia
+   del universo. No se convierten bajas en recuperación ni se incluyen sus notas.
+3. **Hallazgo adicional: ausencia de correspondencias**: contrato de tres estados
+   (omitido/vigente, nulo/ausencia fijada, ID/versión fijada). Paginación y CSV
+   conservan el estado consultado. Dos sesiones E2E demuestran que crear el primer
+   mapeo no cambia la consulta anterior hasta usar Actualizar correspondencias.
+   Se conserva la regresión de versiones no nulas revisadas posteriormente.
+
+Evidencia reproducible: `tests/unit/history.test.ts`,
+`tests/emulators/history-review.test.ts`, `history-pagination.test.ts` y
+`tests/e2e/history.spec.ts`. Cálculos y operación actualizados sin nuevas reglas
+académicas. Las conversaciones solo se resuelven tras verificar las correcciones.
+
+Verificación local de esta revisión (Windows / Node 22.22.0 / Java 21):
+
+| Comando | Resultado de la revisión |
+| --- | --- |
+| `npm run lint` | Aprobado, cero advertencias. |
+| `npm run typecheck` | Aprobado, web y Functions. |
+| `npm run build` | Aprobado; principal 811 984 bytes, aviso de bundle conservado. |
+| `npm run test:unit` | 191 aprobadas, 9 archivos. |
+| `npm run test:emulators` | 59 aprobadas, 8 archivos; 188,51 s de Vitest. |
+| `npm run test:e2e` | 32 aprobadas, escritorio/móvil; repetición completa en 6,1 min. |
+
+La primera ejecución unitaria agotó el tiempo de arranque de un proceso Node en
+una prueba existente; la repetición completa pasó sin cambios a sus límites. En
+emuladores, una nueva aserción esperaba un número HTTP en el mensaje del helper;
+se corrigió para comprobar `PERMISSION_DENIED` y pasó la suite completa. No se
+suprimieron casos ni se relajaron comprobaciones. Persiste el aviso del SDK
+Storage ya documentado en dependencias y bundle.
+
+La primera ejecución E2E obtuvo 31/32: un caso previo del panel agotó sus 5 s
+tras recargar mientras seguía calculando. La repetición completa obtuvo 32/32,
+sin modificar esa prueba, sus límites ni configuración. Los ocho casos E2E de
+historial (cuatro en cada dispositivo) pasaron en ambas ejecuciones.
+
+Se conservan las capturas de la entrega inicial y se añaden seis de esta revisión
+en [evidencia de revisión](evidencias/etapa-05/revision-pr4/README.md). Solo datos
+sintéticos: filtro A, ausencia de mapeo fijada y baja solo en padrón. CI exacto y
+respuestas a ambas conversaciones quedan enlazados en el PR, una vez comprobados.

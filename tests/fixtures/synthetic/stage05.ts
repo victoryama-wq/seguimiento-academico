@@ -12,7 +12,13 @@ export const historyRequest = {
   afterCut: "posterior",
   filters: {},
 };
-export async function seedHistory(configure = true) {
+export async function seedHistory(
+  configure = true,
+  options: {
+    omitWithdrawnRow?: boolean;
+    omitWithdrawalEvidence?: boolean;
+  } = {},
+) {
   const s = await seedMetrics();
   await api("closeCut", { cutId: "metricas" }, s.admin);
   await source(
@@ -25,20 +31,24 @@ export async function seedHistory(configure = true) {
   await source(
     s.admin,
     "withdrawals",
-    JSON.stringify([
-      {
-        identity: "000BAJA",
-        effectiveDate: "2026-09-21",
-        confirmedCutId: "posterior",
-        reason: "Baja sintética previa",
-      },
-      {
-        identity: "000SINT02",
-        effectiveDate: "2026-10-12",
-        confirmedCutId: "posterior",
-        reason: "Baja sintética segundo corte",
-      },
-    ]),
+    JSON.stringify(
+      [
+        {
+          identity: "000BAJA",
+          effectiveDate: "2026-09-21",
+          confirmedCutId: "posterior",
+          reason: "Baja sintética previa",
+        },
+        {
+          identity: "000SINT02",
+          effectiveDate: "2026-10-12",
+          confirmedCutId: "posterior",
+          reason: "Baja sintética segundo corte",
+        },
+      ].filter(
+        (w) => !options.omitWithdrawalEvidence || w.identity !== "000SINT02",
+      ),
+    ),
     {},
     "bajas-posteriores.json",
   );
@@ -63,7 +73,11 @@ export async function seedHistory(configure = true) {
         courseId: "compartido",
         mapping,
         content:
-          "Correo,A,B,C,Futura\n000SINT01@example.invalid,0,7,,-\n000SINT02@example.invalid,10,10,10,10\n000NUEVO@example.invalid,1,2,3,4\n000BAJA@example.invalid,9,9,9,9\ntup-d1@example.invalid,10,10,10,10\n",
+          "Correo,A,B,C,Futura\n000SINT01@example.invalid,0,7,,-\n" +
+          (options.omitWithdrawnRow
+            ? ""
+            : "000SINT02@example.invalid,10,10,10,10\n") +
+          "000NUEVO@example.invalid,1,2,3,4\n000BAJA@example.invalid,9,9,9,9\ntup-d1@example.invalid,10,10,10,10\n",
       },
       {
         name: "2 Curso A 27-1.csv",

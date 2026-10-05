@@ -297,3 +297,18 @@ atrasos, aprobación ni promedios normalizados. Actividades sin pareja no implic
 equivalencia ni recuperación. Mantener dependencias, bundle, conciliación privada,
 piloto, capacidad/costos, retención/recuperación y validación nube pendientes.
 No se envían recordatorios, mensajes ni comunicaciones a responsables.
+
+### Revisión del PR #4: filtros, bajas generales y ausencia de mapeo
+
+- Decisión técnica: `activity` en comparación designa el ID del extremo anterior.
+  Servidor construye un mapa por instancia y extremo a partir de la versión de
+  correspondencias aprobada, antes del conteo y filtro de estado de registro.
+  Este selector interno no es una facultad aceptada desde el navegador; las
+  consultas siguen comprobando carreras vigentes y fotografías autorizadas.
+- Corrección de regla existente: una exclusión general autorizada por baja se
+  vincula por matrícula normalizada aunque no exista fila Moodle posterior.
+  Procedencia conservada; ausencias sin esa evidencia no se convierten en bajas.
+- Decisión técnica: ausencia fijada (`mappingId: null`) y consulta vigente
+  (propiedad omitida) son estados distintos. Páginas/CSV conservan el nulo o ID
+  observado hasta actualización explícita. No se alteran versiones cerradas,
+  fórmulas, reglas académicas ni pendientes de validación privada y nube.

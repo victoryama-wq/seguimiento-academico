@@ -43,7 +43,8 @@ export function compareHistory(
     if (!other) {
       const withdrawal = right.exclusions.find(
         (e) =>
-          e.courseId === row.courseId &&
+          (e.courseId === row.courseId || e.courseId === null) &&
+          identity(row.identity).normalized !== null &&
           identity(e.identity).normalized ===
             identity(row.identity).normalized &&
           /baja/i.test(e.reason),

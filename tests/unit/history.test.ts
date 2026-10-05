@@ -86,6 +86,59 @@ const data = (id: string, states: string[]): Dashboard => ({
   ],
 });
 describe("historial sobre correspondencias explícitas", () => {
+  it("distingue configuración vigente, ausencia fijada y versión explícita", () => {
+    const request = { beforeCut: "a", afterCut: "b", filters: {} };
+    for (const op of ["compareCuts", "exportComparison"] as const) {
+      expect(historyOperations[op].parse(request).mappingId).toBeUndefined();
+      expect(
+        historyOperations[op].parse({ ...request, mappingId: null }).mappingId,
+      ).toBeNull();
+      expect(
+        historyOperations[op].parse({ ...request, mappingId: "version" })
+          .mappingId,
+      ).toBe("version");
+    }
+  });
+  it.each([null, "curso"])(
+    "conserva baja autorizada y procedencia con curso %s sin fila posterior",
+    (courseId) => {
+      const a = data("a", ["guion"]),
+        b = data("b", []);
+      b.details = [];
+      b.exclusions = [
+        {
+          identity: "00001",
+          courseId,
+          careerId: "a",
+          reason: "baja",
+          provenance: "padron-v2:fila:8",
+        },
+      ];
+      const r = compareHistory(a, b, [
+        { courseId: "curso", before: "0", after: "0" },
+      ]);
+      expect(r.changes.find((c) => c.kind === "baja")).toMatchObject({
+        student: "00001",
+        provenance: "padron-v2:fila:8",
+      });
+      expect(r.before.D).toBe(0);
+      expect(r.after.D).toBe(0);
+      expect(r.differencePoints).toBeNull();
+    },
+  );
+  it.each([
+    { identity: "otra", courseId: null, reason: "baja" },
+    { identity: "00001", courseId: "otro", reason: "baja" },
+    { identity: "00001", courseId: null, reason: "especial" },
+  ])("no inventa baja sin evidencia coincidente: %j", (exclusion) => {
+    const a = data("a", ["guion"]),
+      b = data("b", []);
+    b.details = [];
+    b.exclusions = [{ ...exclusion, careerId: "a", provenance: "otra" }];
+    const r = compareHistory(a, b, []);
+    expect(r.changes.some((c) => c.kind === "baja")).toBe(false);
+    expect(r.changes.some((c) => c.kind === "fuera_del_universo")).toBe(true);
+  });
   it("propone fechas civiles cada 21 días, incluyendo cambio de año", () => {
     expect(calendarDates("2026-12-12", 3)).toEqual([
       "2026-12-12",

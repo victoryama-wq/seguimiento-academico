@@ -193,7 +193,8 @@ function Comparison({ overview }: { overview: Overview }) {
   const [before, setBefore] = useState(cuts[0]?.id ?? ""),
     [after, setAfter] = useState(cuts[1]?.id ?? "");
   const [student, setStudent] = useState(""),
-    [career, setCareer] = useState("");
+    [career, setCareer] = useState(""),
+    [activity, setActivity] = useState("");
   const [data, setData] = useState<z.infer<typeof comparisonSchema> | null>(
     null,
   );
@@ -207,6 +208,7 @@ function Comparison({ overview }: { overview: Overview }) {
     filters: {
       ...(student ? { student } : {}),
       ...(career ? { careerId: career } : {}),
+      ...(activity ? { activity } : {}),
     },
   };
   function invalidate() {
@@ -218,6 +220,7 @@ function Comparison({ overview }: { overview: Overview }) {
     part: "common" | "changes" = "common",
     offset = 0,
     mappingId = data?.mappingId,
+    refresh = false,
   ) {
     const current = ++generation.current;
     setBusy(true);
@@ -229,7 +232,7 @@ function Comparison({ overview }: { overview: Overview }) {
           ...input,
           section: part,
           offset,
-          ...(mappingId ? { mappingId } : {}),
+          ...(!refresh && mappingId !== undefined ? { mappingId } : {}),
         },
         comparisonSchema,
       );
@@ -274,7 +277,7 @@ function Comparison({ overview }: { overview: Overview }) {
     try {
       const result = await callAcademic(
         "exportComparison",
-        { ...input, ...(data?.mappingId ? { mappingId: data.mappingId } : {}) },
+        { ...input, ...(data ? { mappingId: data.mappingId } : {}) },
         exported,
       );
       downloadText("comparacion-historica.csv", result.csv);
@@ -346,6 +349,17 @@ function Comparison({ overview }: { overview: Overview }) {
             }}
           />
         </label>
+        <label>
+          Actividad del corte anterior
+          <input
+            value={activity}
+            disabled={busy}
+            onChange={(e) => {
+              setActivity(e.target.value);
+              invalidate();
+            }}
+          />
+        </label>
       </div>
       <button
         disabled={busy || !before || !after || before === after}
@@ -358,6 +372,12 @@ function Comparison({ overview }: { overview: Overview }) {
       {error && <p role="alert">{error}</p>}
       {data && (
         <>
+          <button
+            disabled={busy}
+            onClick={() => void load("common", 0, undefined, true)}
+          >
+            Actualizar correspondencias
+          </button>
           <p>{data.reason}</p>
           <div data-testid="history-totals">
             <p>

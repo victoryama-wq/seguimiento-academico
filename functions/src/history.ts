@@ -43,9 +43,20 @@ async function cutById(id: string) {
   if (!cut) throw missing();
   return cut;
 }
-async function full(cutId: string, uid: string, filters = {}) {
+async function full(
+  cutId: string,
+  uid: string,
+  filters = {},
+  activityByCourse?: ReadonlyMap<string, string>,
+) {
   return dashboardSchema.parse(
-    await dashboard({ cutId, filters, view: "institucion" }, uid, false, true),
+    await dashboard(
+      { cutId, filters, view: "institucion" },
+      uid,
+      false,
+      true,
+      activityByCourse,
+    ),
   );
 }
 async function closedPair(before: string, after: string) {
@@ -249,14 +260,15 @@ export async function historyOperation(
       const input = historyOperations[op].parse(raw);
       await closedPair(input.beforeCut, input.afterCut);
       const mappingId =
-        input.mappingId ??
-        ((
-          await db
-            .doc(
-              `comparisonPointers/${hash(canonical([input.beforeCut, input.afterCut]))}`,
-            )
-            .get()
-        ).data()?.id as string | undefined);
+        input.mappingId !== undefined
+          ? input.mappingId
+          : ((
+              await db
+                .doc(
+                  `comparisonPointers/${hash(canonical([input.beforeCut, input.afterCut]))}`,
+                )
+                .get()
+            ).data()?.id as string | undefined);
       const map = mappingId
         ? (await db.doc(`comparisonMappings/${mappingId}`).get()).data()
         : undefined;
@@ -267,15 +279,20 @@ export async function historyOperation(
           map.afterCut !== input.afterCut)
       )
         throw missing();
-      const [left, right] = await Promise.all([
-        full(input.beforeCut, uid, input.filters),
-        full(input.afterCut, uid, input.filters),
-      ]);
-      const result = compareHistory(
-        left,
-        right,
-        (map?.pairs ?? []) as Correspondence[],
+      // Activity identifies the BEFORE endpoint, scoped to each course instance.
+      // Resolve before aggregating, including any registration-state filter.
+      const pairs = ((map?.pairs ?? []) as Correspondence[]).filter(
+        (p) => !input.filters.activity || p.before === input.filters.activity,
       );
+      const activities = (side: "before" | "after") =>
+        input.filters.activity
+          ? new Map(pairs.map((p) => [p.courseId, p[side]]))
+          : undefined;
+      const [left, right] = await Promise.all([
+        full(input.beforeCut, uid, input.filters, activities("before")),
+        full(input.afterCut, uid, input.filters, activities("after")),
+      ]);
+      const result = compareHistory(left, right, pairs);
       result.mappingId = mappingId ?? null;
       result.mappingAudit = map
         ? `${map.actor}: ${map.reason} (${map.recordedAt})`

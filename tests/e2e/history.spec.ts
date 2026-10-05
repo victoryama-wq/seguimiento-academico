@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, devices, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { seedHistory, historyPairs } from "../fixtures/synthetic/stage05";
 import { people, password } from "../fixtures/synthetic/stage03";
 test.setTimeout(120000);
@@ -156,7 +157,7 @@ test("coordinación A navega por teclado, exporta y conserva una bitácora atrib
 test("coordinación B conserva no comparable, permisos y estados de error", async ({
   page,
 }, info) => {
-  await seedHistory();
+  await seedHistory(true, { omitWithdrawnRow: true });
   await login(page, people.b);
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
@@ -216,4 +217,98 @@ test("coordinación B conserva no comparable, permisos y estados de error", asyn
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("dos sesiones conservan ausencia de correspondencias hasta actualizar y exportan A→A2 por curso", async ({
+  page,
+  browser,
+}, info) => {
+  await seedHistory(false, { omitWithdrawnRow: true });
+  await login(page, people.a);
+  await compare(page);
+  await expect(
+    page.getByText(/No comparable: sin correspondencias aprobadas/),
+  ).toBeVisible();
+  const context = await browser.newContext({
+    ...(info.project.name.includes("mobile")
+      ? devices["Pixel 7"]
+      : devices["Desktop Chrome"]),
+    baseURL: "http://127.0.0.1:4173",
+  });
+  try {
+    const admin = await context.newPage();
+    await login(admin, people.admin);
+    await compare(admin);
+    await admin
+      .getByText("Administrar correspondencias explícitas", { exact: true })
+      .click();
+    await admin
+      .getByLabel("Correspondencias revisadas (JSON)")
+      .fill(JSON.stringify(historyPairs));
+    await admin
+      .getByLabel("Motivo de correspondencia")
+      .fill("Segunda sesión: equivalencias sintéticas revisadas");
+    await admin
+      .getByRole("button", { name: "Guardar correspondencias" })
+      .click();
+    await expect(admin.getByTestId("history-totals")).toContainText(
+      "25 puntos porcentuales",
+    );
+    await page.getByRole("button", { name: "Cambios y exclusiones" }).click();
+    await expect(page.getByTestId("history-totals")).toContainText(
+      "0 observaciones",
+    );
+    await expect(
+      page.getByText(/No comparable: sin correspondencias aprobadas/),
+    ).toBeVisible();
+    const exportCsv = async () => {
+      const pending = page.waitForEvent("download");
+      await page
+        .getByRole("button", { name: "Exportar comparación completa" })
+        .click();
+      const path = await (await pending).path();
+      return readFile(path!, "utf8");
+    };
+    const pinned = await exportCsv();
+    expect(pinned).toContain('"Universo común","0"');
+    expect(pinned).toContain("Sin correspondencia aprobada");
+    await page.screenshot({
+      path: info.outputPath("revision-ausencia-fijada.png"),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Actualizar correspondencias" })
+      .click();
+    await expect(page.getByTestId("history-totals")).toContainText(
+      "4 observaciones",
+    );
+    await page.getByLabel("Actividad del corte anterior").fill("A");
+    await page
+      .getByRole("button", { name: "Comparar cortes", exact: true })
+      .click();
+    await expect(page.getByTestId("history-totals")).toContainText(
+      "2 observaciones",
+    );
+    const filtered = await exportCsv();
+    expect(filtered).toContain('"Universo común","2"');
+    expect(filtered).toContain('"compartido","A","A2"');
+    expect(filtered).toContain('"solo-a","A","A"');
+    expect(filtered.toLowerCase()).not.toContain("000sint02");
+    await page.screenshot({
+      path: info.outputPath("revision-actividad-mapeada.png"),
+      fullPage: true,
+    });
+    await page.getByLabel("Actividad del corte anterior").fill("A2");
+    await page
+      .getByRole("button", { name: "Comparar cortes", exact: true })
+      .click();
+    await expect(page.getByTestId("history-totals")).toContainText(
+      "0 observaciones",
+    );
+    await expect(
+      page.getByText(/No comparable: sin correspondencias aprobadas/),
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
 });

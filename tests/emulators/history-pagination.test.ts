@@ -71,6 +71,11 @@ it("pagina el universo común de curso compartido, exporta completo y protege ma
   }
   const pair = { beforeCut: "hist-a", afterCut: "hist-b" };
   const request = { ...pair, filters: {} };
+  const unmapped = comparisonSchema.parse(
+    await api("compareCuts", { ...request, section: "changes" }, s.a),
+  );
+  expect(unmapped.mappingId).toBeNull();
+  expect(unmapped.next).toBe(25);
   const configured = (await api(
     "configureComparison",
     {
@@ -85,6 +90,26 @@ it("pagina el universo común de curso compartido, exporta completo y protege ma
     },
     s.admin,
   )) as { id: string };
+  // A second (administrative) session created a mapping after the first query.
+  const pinned = { ...request, mappingId: unmapped.mappingId };
+  const oldPage = comparisonSchema.parse(
+    await api(
+      "compareCuts",
+      { ...pinned, section: "changes", offset: unmapped.next },
+      s.a,
+    ),
+  );
+  expect(oldPage.mappingId).toBeNull();
+  expect(oldPage.before.D).toBe(0);
+  expect(oldPage.total).toBe(unmapped.total);
+  expect(oldPage.changes).toHaveLength(25);
+  const oldExport = (await api("exportComparison", pinned, s.a)) as {
+    csv: string;
+  };
+  expect(oldExport.csv).toContain('"Universo común","0"');
+  expect(oldExport.csv).toContain("Sin correspondencia aprobada");
+  expect(oldExport.csv).not.toContain(configured.id);
+  expect(oldExport.csv.toLowerCase()).not.toContain('"000sint01","compartido"');
   for (const session of [s.a, s.b]) {
     const first = comparisonSchema.parse(
       await api("compareCuts", request, session),
@@ -143,6 +168,17 @@ it("pagina el universo común de curso compartido, exporta completo y protege ma
   expect(
     comparisonSchema.parse(await api("compareCuts", request, s.a)).universe,
   ).toBe(1);
+  const previousExport = (await api(
+    "exportComparison",
+    { ...request, mappingId: configured.id },
+    s.a,
+  )) as { csv: string };
+  expect(
+    previousExport.csv
+      .toLowerCase()
+      .split("\r\n")
+      .filter((row) => row.startsWith('"000sint01","compartido"')),
+  ).toHaveLength(26);
   const cut = (await stores().db.doc("cuts/hist-a").get()).data()!;
   const env = await initializeTestEnvironment({
     projectId: "demo-seguimiento-ci",
