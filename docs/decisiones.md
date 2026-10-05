@@ -312,3 +312,39 @@ No se envían recordatorios, mensajes ni comunicaciones a responsables.
   (propiedad omitida) son estados distintos. Páginas/CSV conservan el nulo o ID
   observado hasta actualización explícita. No se alteran versiones cerradas,
   fórmulas, reglas académicas ni pendientes de validación privada y nube.
+
+## Etapa 06 — decisiones técnicas y aceptaciones pendientes
+
+- Se conserva la arquitectura y los contratos existentes. El piloto usa las APIs
+  callable y el worker real de emuladores, con cinco membresías de coordinador,
+  50 personas sintéticas y dos cortes. Veinte archivos por lote como máximo;
+  no se elevan límites de carga, filas, celdas, exportación ni recursos Functions.
+- Cuello de botella observado: panel institucional de 230 cursos con 17,7–19,6 s
+  y cierres de 17,4–17,7 s en la base. `captureMetrics` releía trabajos ya consultados
+  y esperaba tres lecturas por curso. Ahora reutiliza esa consulta transaccional,
+  indexa trabajos por curso y agrupa punteros/selecciones en bloques de 400 refs.
+  Conserva la misma transacción, el control de membresía vigente y el CAS del cierre;
+  no añade caché global ni cambia denominadores. La repetición y las regresiones
+  de concurrencia son condición de validación; no se promete latencia de nube.
+- CSV/XLSX/ODS se generan determinísticamente; un docente no entra a denominadores.
+  Las cinco actividades son cero, número, guion, vacío e inválido. No se calcula
+  rendimiento con el número de cursos sin declarar densidad y bytes.
+- Telemetría optativa `PILOT_METRICS=1` funciona solo en demo completo; registra
+  operación, tiempo y memoria antes/después, nunca argumentos, respuestas,
+  identidades, tokens ni nombres de archivo. RSS muestreada no es pico continuo.
+  Emuladores no miden operaciones facturadas de nube ni su capacidad productiva.
+- La prueba de interrupción inyecta estado abandonado y fila parcial mediante SDK
+  privilegiado del fixture demo. Después ejecuta reintento y publicación reales.
+  Se distingue de matar procesos del SO o ensayar una caída de servicio en nube.
+- Conciliación privada: solo lectura con parsers aprobados, comparación de hashes
+  antes/después y reporte local ignorado. Coincidencia de identidad no significa
+  afiliación base resuelta; se conservan las inscripciones múltiples. Las columnas
+  candidatas no se convierten en actividades seleccionadas de un corte.
+- Se prepara configuración separada de staging, sin proyecto por defecto ni
+  credenciales. El usuario confirma que aún se creará Firebase. Activación explícita
+  de runtime/bucket/región, IAM, bootstrap y validación real quedan pendientes del
+  destino; no se debilitan guardias demo para simular una publicación.
+- Retención y presupuestos son propuestas documentadas; no TTL, purga, lifecycle,
+  minInstances reservado ni backup remoto activado. Restauración de nube y RPO/RTO
+  todavía no están probados. Las decisiones académicas no se sustituyen por estas
+  decisiones técnicas.

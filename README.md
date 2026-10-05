@@ -1,4 +1,4 @@
-# Seguimiento académico · etapa 05
+# Seguimiento académico · etapa 06
 
 React, TypeScript estricto y Firebase Emulator Suite, en español. La etapa 02
 conserva parsers ODS/XLSX/CSV, normalización, clasificación y resoluciones auditadas.
@@ -11,6 +11,15 @@ de cierre, comparación sobre universo común explícito y bitácora atribuible.
 [Operación e interpretación histórica](docs/operacion-etapa-05.md),
 [cálculos de dos cortes](docs/calculos-etapa-05.md) y
 [entrega de etapa 05](docs/entrega-etapa-05.md).
+
+La etapa 06 añade piloto sintético reproducible de 45/230 cursos, mediciones,
+recuperación y preparación revisable de publicación. Consulte la
+[entrega y aceptaciones](docs/entrega-etapa-06.md),
+[operación y staging](docs/operacion-etapa-06.md),
+[costos y retención propuestos](docs/costos-y-retencion-etapa-06.md) y
+[diagnóstico actualizado de dependencias](docs/dependencias-etapa-06.md).
+El proyecto Firebase de destino no existe todavía; el runtime sigue limitado a
+demo. La conciliación privada provisional no sustituye aceptación académica.
 
 ## Arranque y comprobaciones
 
@@ -26,9 +35,11 @@ npm run build
 npx --no-install playwright install chromium
 npm run test:emulators
 npm run test:e2e
+npm run test:pilot
+npm run verify:hosting
 ```
 
-Los dos últimos comandos son **secuenciales** y arrancan entornos limpios con
+Los comandos de emuladores, E2E y piloto son **secuenciales** y arrancan entornos limpios con
 `demo-seguimiento-ci`. No reutilizan procesos ni credenciales del equipo. Puertos:
 Auth 9099, Firestore 8080, Storage 9199, Functions 5001, hub 4400 y Vite E2E 4173.
 En Linux CI se instala Chromium con `--with-deps`. El check `ci` exige calidad e

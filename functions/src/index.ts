@@ -5,6 +5,7 @@ import { z } from "zod";
 import { academicOperation, requestSchema } from "./api";
 import { processJob } from "./jobs";
 import { localOnly } from "./store";
+import { pilotMeasure } from "./pilot-telemetry";
 
 export const academicApi = onCall(
   {
@@ -18,7 +19,9 @@ export const academicApi = onCall(
     localOnly();
     try {
       const data = requestSchema.parse(request.data);
-      return await academicOperation(data.op, data.input, request.auth?.uid);
+      return await pilotMeasure(data.op, () =>
+        academicOperation(data.op, data.input, request.auth?.uid),
+      );
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       if (error instanceof z.ZodError)
@@ -43,7 +46,7 @@ export const importWorker = onDocumentWritten(
   },
   async (event) => {
     if (event.data?.after.data()?.status === "queued")
-      await processJob(event.params.jobId);
+      await pilotMeasure("worker", () => processJob(event.params.jobId));
   },
 );
 

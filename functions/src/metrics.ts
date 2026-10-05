@@ -176,20 +176,40 @@ export async function captureMetrics(
       "El corte excede el límite de consulta medido; no se muestran totales parciales.",
     );
   const entries: Entry[] = [];
-  for (const doc of courses.docs) {
-    const course = doc.data() as Course;
-    if (cut.frozenCourseIds && !cut.frozenCourseIds.includes(course.id))
-      continue;
-    if (!course.careers.some((c) => allowed(member, c))) continue;
-    const ptr = (
-      await tx.get(db.doc(`cuts/${cut.id}/courses/${course.id}`))
-    ).data();
-    const selected = (await tx.get(selectionRef(cut.id, course.id))).data() as
-      Selection | undefined;
-    const job = ptr
-      ? ((await tx.get(db.doc(`jobs/${ptr.versionId}`))).data() as
-          Job | undefined)
-      : undefined;
+  const authorized = courses.docs
+    .map((doc) => doc.data() as Course)
+    .filter(
+      (course) =>
+        (!cut.frozenCourseIds || cut.frozenCourseIds.includes(course.id)) &&
+        course.careers.some((c) => allowed(member, c)),
+    );
+  // Reutilizar la consulta de trabajos dentro de la misma transacción; no volver
+  // a leer cada trabajo ni recorrer todos los trabajos por cada asignatura.
+  const byId = new Map(jobs.docs.map((doc) => [doc.id, doc.data() as Job]));
+  const byCourse = new Map<string, Job[]>();
+  for (const job of byId.values()) {
+    if (!job.courseId) continue;
+    const group = byCourse.get(job.courseId) ?? [];
+    group.push(job);
+    byCourse.set(job.courseId, group);
+  }
+  const refs = authorized.flatMap((course) => [
+    db.doc(`cuts/${cut.id}/courses/${course.id}`),
+    selectionRef(cut.id, course.id),
+  ]);
+  const metadata = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+  // Lecturas agrupadas, acotadas y aún transaccionales: no cache global ni
+  // manifiestos mezclados cuando publicación/selección compiten con el cierre.
+  for (let i = 0; i < refs.length; i += 400) {
+    for (const doc of await tx.getAll(...refs.slice(i, i + 400)))
+      metadata.set(doc.ref.path, doc);
+  }
+  for (const course of authorized) {
+    const ptr = metadata.get(`cuts/${cut.id}/courses/${course.id}`)!.data();
+    const selected = metadata
+      .get(selectionRef(cut.id, course.id).path)!
+      .data() as Selection | undefined;
+    const job = ptr ? byId.get(ptr.versionId as string) : undefined;
     if (
       ptr &&
       (!job ||
@@ -198,7 +218,7 @@ export async function captureMetrics(
         job.cutId !== cut.id)
     )
       throw missing();
-    const courseJobs = jobs.docs.filter((j) => j.data().courseId === course.id);
+    const courseJobs = byCourse.get(course.id) ?? [];
     entries.push({
       course: {
         ...course,
@@ -206,11 +226,9 @@ export async function captureMetrics(
       },
       job: job ?? null,
       selection: selected ?? null,
-      received: courseJobs.some((j) => j.data().status !== "awaiting_upload"),
+      received: courseJobs.some((j) => j.status !== "awaiting_upload"),
       validated: courseJobs.some(
-        (j) =>
-          ["ready", "published"].includes(j.data().status) &&
-          !j.data().blocking,
+        (j) => ["ready", "published"].includes(j.status) && !j.blocking,
       ),
     });
   }
