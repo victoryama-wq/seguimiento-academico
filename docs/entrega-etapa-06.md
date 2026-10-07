@@ -215,3 +215,19 @@ por sí solo fuga persistente; las muestras RSS y la limitación están publicad
 Detalles operativos en [manual](operacion-etapa-06.md),
 [costos/retención](costos-y-retencion-etapa-06.md). Piloto institucional, aceptación
 privada completa, destino y validación en nube siguen separados del éxito sintético.
+
+## Actualización de decisiones académicas aprobadas
+
+La implementación posterior en este mismo PR se documenta en
+[integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
+Ese informe sustituye los pendientes históricos de catálogo/afiliación ya resueltos:
+36 registros de catálogo, seis responsables, 2.873 inscripciones, 2.665 identidades,
+2.661 principales y cuatro personas excluidas. Las 73 revisiones están resueltas;
+hay dos observaciones nuevas de fecha que el usuario indicó mantener pendientes.
+El paquete real sigue sin publicarse. No se incorporan datos privados a esta entrega.
+
+Resultados de la ampliación: 211 unitarias, 64 de emuladores, 34 E2E, dos escenarios
+de piloto y guardia Hosting aprobados; lint, tipos y build aprobados. Bundle actual:
+`index-Bu7tHCvu.js`, 819.095 bytes, gzip 244,70 kB. Las mediciones anteriores se
+conservan como antecedentes. Nuevas capturas, cálculos, procedimiento y límites en
+[integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).

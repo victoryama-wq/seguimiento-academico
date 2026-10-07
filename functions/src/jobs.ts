@@ -4,6 +4,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { FieldPath } from "firebase-admin/firestore";
 import {
   applySupplement,
+  identity,
   catalogSchema,
   contextSchema,
   courseFilename,
@@ -18,6 +19,12 @@ import {
   resolveDuplicateRows,
 } from "../../src/importing/mapping";
 import { prepareRoster } from "../../src/importing/roster";
+import {
+  resolveAcademicPackage,
+  validateAcademicPackage,
+} from "../../src/importing/decisions";
+import type { Observation } from "../../src/domain/decision-package";
+import { accumulateRows } from "../../src/domain/accumulation";
 import {
   type Member,
   type RowView,
@@ -54,6 +61,7 @@ export type Cut = {
   dates: Cycle["dates"];
   parentId: string | null;
   reason: string | null;
+  carryCutId?: string;
   frozenCourseIds?: string[];
   closurePath?: string;
 };
@@ -65,6 +73,12 @@ export type Course = {
   careers: string[];
 };
 export type Job = {
+  sources?: SourceRefs;
+  cumulative?: boolean;
+  activityIds?: string[];
+  carryVersion?: string | null;
+  revalidationOf?: string;
+  revalidatedBy?: string;
   id: string;
   kind: SourceKind | "report";
   cycleId: string;
@@ -110,7 +124,8 @@ export function jobView(job: Job) {
     replaces: job.expected,
   };
 }
-type Artifact = {
+export type Artifact = {
+  observations?: Observation[];
   filename?:
     | ReturnType<typeof resolveCourseFilename>
     | ReturnType<typeof courseFilename>;
@@ -127,6 +142,29 @@ type Artifact = {
 };
 async function administrative(job: Job, bytes: Buffer): Promise<Artifact> {
   const version = job.id;
+  if (job.kind === "academicPackage") {
+    const p = validateAcademicPackage(
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+      job.cycleId,
+    );
+    const resolved = resolveAcademicPackage(
+      p,
+      job.cycleId,
+      "preview",
+      "9999-12-31",
+      version,
+      job.uid,
+    );
+    return {
+      data: p,
+      source: { sha256: hash(bytes), parserVersion: "academic-package/1" },
+      count: p.enrollments.length,
+      observations: resolved.observations,
+      issues: resolved.observations
+        .filter((o) => o.state === "pendiente")
+        .map((o) => ({ code: o.reason, refs: [o.id] })),
+    };
+  }
   if (["withdrawals", "exceptions"].includes(job.kind)) {
     if (!job.file.name.endsWith(".json")) throw new InvalidSource();
     const input: unknown = JSON.parse(
@@ -245,6 +283,18 @@ export async function academicSnapshot(
       source.artifact as string,
     );
   }
+  if (loaded.academicPackage) {
+    const id = cut.sources.academicPackage!;
+    const source = (await db.doc(`sources/${id}`).get()).data()!;
+    return resolveAcademicPackage(
+      loaded.academicPackage.data,
+      cut.cycleId,
+      cut.id,
+      cut.date,
+      id,
+      String(source.approvedBy),
+    ).academic;
+  }
   const supplemented = applySupplement(
     loaded.roster?.data,
     loaded.supplement?.data ?? [],
@@ -270,7 +320,8 @@ async function report(
   bytes: Buffer,
   token: string,
 ): Promise<Artifact> {
-  const cut = (await db.doc(`cuts/${job.cutId}`).get()).data() as Cut;
+  const currentCut = (await db.doc(`cuts/${job.cutId}`).get()).data() as Cut;
+  const cut = { ...currentCut, sources: job.sources ?? currentCut.sources };
   const course = (
     await db.doc(`courses/${job.courseId}`).get()
   ).data() as Course;
@@ -308,9 +359,37 @@ async function report(
     version: job.id,
   });
   const academic = await academicSnapshot(cut);
+  const observations: Observation[] = [];
+  if (cut.sources.academicPackage) {
+    const source = (
+      await db.doc(`sources/${cut.sources.academicPackage}`).get()
+    ).data()!;
+    const stored = await jsonFile<Artifact>(source.artifact as string);
+    const all = resolveAcademicPackage(
+      stored.data,
+      cut.cycleId,
+      cut.id,
+      cut.date,
+      cut.sources.academicPackage,
+      String(source.approvedBy),
+    ).observations;
+    const reported = new Set(
+      [...parsed.accepted, ...parsed.unresolved].map(
+        (r) => r.person.normalized,
+      ),
+    );
+    observations.push(
+      ...all.filter((o) => reported.has(identity(o.identity).normalized)),
+    );
+  }
   const persons = new Map(academic.persons.map((p) => [p.identity, p]));
   const enrollments = new Map(academic.enrollments.map((e) => [e.id, e]));
   const issues = [...parsed.issues];
+  issues.push(
+    ...observations
+      .filter((o) => o.state === "pendiente")
+      .map((o) => ({ code: "observacion_academica_pendiente", refs: [o.id] })),
+  );
   const issuesByRow = new Map<string, string[]>();
   for (const issue of parsed.issues)
     for (const ref of issue.refs) {
@@ -326,7 +405,7 @@ async function report(
       reason: "docente",
     }),
   );
-  const rows: RowView[] = [];
+  let rows: RowView[] = [];
   for (const row of [...parsed.accepted, ...parsed.unresolved]) {
     const person = row.person.normalized
       ? persons.get(row.person.normalized)
@@ -348,7 +427,9 @@ async function report(
         identity: String(row.person.original),
         careerId: careers.length === 1 ? careers[0]! : null,
         row: row.row,
-        reason: [...new Set(records.map((e) => e.kind))].join(", "),
+        reason: [
+          ...new Set(records.map((e) => e.exclusionReason ?? e.kind)),
+        ].join(", "),
       });
       continue;
     }
@@ -357,9 +438,52 @@ async function report(
         code: "afiliacion_requiere_revision_administrativa",
         refs: [String(row.row)],
       });
+      observations.push({
+        id: `report-${row.row}`,
+        identity: String(row.person.original ?? ""),
+        careerId: base?.careerId ?? null,
+        group: base?.group ?? "",
+        file: table.source.originalName,
+        sheet: table.source.sheet,
+        row: row.row,
+        original: row.person.original,
+        effective: null,
+        reason: "Identidad, carrera o afiliación principal sin resolver",
+        rule: "atribucion",
+        state: "pendiente",
+        action:
+          "Solicitar resolución administrativa o cargar archivo corregido",
+        sourceVersion: job.id,
+      });
       continue;
     }
     const rowIssues = issuesByRow.get(String(row.row)) ?? [];
+    for (const code of rowIssues)
+      observations.push({
+        id: `report-${row.row}-${code}`,
+        identity: String(row.person.original),
+        careerId: base.careerId,
+        group: base.group,
+        file: table.source.originalName,
+        sheet: table.source.sheet,
+        row: row.row,
+        original: row.values.map((v) => ({
+          activityId: v.activityId,
+          raw: v.grade.raw,
+        })),
+        effective: row.values.map((v) => ({
+          activityId: v.activityId,
+          state: v.grade.state,
+        })),
+        reason: code,
+        rule: "clasificacion_sin_coercion",
+        state: code === "calificacion_invalida" ? "resuelto" : "pendiente",
+        action:
+          code === "calificacion_invalida"
+            ? "Conservar estado inválido o cargar una corrección"
+            : "Corregir archivo o solicitar resolución administrativa",
+        sourceVersion: job.id,
+      });
     const value: RowView = {
       id: String(row.row).padStart(6, "0"),
       identity: String(row.person.original),
@@ -369,6 +493,23 @@ async function report(
         activityId: v.activityId,
         state: v.grade.state,
         raw: v.grade.raw,
+        sourceVersion: job.id,
+        ...(parsed.mapping.columns.find((c) => c.activityId === v.activityId)
+          ?.additional !== undefined
+          ? {
+              additional: parsed.mapping.columns.find(
+                (c) => c.activityId === v.activityId,
+              )!.additional,
+            }
+          : {}),
+        ...(parsed.mapping.columns.find((c) => c.activityId === v.activityId)
+          ?.unit !== undefined
+          ? {
+              unit: parsed.mapping.columns.find(
+                (c) => c.activityId === v.activityId,
+              )!.unit,
+            }
+          : {}),
       })),
       issues: rowIssues,
     };
@@ -376,16 +517,76 @@ async function report(
       throw new InvalidSource();
     rows.push(value);
   }
+  if (job.cumulative && job.carryVersion) {
+    const previous = await getJob(job.carryVersion);
+    if (
+      previous.status !== "published" ||
+      previous.courseId !== job.courseId ||
+      previous.cycleId !== job.cycleId ||
+      !previous.token
+    )
+      throw new InvalidSource();
+    const before: RowView[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await rowsPage(
+        previous,
+        { role: "admin", active: true, careers: [] },
+        undefined,
+        cursor,
+      );
+      before.push(...page.rows);
+      if (before.length > 10000) throw new InvalidSource();
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+    const eligible: RowView[] = [];
+    for (const row of before) {
+      const person = persons.get(identity(row.identity).normalized ?? "");
+      const base = person?.baseEnrollmentId
+        ? enrollments.get(person.baseEnrollmentId)
+        : undefined;
+      if (base && course.careers.includes(base.careerId))
+        eligible.push({ ...row, careerId: base.careerId });
+      else {
+        const records =
+          person?.enrollmentIds.map((id) => enrollments.get(id)!) ?? [];
+        if (
+          records.length &&
+          records.every((e) =>
+            ["baja", "excluida", "practica", "docente"].includes(e.kind),
+          )
+        )
+          excluded.push({
+            identity: row.identity,
+            careerId: row.careerId,
+            row: row.row,
+            reason: [
+              ...new Set(records.map((e) => e.exclusionReason ?? e.kind)),
+            ].join(", "),
+          });
+        else
+          issues.push({
+            code: "afiliacion_acumulada_requiere_revision",
+            refs: [row.id],
+          });
+      }
+    }
+    rows = accumulateRows(eligible, rows);
+  }
   for (let i = 0; i < rows.length; i += 200) {
     const batch = db.batch();
-    for (const row of rows.slice(i, i + 200))
+    for (const row of rows.slice(i, i + 200)) {
+      if (Buffer.byteLength(JSON.stringify(row)) > 128 * 1024)
+        throw new InvalidSource();
       batch.create(
         db.doc(`jobs/${job.id}/attempts/${token}/rows/${row.id}`),
         row,
       );
+    }
     await batch.commit();
   }
   return {
+    observations,
     filename: fileCourse,
     data: {
       mapping: parsed.mapping,
@@ -393,6 +594,10 @@ async function report(
       sources: cut.sources,
       teachers: parsed.teachers,
       academicIssues: academic.issues,
+      activityIds: [
+        ...new Set(rows.flatMap((r) => r.values.map((v) => v.activityId))),
+      ],
+      carryVersion: job.carryVersion ?? null,
     },
     source: table.source,
     issues,
@@ -461,6 +666,12 @@ export async function processJob(id: string) {
       tx.update(ref, {
         status: "ready",
         artifact: path,
+        ...(job.kind === "report" && job.cumulative
+          ? {
+              activityIds: (artifact.data as { activityIds: string[] })
+                .activityIds,
+            }
+          : {}),
         // Una nota inválida es un estado publicable, no una identidad sin resolver.
         // Todo código nuevo/desconocido sigue bloqueando por defecto.
         blocking: artifact.issues.some(
@@ -524,10 +735,27 @@ export async function previewJob(
   member: Member,
   careerId?: string,
   cursor?: string,
+  observationOffset = 0,
 ) {
   const page = await rowsPage(job, member, careerId, cursor);
   const artifact = job.artifact ? await jsonFile<Artifact>(job.artifact) : null;
+  const observations = (artifact?.observations ?? []).filter(
+    (o) =>
+      member.role === "admin" ||
+      (o.careerId !== null &&
+        o.careerId === careerId &&
+        member.careers.includes(o.careerId)),
+  );
   return {
+    observations: observations.slice(
+      observationOffset,
+      observationOffset + 100,
+    ),
+    observationsCount: observations.length,
+    observationNext:
+      observationOffset + 100 < observations.length
+        ? observationOffset + 100
+        : null,
     ...page,
     filename:
       member.role === "admin" && job.kind === "report"

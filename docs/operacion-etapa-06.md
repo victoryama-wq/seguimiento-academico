@@ -108,3 +108,12 @@ exportaciones de coordinadores pasan por Functions y permisos vigentes.
 En esta entrega solo se ejercitan recuperaciones sintéticas en emuladores y
 regresiones de navegador. Reversión de release, restauración completa y validación
 de cinco coordinaciones reales en nube permanecen pendientes.
+
+### Catálogo, decisiones y acumulación aprobados
+
+Consultar [el procedimiento actualizado](integracion-decisiones-aprobadas.md) para
+importar el paquete privado en emuladores, revisar incidencias, registrar una
+corrección, publicar su fuente y volver a validar reportes. No mezclar el paquete
+completo con la anexión del suplemento ya integrado. Ninguna etiqueta de responsable
+crea una cuenta o permiso. El calendario de Virtual y dos observaciones nuevas de
+fecha permanecen pendientes; el paquete real no está autorizado para publicación.

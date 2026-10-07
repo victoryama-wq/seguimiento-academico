@@ -139,3 +139,17 @@ Bitácora por estudiante/curso/corte: observación, responsable, fecha de contac
 - Retención, recuperación, presupuesto y tamaño real de archivos antes de producción.
 
 No inventar valores para completar esos pendientes. Implementar estados «por configurar» y continuar con el desarrollo verificable.
+
+## Actualización aprobada del catálogo y cargas
+
+Las reglas vigentes recibidas en octubre de 2026 se detallan en
+[integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
+La referencia original a cinco coordinaciones describe el dimensionamiento inicial;
+no es un límite de autorización. El catálogo revisado tiene seis responsables y
+las membresías del sistema se asignan por separado.
+
+Para el perfil aprobado, Escolarizado sigue bloques 1–2, 3–5, 6–7 y Ejecutivo
+unidades semanales, por semana vencida y con fechas flexibles. Virtual tiene horario
+confirmado, pero calendario pendiente. Las cargas parciales acumulan datos por ID
+estable de actividad sin convertir ausencias en cero. La prioridad de excepciones
+individuales se limita a su inscripción y ciclo; no se alteran cortes cerrados.

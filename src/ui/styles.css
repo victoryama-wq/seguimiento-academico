@@ -496,6 +496,7 @@ footer {
 .access-card button { padding: 10px 16px; border: 1px solid #236959; border-radius: 6px; color: #174c3f; background: #f2f8f5; cursor: pointer; }
 .access-card button:disabled { opacity: .55; cursor: default; }
 .admin-form, .upload-item, .preview { margin-top: 20px; padding: 16px; border: 1px solid #dce4e3; border-radius: 8px; }
+.preview { min-width: 0; overflow-wrap: anywhere; }
 .admin-form summary { cursor: pointer; font-weight: 600; }
 .job-list { list-style: none; padding: 0; }
 .job-list li { padding: 16px 0; border-bottom: 1px solid #dce4e3; overflow-wrap: anywhere; }

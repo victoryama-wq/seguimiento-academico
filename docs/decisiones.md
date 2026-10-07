@@ -348,3 +348,40 @@ No se envían recordatorios, mensajes ni comunicaciones a responsables.
   minInstances reservado ni backup remoto activado. Restauración de nube y RPO/RTO
   todavía no están probados. Las decisiones académicas no se sustituyen por estas
   decisiones técnicas.
+
+## Integración de decisiones aprobadas — 7 de octubre de 2026
+
+La nueva solicitud autoriza implementar las decisiones vigentes y el flujo de
+correcciones dentro del PR #5. Sustituye el alcance anterior de solo preparar
+matrices; los datos identificables y las resoluciones individuales siguen privados.
+
+- Regla académica aprobada: perfil `approved-2026-10`, catálogo oficial y plan
+  conservado, normalización de grupos y prioridad individual explícita. El calendario
+  se configura por ciclo. Las resoluciones posteriores delimitan o sustituyen las
+  anteriores; DEC-30 no se convierte en una prioridad global de fecha sobre CA.
+- Decisión técnica: paquete administrativo completo, JSON validado, con originales,
+  huellas por contenido+ocurrencia, catálogo, configuración, aprobaciones y revisiones.
+  El adaptador local evita recapturar las resoluciones. Las membresías siguen siendo
+  asignaciones explícitas en servidor; los responsables del catálogo no son cuentas.
+- Decisión técnica: correcciones como propuestas inmutables con referencia al original,
+  actor real, motivo, fecha y auditoría. Los cortes abiertos sin resultados pueden
+  adoptar fuentes nuevas mediante comparación de la versión esperada. Los demás
+  requieren una revisión atribuible. La revalidación conserva bytes y autoría de
+  resoluciones anteriores y publica únicamente contra las fuentes revisadas.
+- Regla académica aprobada: cargas acumulativas y flexibles; conservar filas/columnas
+  ausentes, separar todos los estados, adicionales computables solo con calificación
+  numérica. La selección de actividades sigue siendo explícita por publicación.
+  Un corte puede arrastrar una fotografía cerrada del mismo ciclo (`carryCutId`).
+- Regla académica pendiente: calendario específico de Virtual; horario sabatino
+  matutino confirmado, sin convertir otra modalidad por su código de grupo.
+- Conciliación actual: 2.873 inscripciones, 2.665 personas, 2.661 principales,
+  cuatro personas excluidas, 73 revisiones resueltas y cero diferencias de afiliación.
+  Se detectaron dos observaciones adicionales de fecha, fuera de esas 73 revisiones.
+  El usuario indicó conservarlas pendientes: bloquean la publicación del paquete
+  real. No modificar sus originales ni repetir la solicitud de decisiones ya aprobadas.
+- Se mantienen los pendientes de piloto institucional, selección de actividades reales,
+  correspondencia curso/inscripción, nube, dependencias y bundle. No se modifican
+  protecciones, permisos de infraestructura ni guardias de emuladores.
+
+Contrato, procedimiento, cálculos y agregados en
+[integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).

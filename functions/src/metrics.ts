@@ -60,6 +60,7 @@ const missing = () => new HttpsError("not-found", "Datos no disponibles.");
 const conflict = () =>
   new HttpsError("aborted", "La versión cambió. Actualiza y revisa de nuevo.");
 const available = (job: Job) =>
+  job.activityIds ??
   z
     .array(z.object({ kind: z.string(), activityId: z.string().optional() }))
     .parse(job.file.mapping.columns)
@@ -331,9 +332,12 @@ export async function dashboard(
     facets.plan.push(c.plan);
     if (c.coordination) facets.coordination.push(c.coordination);
   }
+  const principalIds = new Set(academic.persons.map((p) => p.baseEnrollmentId));
   for (const e of academic.enrollments.filter(
     (e) =>
-      allowed(member, e.careerId) && e.kind === "base" && !e.problems.length,
+      allowed(member, e.careerId) &&
+      (e.kind === "base" || principalIds.has(e.id)) &&
+      !e.problems.length,
   )) {
     facets.group.push(e.parsed.normalized);
     if (e.parsed.modality) facets.modality.push(e.parsed.modality);
@@ -462,14 +466,16 @@ export async function dashboard(
           );
           // El worker ya resuelve duplicados; fallar ante un derivado incoherente.
           if (
-            new Set(values.map((v) => v.activityId)).size !==
-              activities.length ||
-            values.length !== activities.length
+            new Set(values.map((v) => v.activityId)).size !== values.length ||
+            (!job.cumulative && values.length !== activities.length)
           )
             throw new HttpsError(
               "failed-precondition",
               "Observaciones incompletas o duplicadas: revisar versión publicada.",
             );
+          values = values.filter(
+            (v) => !v.additional || v.state === "numerica",
+          );
           if (f.activity || activityByCourse)
             values = values.filter(
               (v) =>
@@ -491,7 +497,10 @@ export async function dashboard(
             coordination: base.catalog?.coordination ?? "sin_coordinacion",
             plan: base.catalog?.plan ?? "sin_plan",
             special,
-            attribution: "grupo_base_confirmado",
+            attribution:
+              base.kind === "especial"
+                ? "principal_especial_confirmada"
+                : "grupo_base_confirmado",
             enrollmentIds: owned.map((e) => e.id),
             sourceVersions: cut.sources,
             issues: [
@@ -584,7 +593,7 @@ export async function dashboard(
       careerId: e.careerId,
       courseId: null,
       reason: [
-        e.kind,
+        e.exclusionReason ?? e.kind,
         ...e.problems,
         ...(!base && e.kind === "especial"
           ? ["sin_grupo_base_confirmado; sin atribucion provisional"]
@@ -873,6 +882,7 @@ export async function dashboard(
       "Inscripciones",
       "Fuentes",
       "Incidencias",
+      "Version de celda",
     ],
     ...details.flatMap((r) =>
       r.values.map((v) => [
@@ -891,6 +901,7 @@ export async function dashboard(
         r.enrollmentIds.join(" | "),
         canonical(r.sourceVersions),
         r.issues.join(" | "),
+        v.sourceVersion ?? r.versionId,
       ]),
     ),
     [

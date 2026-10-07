@@ -3,6 +3,7 @@ import { civilDateSchema } from "./schemas";
 import { courseFilenameResolutionSchema } from "./academic";
 import { historyOperations } from "./history-contract";
 import { metricOperations } from "./metrics-contract";
+import { packageDecisionSchema } from "./decision-package";
 
 export const filenameResolutionSchema = courseFilenameResolutionSchema
   .omit({ approvedBy: true, version: true })
@@ -29,6 +30,7 @@ export const sourceKind = z.enum([
   "supplement",
   "withdrawals",
   "exceptions",
+  "academicPackage",
 ]);
 export const descriptorSchema = z.strictObject({
   name: z.string().min(1).max(180),
@@ -47,6 +49,16 @@ export const operationSchemas = {
   ...metricOperations,
   ...historyOperations,
   overview: z.strictObject({}),
+  reviseAcademicDecision: z.strictObject({
+    jobId: keySchema,
+    decision: packageDecisionSchema,
+  }),
+  refreshCutSources: z.strictObject({
+    cutId: keySchema,
+    expectedSources: z.record(z.string(), z.string()),
+    reason: label,
+  }),
+  revalidate: z.strictObject({ jobId: keySchema }),
   assignMember: z.strictObject({ uid: keySchema, member: memberSchema }),
   createCycle: z.strictObject({ id: keySchema, dates: calendarInput }),
   createCourse: z.strictObject({
@@ -61,6 +73,7 @@ export const operationSchemas = {
     id: keySchema,
     date: civilDateSchema,
     parentId: keySchema.optional(),
+    carryCutId: keySchema.optional(),
     reason: label.optional(),
   }),
   closeCut: z.strictObject({ cutId: keySchema }),
@@ -105,6 +118,7 @@ export const operationSchemas = {
     jobId: keySchema,
     careerId: keySchema.optional(),
     cursor: keySchema.optional(),
+    observationOffset: z.number().int().min(0).max(20000).default(0),
   }),
   publish: z.strictObject({ jobId: keySchema, replace: z.boolean() }),
   retry: z.strictObject({ jobId: keySchema }),
@@ -151,7 +165,14 @@ export const rowViewSchema = z.object({
   careerId: z.string(),
   row: z.number(),
   values: z.array(
-    z.object({ activityId: z.string(), state: z.string(), raw: z.unknown() }),
+    z.object({
+      activityId: z.string(),
+      state: z.string(),
+      raw: z.unknown(),
+      additional: z.boolean().optional(),
+      unit: z.number().optional(),
+      sourceVersion: z.string().optional(),
+    }),
   ),
   issues: z.array(z.string()),
 });
@@ -165,6 +186,7 @@ export const overviewSchema = z.object({
       cycleId: z.string(),
       status: z.string(),
       date: z.string(),
+      sources: z.record(z.string(), z.string()).optional(),
     }),
   ),
   courses: z.array(

@@ -130,6 +130,8 @@ const moodleMappingSchema = z.strictObject({
       selector: selectorSchema,
       kind: z.enum(["activity", "category", "total", "metadata"]),
       activityId: z.string().trim().min(1).optional(),
+      additional: z.boolean().optional(),
+      unit: z.number().int().positive().max(100).optional(),
     }),
   ),
 });

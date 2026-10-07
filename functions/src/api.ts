@@ -1,6 +1,7 @@
 import { FieldPath } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { correctionOperation } from "./corrections";
 import { closeHistoricalCut, historyOperation } from "./history";
 import { historyOperations } from "../../src/domain/history-contract";
 import { dashboard, configureMetrics } from "./metrics";
@@ -48,6 +49,10 @@ export async function academicOperation(
   if (op in historyOperations)
     return historyOperation(op as keyof typeof historyOperations, raw, actor);
   switch (op) {
+    case "reviseAcademicDecision":
+    case "refreshCutSources":
+    case "revalidate":
+      return correctionOperation(op, raw, actor);
     case "dashboard":
       return dashboard(raw, actor, false);
     case "exportDashboard":
@@ -71,6 +76,7 @@ export async function academicOperation(
             cycleId: v.cycleId,
             date: v.date,
             status: v.status,
+            sources: v.sources,
           };
         }),
         courses: courses.docs
@@ -153,11 +159,30 @@ export async function academicOperation(
         const cycle = (
           await tx.get(db.doc(`cycles/${input.cycleId}`))
         ).data() as Cycle | undefined;
-        if (!cycle?.sources.roster || !cycle.sources.catalog)
+        if (
+          !cycle ||
+          (!cycle.sources.academicPackage &&
+            (!cycle.sources.roster || !cycle.sources.catalog))
+        )
           throw new HttpsError(
             "failed-precondition",
             "Publica padrón y catálogo antes del corte.",
           );
+        if (input.carryCutId) {
+          const carry = (
+            await tx.get(db.doc(`cuts/${input.carryCutId}`))
+          ).data() as Cut | undefined;
+          if (
+            !carry ||
+            carry.status !== "closed" ||
+            carry.cycleId !== input.cycleId ||
+            !cycle.sources.academicPackage
+          )
+            throw new HttpsError(
+              "failed-precondition",
+              "La acumulación requiere un corte cerrado del mismo ciclo y el perfil aprobado.",
+            );
+        }
         if (input.parentId) {
           const parent = (
             await tx.get(db.doc(`cuts/${input.parentId}`))
@@ -246,6 +271,15 @@ export async function academicOperation(
           Cut | undefined;
         if (!cut) throw missing();
         if (cut.status !== "open") throw closed();
+        if (
+          cut.carryCutId &&
+          (await tx.get(db.doc(`cuts/${cut.carryCutId}`))).data()?.status !==
+            "closed"
+        )
+          throw new HttpsError(
+            "failed-precondition",
+            "Cierra el corte de origen para fijar el acumulado antes de cargar.",
+          );
         const jobs: Job[] = [];
         const found = new Set<string>();
         for (const file of input.files) {
@@ -284,11 +318,20 @@ export async function academicOperation(
           found.add(id);
           const previous = await tx.get(db.doc(`jobs/${id}`));
           const pointer = await tx.get(pointerRef(cut.id, course.id));
+          const carry = cut.carryCutId
+            ? await tx.get(pointerRef(cut.carryCutId, course.id))
+            : null;
           if (previous.exists) continue;
           const { courseId, filenameResolution, ...descriptor } = file;
           jobs.push({
             id,
             kind: "report",
+            sources: cut.sources,
+            cumulative: !!cut.sources.academicPackage,
+            carryVersion:
+              (pointer.data()?.versionId as string | undefined) ??
+              (carry?.data()?.versionId as string | undefined) ??
+              null,
             cycleId: cut.cycleId,
             cutId: cut.id,
             courseId,
@@ -403,7 +446,13 @@ export async function academicOperation(
       const input = operationSchemas.preview.parse(raw);
       const job = await getJob(input.jobId);
       await authorizeJob(member, job);
-      return previewJob(job, member, input.careerId, input.cursor);
+      return previewJob(
+        job,
+        member,
+        input.careerId,
+        input.cursor,
+        input.observationOffset,
+      );
     }
     case "publishSource": {
       admin(member);
@@ -458,6 +507,11 @@ export async function academicOperation(
         if (job.status === "published") return;
         const cut = (await tx.get(db.doc(`cuts/${job.cutId}`))).data() as Cut;
         if (cut.status !== "open") throw closed();
+        if (job.sources && canonical(job.sources) !== canonical(cut.sources))
+          throw new HttpsError(
+            "failed-precondition",
+            "Las fuentes cambiaron. Vuelve a validar el original.",
+          );
         if (
           job.status !== "ready" ||
           job.blocking ||
@@ -586,10 +640,17 @@ export async function academicOperation(
         return `"${(/^[\s]*[=+@-]/.test(value) ? "'" + value : value).replaceAll('"', '""')}"`;
       };
       const csv = [
-        "matricula,actividad,estado,original,version",
+        "matricula,actividad,estado,original,version,version_celda",
         ...page.rows.flatMap((r) =>
           r.values.map((v) =>
-            [r.identity, v.activityId, v.state, v.raw, id]
+            [
+              r.identity,
+              v.activityId,
+              v.state,
+              v.raw,
+              id,
+              v.sourceVersion ?? id,
+            ]
               .map(escape)
               .join(","),
           ),

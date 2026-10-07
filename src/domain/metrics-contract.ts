@@ -86,7 +86,12 @@ export const metricDetail = z.object({
   sourceVersions: z.record(z.string(), z.string()),
   issues: z.array(z.string()),
   values: z.array(
-    z.object({ activityId: z.string(), state: z.string(), raw: z.unknown() }),
+    z.object({
+      activityId: z.string(),
+      state: z.string(),
+      raw: z.unknown(),
+      sourceVersion: z.string().optional(),
+    }),
   ),
   counts: countsSchema,
 });

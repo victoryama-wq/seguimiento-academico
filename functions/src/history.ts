@@ -2,6 +2,10 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
 import {
+  academicPackageSchema,
+  approvedCalendarDates,
+} from "../../src/domain/decision-package";
+import {
   historyOperations,
   casePage,
   caseRevision,
@@ -14,7 +18,7 @@ import {
 } from "../../src/domain/history";
 import { dashboardSchema } from "../../src/domain/metrics-contract";
 import { csvCell } from "../../src/domain/metrics";
-import { academicSnapshot, type Cut, type Cycle } from "./jobs";
+import { academicSnapshot, type Artifact, type Cut, type Cycle } from "./jobs";
 import { captureMetrics, dashboard } from "./metrics";
 import {
   db,
@@ -24,6 +28,7 @@ import {
   canonical,
   hash,
   saveImmutable,
+  jsonFile,
 } from "./store";
 
 const conflict = () =>
@@ -81,7 +86,7 @@ export async function closeHistoricalCut(cutId: string, uid: string) {
   const academic = await academicSnapshot(captured.data.cut);
   const payload = {
     schema: "closure/1",
-    academicRules: "etapa02-04/1",
+    academicRules: academic.context.rulesVersion ?? "etapa02-04/1",
     snapshot: captured.data,
     academic,
     actor: uid,
@@ -116,16 +121,44 @@ export async function historyOperation(
     case "planCalendar": {
       admin(member);
       const input = historyOperations.planCalendar.parse(raw);
-      const dates = calendarDates(input.firstDate, input.count);
+      let dates = calendarDates(input.firstDate, input.count);
       await db.runTransaction(async (tx) => {
         admin(await membership(uid, tx));
         const cycle = (
           await tx.get(db.doc(`cycles/${input.cycleId}`))
         ).data() as Cycle | undefined;
-        if (!cycle?.sources.roster || !cycle.sources.catalog)
+        if (
+          !cycle ||
+          (!cycle.sources.academicPackage &&
+            (!cycle.sources.roster || !cycle.sources.catalog))
+        )
           throw precondition("Publica padrón y catálogo antes de planificar.");
+        if (cycle.sources.academicPackage) {
+          if (!input.modality)
+            throw precondition(
+              "Selecciona modalidad para el calendario aprobado; Virtual requiere configuración explícita.",
+            );
+          const source = (
+            await tx.get(db.doc(`sources/${cycle.sources.academicPackage}`))
+          ).data()!;
+          const artifact = await jsonFile<Artifact>(String(source.artifact));
+          try {
+            dates = approvedCalendarDates(
+              academicPackageSchema.parse(artifact.data),
+              input.modality,
+              input.firstDate,
+              input.count,
+            );
+          } catch (error) {
+            throw precondition(
+              error instanceof Error ? error.message : "Calendario inválido",
+            );
+          }
+        }
         const refs = dates.map((date) =>
-          db.doc(`cuts/${input.cycleId}-${date}`),
+          db.doc(
+            `cuts/${input.cycleId}-${date}${cycle.sources.academicPackage ? `-${input.modality}` : ""}`,
+          ),
         );
         const previous = await tx.getAll(...refs);
         for (let i = 0; i < refs.length; i++) {
@@ -138,8 +171,12 @@ export async function historyOperation(
             dates: cycle.dates,
             status: "open",
             parentId: null,
+            ...(cycle.sources.academicPackage && i > 0
+              ? { carryCutId: refs[i - 1]!.id }
+              : {}),
             reason: null,
             createdBy: uid,
+            ...(input.modality ? { modality: input.modality } : {}),
             createdAt: Date.now(),
           });
         }

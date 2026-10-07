@@ -69,7 +69,12 @@ function Calendar({ overview }: { overview: Overview }) {
     try {
       await callAcademic(
         "planCalendar",
-        { cycleId: cycle, firstDate: v.firstDate, count: Number(v.count) },
+        {
+          cycleId: cycle,
+          firstDate: v.firstDate,
+          count: Number(v.count),
+          ...(v.modality ? { modality: v.modality } : {}),
+        },
         okSchema,
       );
       await load();
@@ -161,11 +166,24 @@ function Calendar({ overview }: { overview: Overview }) {
         <details>
           <summary>Proponer calendario de cortes</summary>
           <p>
-            Fechas separadas por 21 días. Se conservan cortes existentes. La
-            fecha académica puede ajustarse antes de aceptar archivos; después
+            El perfil aprobado usa semanas vencidas según modalidad y unidades;
+            el perfil anterior conserva intervalos de 21 días. Virtual requiere
+            su propio calendario. Son fechas de referencia flexibles. La fecha
+            académica puede ajustarse antes de aceptar archivos; después
             requiere una revisión.
           </p>
           <form onSubmit={(e) => void plan(e)}>
+            <label>
+              Modalidad del calendario
+              <select name="modality">
+                <option value="">Perfil anterior (21 días)</option>
+                <option value="escolarizado">Escolarizado</option>
+                <option value="ejecutivo">Ejecutivo</option>
+                <option value="virtual">
+                  Virtual (requiere configuración)
+                </option>
+              </select>
+            </label>
             <label>
               Primer corte
               <input type="date" name="firstDate" required />

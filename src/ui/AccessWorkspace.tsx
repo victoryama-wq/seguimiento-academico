@@ -16,6 +16,8 @@ import {
   type User,
 } from "firebase/auth";
 import { z } from "zod";
+import { observationSchema } from "../domain/decision-package";
+import { Observations } from "./Observations";
 import { firebaseServices } from "../infrastructure/firebase";
 import {
   callAcademic,
@@ -37,6 +39,9 @@ const jobsSchema = z.object({
   cursor: z.string().nullable().optional(),
 });
 const previewSchema = z.object({
+  observations: z.array(observationSchema),
+  observationsCount: z.number(),
+  observationNext: z.number().nullable(),
   excluded: z.array(
     z.object({ identity: z.string(), row: z.number(), reason: z.string() }),
   ),
@@ -491,13 +496,14 @@ function Imports({ overview }: { overview: Overview }) {
       }
     }
   }
-  async function view(job: JobView, cursor?: string) {
+  async function view(job: JobView, cursor?: string, observationOffset = 0) {
     clearPreview();
     const request = previewRequest.current;
     const response = await callAcademic(
       "preview",
       {
         jobId: job.id,
+        observationOffset,
         ...(careerId ? { careerId } : {}),
         ...(cursor ? { cursor } : {}),
       },
@@ -566,6 +572,34 @@ function Imports({ overview }: { overview: Overview }) {
         <SourceUpload cycles={overview.cycles} done={refresh} />
       ) : (
         <>
+          {overview.member.role === "admin" && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const current = await callAcademic(
+                    "overview",
+                    {},
+                    overviewSchema,
+                  );
+                  const cut = current.cuts.find((c) => c.id === cutId);
+                  await callAcademic(
+                    "refreshCutSources",
+                    {
+                      cutId,
+                      expectedSources: cut?.sources ?? {},
+                      reason:
+                        "Aplicar fuente administrativa revisada antes de publicar reportes",
+                    },
+                    okSchema,
+                  );
+                  clearPreview();
+                })
+              }
+            >
+              Actualizar fuentes del corte abierto sin resultados
+            </button>
+          )}
           <label>
             Reportes Moodle
             <input
@@ -765,6 +799,43 @@ function Imports({ overview }: { overview: Overview }) {
               </tbody>
             </table>
           </div>
+          <Observations
+            key={preview.job.id}
+            rows={preview.observations}
+            admin={overview.member.role === "admin"}
+            done={async () => {
+              await refresh();
+            }}
+          />
+          <p>{preview.observationsCount} observaciones autorizadas.</p>
+          {preview.observationNext !== null && (
+            <button
+              onClick={() =>
+                void run(() =>
+                  view(preview.job, undefined, preview.observationNext!),
+                )
+              }
+            >
+              Siguientes observaciones
+            </button>
+          )}
+          {preview.job.kind === "report" && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const job = await callAcademic(
+                    "revalidate",
+                    { jobId: preview.job.id },
+                    jobViewSchema,
+                  );
+                  await view(job);
+                })
+              }
+            >
+              Volver a validar el original
+            </button>
+          )}
           {preview.excluded.length > 0 && (
             <details>
               <summary>Exclusiones de este alcance (hasta 100)</summary>
@@ -930,6 +1001,9 @@ function SourceUpload({
           <option value="supplement">Suplemento</option>
           <option value="withdrawals">Bajas (JSON)</option>
           <option value="exceptions">Excepciones (JSON)</option>
+          <option value="academicPackage">
+            Catálogo, calendario y decisiones aprobadas (JSON)
+          </option>
         </select>
       </label>
       <label>

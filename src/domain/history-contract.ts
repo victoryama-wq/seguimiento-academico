@@ -30,6 +30,7 @@ const comparisonRequest = z.strictObject({
 const target = { cutId: key, courseId: key, student: text };
 export const historyOperations = {
   planCalendar: z.strictObject({
+    modality: z.enum(["escolarizado", "ejecutivo", "virtual"]).optional(),
     cycleId: key,
     firstDate: civilDateSchema,
     count: z.int().min(1).max(20),
