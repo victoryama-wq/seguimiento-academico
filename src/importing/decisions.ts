@@ -52,6 +52,8 @@ export function validateAcademicPackage(input: unknown, cycle: string) {
     if (!keys.has(d.enrollmentId) || seen.has(d.enrollmentId))
       throw new Error("Resolución huérfana o contradictoria");
     if (
+      (d.originalDateApproved &&
+        (!["base", "especial"].includes(d.kind ?? "") || d.date)) ||
       (d.kind === "baja" && d.exclusionReason !== "baja") ||
       (d.kind === "excluida" && !d.exclusionReason) ||
       (d.exclusionReason && !["baja", "excluida"].includes(d.kind ?? "")) ||

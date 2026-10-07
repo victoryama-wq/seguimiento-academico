@@ -222,12 +222,17 @@ La implementación posterior en este mismo PR se documenta en
 [integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
 Ese informe sustituye los pendientes históricos de catálogo/afiliación ya resueltos:
 36 registros de catálogo, seis responsables, 2.873 inscripciones, 2.665 identidades,
-2.661 principales y cuatro personas excluidas. Las 73 revisiones están resueltas;
-hay dos observaciones nuevas de fecha que el usuario indicó mantener pendientes.
+2.661 principales y cuatro personas excluidas. La matriz actualizada incorpora
+DEC-35/36 y eleva a 75 las revisiones resueltas: sustituye la instrucción anterior
+de dejar dos fechas pendientes. Las cuatro clasificaciones base/especial y el
+cambio de principal se verificaron conservando todos los originales; cero
+pendientes y diferencias contra las afiliaciones aprobadas.
 El paquete real sigue sin publicarse. No se incorporan datos privados a esta entrega.
 
-Resultados de la ampliación: 211 unitarias, 64 de emuladores, 34 E2E, dos escenarios
-de piloto y guardia Hosting aprobados; lint, tipos y build aprobados. Bundle actual:
-`index-Bu7tHCvu.js`, 819.095 bytes, gzip 244,70 kB. Las mediciones anteriores se
+Resultados de la primera ampliación: 211 unitarias, 64 de emuladores, 34 E2E, dos
+escenarios de piloto y guardia Hosting aprobados; lint, tipos y build aprobados.
+La actualización DEC-35/36 agrega regresiones de clasificación y de revisiones
+obsoletas/concurrentes; resultados actuales en el informe de integración.
+Bundle actual: `index-AHv9mtQj.js`, 819.132 bytes, gzip 244,71 kB. Las mediciones anteriores se
 conservan como antecedentes. Nuevas capturas, cálculos, procedimiento y límites en
 [integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).

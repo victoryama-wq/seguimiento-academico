@@ -170,6 +170,7 @@ export const enrollmentDecisionSchema = z.strictObject({
   ...audit,
   enrollmentId: text,
   date: civilDateSchema.optional(),
+  originalDateApproved: z.boolean().optional(),
   kind: z.enum(["base", "especial", "excluida", "baja"]).optional(),
   exclusionReason: z
     .enum(["baja", "ciclo", "antecedente_sustituido", "error_captura"])
@@ -281,7 +282,8 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
       problems.push("ciclo_sin_excepcion");
     if (
       !date ||
-      (!context.calendar.dates[date] && !(approved && parsed.special))
+      (!context.calendar.dates[date] &&
+        !(approved && (parsed.special || decision?.originalDateApproved)))
     )
       problems.push("fecha_desconocida");
     const withdrawal = context.withdrawals.find(

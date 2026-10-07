@@ -115,5 +115,11 @@ Consultar [el procedimiento actualizado](integracion-decisiones-aprobadas.md) pa
 importar el paquete privado en emuladores, revisar incidencias, registrar una
 corrección, publicar su fuente y volver a validar reportes. No mezclar el paquete
 completo con la anexión del suplemento ya integrado. Ninguna etiqueta de responsable
-crea una cuenta o permiso. El calendario de Virtual y dos observaciones nuevas de
-fecha permanecen pendientes; el paquete real no está autorizado para publicación.
+crea una cuenta o permiso. DEC-35/36 resuelven las dos observaciones de fecha sin
+alterar los originales; el calendario de Virtual continúa pendiente. La validación
+local no autoriza importar datos reales a Firebase ni desplegar.
+
+Si una revisión se rechaza porque la fuente cambió, actualizar trabajos y abrir la
+versión vigente antes de preparar otra decisión. No volver a publicar una copia de
+la fuente antigua para eludir el conflicto. Los reintentos idénticos recuperan la
+misma propuesta; una publicación concurrente perdedora requiere revisión explícita.

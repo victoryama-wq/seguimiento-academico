@@ -544,5 +544,179 @@ describe.sequential(
         105,
       );
     });
+    it("publica clasificaciones individuales base/especial con fechas originales y aislamiento", async () => {
+      const packageData = approvedPackage();
+      packageData.reason = "Clasificaciones individuales nuevas, sintéticas";
+      const rows = [
+        enrollment("000SINT01", "27-1 LAF 53 03A", "17/09/2026", 2),
+        enrollment("000SINT01", "27-1 LAF 24 04A", "31/08/2026", 3),
+        enrollment("000SINT02", "27-1 ARQ 53 08A", "12/09/2026", 4),
+        enrollment("000SINT02", "27-1 ARQ 24 07A", "29/08/2026", 5),
+      ];
+      packageData.enrollments = rows;
+      packageData.decisions = rows.map((e, i) =>
+        decision(e.key, {
+          kind: i === 1 || i === 2 ? "base" : "especial",
+          primary: i === 1 || i === 2,
+          originalDateApproved: true,
+        }),
+      );
+      await source(
+        sessions.admin,
+        "academicPackage",
+        JSON.stringify(packageData),
+        {},
+        "individuales.json",
+      );
+      await api(
+        "createCut",
+        { cycleId: "27-1", id: "individuales", date: "2026-10-20" },
+        sessions.admin,
+      );
+      const id = await upload(
+        "Correo,U1\n000SINT01@example.invalid,0\n000SINT02@example.invalid,7\n",
+        ["U1"],
+        "individuales",
+      );
+      const preview = (await api("preview", { jobId: id }, sessions.admin)) as {
+        observations: Observation[];
+      };
+      for (const row of rows) {
+        const observation = preview.observations.find((o) => o.id === row.key);
+        expect(observation).toMatchObject({
+          state: "resuelto",
+          original: { date: row.original.date, group: row.original.group },
+        });
+      }
+      await api("publish", { jobId: id, replace: false }, sessions.admin);
+      for (const [token, career, own, foreign] of [
+        [sessions.a, "laf-plan-1", "000SINT01", "000SINT02"],
+        [sessions.b, "arq-plan-1", "000SINT02", "000SINT01"],
+      ]) {
+        const input = {
+          cutId: "individuales",
+          courseId: "compartido",
+          careerId: career,
+        };
+        const result = (await api("results", input, token!)) as {
+          rows: RowView[];
+        };
+        expect(result.rows).toHaveLength(1);
+        expect(JSON.stringify(result)).toContain(own);
+        expect(JSON.stringify(result)).not.toContain(foreign);
+        const exported = JSON.stringify(await api("export", input, token!));
+        expect(exported).toContain(own);
+        expect(exported).not.toContain(foreign);
+      }
+    });
+    it("rechaza revisar fuentes antiguas y borradores obsoletos; conserva decisiones, reintentos y CAS concurrente", async () => {
+      const data = approvedPackage();
+      data.reason = "Control de revisiones concurrentes";
+      const base = await source(
+        sessions.admin,
+        "academicPackage",
+        JSON.stringify(data),
+        {},
+        "concurrencia.json",
+      );
+      const requests = data.enrollments.map((e) => ({
+        jobId: base,
+        decision: decision(e.key, { kind: "base", primary: true }),
+      }));
+      const drafts = (await Promise.all(
+        requests.map((input) =>
+          api("reviseAcademicDecision", input, sessions.admin),
+        ),
+      )) as { id: string }[];
+      await Promise.all(drafts.map((d) => waitJob(d.id)));
+      const publications = await Promise.allSettled(
+        drafts.map((d) =>
+          api("publishSource", { jobId: d.id, replace: true }, sessions.admin),
+        ),
+      );
+      expect(publications.filter((r) => r.status === "fulfilled")).toHaveLength(
+        1,
+      );
+      const win = publications.findIndex((r) => r.status === "fulfilled");
+      const lose = 1 - win;
+      expect(
+        String((publications[lose] as PromiseRejectedResult).reason),
+      ).toContain("ABORTED");
+      const winner = drafts[win]!.id;
+      const loser = drafts[lose]!.id;
+      // Mismo reintento es recuperable aun después de publicar la revisión.
+      expect(
+        await api("reviseAcademicDecision", requests[win], sessions.admin),
+      ).toMatchObject({ id: winner });
+      const beforeJobs = (await stores().db.collection("jobs").get()).size;
+      for (const stale of [base, loser]) {
+        await expect(
+          api(
+            "reviseAcademicDecision",
+            {
+              jobId: stale,
+              decision: decision(data.enrollments[lose]!.key, {
+                kind: "base",
+                primary: true,
+                reason: "Nueva revisión desde versión obsoleta",
+              }),
+            },
+            sessions.admin,
+          ),
+        ).rejects.toThrow("FAILED_PRECONDITION");
+      }
+      expect((await stores().db.collection("jobs").get()).size).toBe(
+        beforeJobs,
+      );
+      expect(
+        (await stores().db.doc("cycles/27-1").get()).data()!.sources
+          .academicPackage,
+      ).toBe(winner);
+      const next = (await api(
+        "reviseAcademicDecision",
+        { ...requests[lose], jobId: winner },
+        sessions.admin,
+      )) as { id: string };
+      await waitJob(next.id);
+      await api(
+        "publishSource",
+        { jobId: next.id, replace: true },
+        sessions.admin,
+      );
+      const job = (await stores().db.doc(`jobs/${next.id}`).get()).data()!;
+      const [bytes] = await stores()
+        .bucket.file(job.artifact as string)
+        .download();
+      const artifact = JSON.parse(bytes.toString()) as {
+        data: { decisions: unknown[]; revisionOf: string };
+      };
+      expect(artifact.data.decisions).toHaveLength(2);
+      expect(artifact.data.decisions).toEqual(
+        expect.arrayContaining(requests.map((r) => r.decision)),
+      );
+      expect(artifact.data.revisionOf).toBe(winner);
+      expect(
+        (await stores().db.doc(`sources/${next.id}`).get()).data()?.previous,
+      ).toBe(winner);
+      expect(
+        (
+          await stores().db.doc(`decisionRevisionAudit/${next.id}`).get()
+        ).data(),
+      ).toMatchObject({ previous: winner, actor: people.admin });
+      await expect(
+        api(
+          "reviseAcademicDecision",
+          {
+            ...requests[lose],
+            jobId: winner,
+            decision: {
+              ...requests[lose]!.decision,
+              reason: "Otro intento antiguo",
+            },
+          },
+          sessions.admin,
+        ),
+      ).rejects.toThrow("FAILED_PRECONDITION");
+    });
   },
 );

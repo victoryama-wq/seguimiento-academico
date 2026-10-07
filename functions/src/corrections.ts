@@ -103,7 +103,6 @@ export async function correctionOperation(
     };
     if (file.bytes > 8 * 1024 * 1024) throw conflict();
     const id = sourceJobId(old.cycleId, old.kind, file);
-    await saveImmutable(`originals/${id}/source`, bytes, "application/json");
     await db.runTransaction(async (tx) => {
       admin(await membership(actor, tx));
       const cycle = (
@@ -111,6 +110,18 @@ export async function correctionOperation(
       ).data() as Cycle;
       const ref = db.doc(`jobs/${id}`);
       if ((await tx.get(ref)).exists) return;
+      const parent = (await tx.get(db.doc(`jobs/${old.id}`))).data() as Job;
+      const current = cycle.sources.academicPackage ?? null;
+      // Una revisión hereda la base que realmente leyó. No hacer pasar una
+      // fotografía antigua por una revisión de la fuente vigente.
+      if (
+        parent.artifact !== old.artifact ||
+        (parent.status === "published"
+          ? current !== parent.id
+          : current !== parent.expected)
+      )
+        throw conflict();
+      await saveImmutable(`originals/${id}/source`, bytes, "application/json");
       const job: Job = {
         ...old,
         id,
@@ -124,7 +135,7 @@ export async function correctionOperation(
         error: null,
         blocking: false,
         createdAt: Date.now(),
-        expected: cycle.sources.academicPackage ?? null,
+        expected: current,
       };
       tx.create(ref, job);
       tx.create(db.doc(`decisionRevisionAudit/${id}`), {

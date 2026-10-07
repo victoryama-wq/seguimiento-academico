@@ -24,6 +24,48 @@ const resolve = (p = approvedPackage()) =>
   );
 
 describe("decisiones versionadas aprobadas", () => {
+  it("acepta la fecha original solo para la inscripción autorizada; fechas inválidas y casos nuevos siguen pendientes", () => {
+    const p = approvedPackage();
+    p.enrollments = [
+      enrollment("000A", "27-1 LAF 11 01A", "12/09/2026"),
+      enrollment("000B", "27-1 LAF 11 01A", "12/09/2026", 3),
+      enrollment("000C", "27-1 LAF 11 01A", "fecha inválida", 4),
+    ];
+    p.decisions = [
+      decision(p.enrollments[0]!.key, {
+        kind: "base",
+        primary: true,
+        originalDateApproved: true,
+      }),
+      decision(p.enrollments[2]!.key, {
+        kind: "base",
+        primary: true,
+        originalDateApproved: true,
+      }),
+    ];
+    const r = resolve(p);
+    expect(r.observations.map((o) => o.state)).toEqual([
+      "resuelto",
+      "pendiente",
+      "pendiente",
+    ]);
+    expect(r.academic.enrollments[0]).toMatchObject({
+      date: "2026-09-12",
+      originalDate: "2026-09-12",
+      kind: "base",
+      problems: [],
+    });
+    expect(r.academic.enrollments[1]?.problems).toContain("fecha_desconocida");
+    expect(r.academic.enrollments[2]?.problems).toContain("fecha_desconocida");
+    const changed = structuredClone(p);
+    changed.enrollments[0]!.original.date = "13/09/2026";
+    expect(() => resolve(changed)).toThrow("Original");
+    expect(() =>
+      resolveAcademicPackage(p, "28-1", "otro", "2027-10-10", "v", "admin"),
+    ).toThrow("otro ciclo");
+    p.decisions[0]!.date = "2026-08-31";
+    expect(() => resolve(p)).toThrow("contradictorios");
+  });
   it("calendarios flexibles por modalidad; Virtual no hereda frecuencia", () => {
     const p = approvedPackage();
     expect(approvedCalendarDates(p, "escolarizado", "2026-09-14", 3)).toEqual([

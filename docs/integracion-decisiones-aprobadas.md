@@ -40,6 +40,7 @@ referencien**. No anexar otra vez el suplemento ya incorporado.
 | DEC-29 | Fecha efectiva corregida separada de la fecha original. |
 | DEC-30 | Prioridad de fecha sobre CA solo en el conjunto delimitado por las resoluciones vigentes de la matriz. No regla global. |
 | DEC-31/32/34 | Elección individual de principal y descarte de una inscripción errónea; no exclusión de toda la persona. |
+| DEC-35/36 | Dos pares base/especial aprobados por inscripción: importa tanto el principal como el especial, sin cambiar fechas ni agregar C.A. al grupo original. Aceptación de fecha original explícita, limitada al registro y ciclo validados. |
 | DEC-27 | Modalidad administrativa original conservada; Virtual muestra horario sabatino matutino. Un código 53 no convierte otra modalidad en Virtual. |
 | DEC-33 / IMP-001–004 | Observaciones, corrección, revalidación y confirmación; calendario flexible, acumulación y alcance real de la carga. |
 
@@ -64,12 +65,17 @@ seis cuentas ni restringen el número de coordinadores del sistema.
    época requiere adaptación explícita, no interpretación aproximada.
 3. Administrador → Fuentes → Fuentes administrativas → «Catálogo, calendario y
    decisiones aprobadas (JSON)». Subir el paquete con mapeo `{}`. Revisar las
-   observaciones paginadas antes de confirmar. No hay recaptura de las 73 revisiones.
+   observaciones paginadas antes de confirmar. No hay recaptura de las 75 revisiones.
 4. En una observación, «Registrar revisión» crea otra propuesta. Requiere motivo,
    regla, fecha de decisión y referencia de autorización. El actor y la hora del
    registro provienen del servidor; el autor declarado en la matriz se conserva
    como procedencia, sin otorgarle permisos. Se conserva auditoría y referencia
    a la fuente anterior; repetir la misma solicitud no duplica la propuesta.
+   Si la fuente fue sustituida, el servidor rechaza iniciar otra revisión desde
+   esa versión o desde un borrador basado en ella. Hay que cargar y revisar la
+   versión vigente; no se mezclan decisiones automáticamente. Dos revisiones
+   concurrentes pueden prepararse, pero solo una puede publicar contra la misma
+   base. La siguiente revisión conserva las decisiones de la ganadora.
 5. Publicar la nueva fuente tras revisarla. Para un corte abierto **sin resultados**,
    actualizar sus fuentes explícitamente y volver a validar el original del
    reporte. Una propuesta validada contra fuentes antiguas no puede publicarse.
@@ -135,15 +141,19 @@ datos reales en Firebase ni en CI público. Resultados del padrón:
 | Identidades distintas | 2.665 |
 | Principales resueltas | 2.661 |
 | Personas excluidas | 4: tres bajas y una exclusión por ciclo |
-| Revisiones importadas como resueltas | 73 |
-| Pendientes en esas 73 revisiones | 0 |
+| Revisiones importadas como resueltas | 75 |
+| Pendientes en esas revisiones | 0 |
 | Diferencias frente a afiliaciones aprobadas | 0 |
-| Observaciones nuevas de fecha, fuera de esas revisiones | 2 |
+| Observaciones de fecha pendientes después de DEC-35/36 | 0 |
 | Catálogo / responsables distintos | 36 / 6 |
 
-El usuario indicó conservar las dos observaciones nuevas como pendientes. No se
-modificaron sus fechas ni se declaró conciliación completa. Bloquean la publicación
-del paquete real; la implementación se verifica con paquetes sintéticos válidos.
+La actualización institucional DEC-35/36 sustituye la instrucción anterior de
+conservar dos fechas pendientes. Se importan cuatro clasificaciones individuales
+(dos principales y dos especiales), manteniendo todos los originales y sin nuevas
+correcciones de fecha. La comprobación privada verifica el cambio de principal
+solicitado. El adaptador termina con salida 0 y sin diferencias contra la matriz.
+Esto cierra esos dos casos del catálogo; no acredita la selección de actividades,
+las correspondencias curso/inscripción ni la aceptación del piloto institucional.
 
 `node scripts/reconcile-approved-pilot.mjs private/approved-package.json private/pilot-manifest.json`
 lee los cuatro libros y conserva el detalle en `private/approved-pilot-reconciliation.json`:
@@ -170,14 +180,14 @@ de destino y validación en nube; ningún tiempo de emulador garantiza capacidad
 No se realizaron merge, despliegue, cambios de protecciones ni comunicaciones a
 estudiantes o responsables.
 
-El build de esta ampliación produce `dist/assets/index-Bu7tHCvu.js` (819.095 bytes;
-244,70 kB gzip según Vite). Sigue el aviso de más de 500 kB. Puede aumentar la
+El build actualizado produce `dist/assets/index-AHv9mtQj.js` (819.132 bytes;
+244,71 kB gzip según Vite). Sigue el aviso de más de 500 kB. Puede aumentar la
 transferencia y el trabajo inicial de parseo en clientes lentos; no se modificó
 el umbral ni se presenta el E2E móvil como medición de hardware real. El diagnóstico
 previo de dependencias continúa en [dependencias-etapa-06.md](dependencias-etapa-06.md),
 sin actualizaciones ni degradaciones en esta ampliación.
 
-### Resultados ejecutados de esta ampliación
+### Resultados de la primera ampliación (antes de DEC-35/36)
 
 | Comando | Resultado local |
 | --- | --- |
@@ -216,12 +226,46 @@ sin cambios de código, aserción ni timeout aprobó. Lint detectó dos variable
 en un generador privado anterior; se conservaron su copia y comportamiento y se
 eliminaron solo las declaraciones no usadas, sin excluir archivos del lint.
 
-La conciliación local no es una suite aprobatoria: el adaptador terminó con salida
-**1**, por las **dos observaciones nuevas pendientes** que el usuario decidió
-conservar. Las 73 revisiones resueltas y los controles de afiliación coinciden. La
-lectura de los cuatro libros terminó con salida 0; no publicó resultados académicos.
-Los hashes de los siete archivos suministrados permanecen sin cambios.
+En la entrega anterior, el adaptador terminó con salida **1** por dos observaciones
+de fecha. Tras DEC-35/36 termina con salida **0**, con 75 revisiones y sin pendientes
+ni discrepancias de catálogo. La lectura de los cuatro libros también termina con
+salida 0, sin publicar resultados académicos. El libro institucional nuevo se conserva
+como otra fuente y no sobrescribe el anterior; padrón y catálogo no fueron modificados.
 
 El SHA final y el enlace del CI automático reconocido por el PR se registran en el
 cuerpo del PR #5; la ejecución remota verifica ese commit. No se usa ejecución manual
 para sustituir el check del PR.
+
+### Verificación de DEC-35/36 y protección de revisiones antiguas
+
+Actualización del 7 de octubre de 2026, posterior a los resultados anteriores:
+
+| Comando | Resultado ejecutado |
+| --- | --- |
+| `npm run lint` | Aprobado |
+| `npm run typecheck` | Aprobado |
+| `npm run build` | Aprobado, conserva advertencia de bundle |
+| `npm run test:unit` | 213 aprobadas |
+| `npm run test:emulators` | 66 aprobadas |
+| `npm run test:e2e` | 34 aprobadas, escritorio/móvil |
+| `npm run test:pilot` | 45 y 230 cursos aprobados |
+| `npm run verify:hosting` | Aprobado, cinco archivos públicos |
+
+Las pruebas del adaptador verifican los dos registros base/especial y la elección
+de principal; las de dominio comprueban fechas originales, fechas inválidas,
+identidades nuevas, alteración del original y otro ciclo. El recorrido de API
+publica las clasificaciones con fechas fuera del calendario y comprueba resultados
+y CSV por carrera, sin exposición cruzada. Los casos son enteramente sintéticos.
+
+La prueba de concurrencia prepara dos revisiones, publica ambas simultáneamente
+y comprueba un único ganador. Rechaza crear otra propuesta desde la fuente
+sustituida o el borrador perdedor, conserva el reintento idéntico y verifica que la
+siguiente revisión de la fuente vigente contiene ambas decisiones con auditoría.
+El E2E verifica el rechazo visible en la interfaz desde una propuesta antigua y
+que no cambia la fuente publicada. No se modificaron timeouts ni workflow.
+
+El adaptador privado actualizado y la lectura de cuatro libros terminaron con
+salida 0. Se contrastaron las 75 revisiones, los agregados y el principal solicitado;
+las 2.873 inscripciones originales siguen idénticas. Es verificación de estas
+decisiones, no aceptación de actividades, correspondencias o operación en nube.
+Paquete anterior, matriz nueva e informe detallado se conservan fuera de Git.

@@ -220,6 +220,32 @@ export function prepareApprovedPackage(input: Input) {
       decision.primary = true;
       changed = true;
     }
+    // Clasificación individual aprobada de ambos registros, no solo la elección
+    // del principal. Nunca agregar C.A. al original ni inventar una fecha base.
+    const individual = text(row[19]).match(
+      /^Grupo (base|especial) vigente por decisión individual$/,
+    );
+    if (individual) {
+      requireValue(
+        text(row[12]).toLowerCase() === individual[1] &&
+          status === "Dentro del ciclo",
+        "Clasificación individual contradictoria",
+      );
+      decision.kind = individual[1] as "base" | "especial";
+      decision.primary = individual[1] === "base";
+      if (
+        /Fecha original .* conservada y aceptada para esta clasificación individual/.test(
+          provenance,
+        )
+      ) {
+        requireValue(
+          civilDate(e!.original.date) && !decision.date,
+          "Aceptación de fecha original contradictoria o inválida",
+        );
+        decision.originalDateApproved = true;
+      }
+      changed = true;
+    }
     if (changed) decisions.push(decision);
   }
   const resolvedReviews = reviews.slice(1).map((r, i) => {

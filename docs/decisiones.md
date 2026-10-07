@@ -374,7 +374,8 @@ matrices; los datos identificables y las resoluciones individuales siguen privad
   Un corte puede arrastrar una fotografía cerrada del mismo ciclo (`carryCutId`).
 - Regla académica pendiente: calendario específico de Virtual; horario sabatino
   matutino confirmado, sin convertir otra modalidad por su código de grupo.
-- Conciliación actual: 2.873 inscripciones, 2.665 personas, 2.661 principales,
+- Conciliación anterior a DEC-35/36 (sustituida por la actualización inferior):
+  2.873 inscripciones, 2.665 personas, 2.661 principales,
   cuatro personas excluidas, 73 revisiones resueltas y cero diferencias de afiliación.
   Se detectaron dos observaciones adicionales de fecha, fuera de esas 73 revisiones.
   El usuario indicó conservarlas pendientes: bloquean la publicación del paquete
@@ -385,3 +386,25 @@ matrices; los datos identificables y las resoluciones individuales siguen privad
 
 Contrato, procedimiento, cálculos y agregados en
 [integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
+
+## Actualización institucional DEC-35/36 y revisiones antiguas (2026-10-07)
+
+- Regla académica aprobada: la matriz actualizada sustituye la instrucción de dejar
+  pendientes dos fechas. Se importan ambos registros de cada par base/especial y
+  la elección de principal, conservando fechas y grupos originales. La aceptación
+  explícita de la fecha pertenece a la inscripción identificada por su huella y
+  al ciclo del paquete; no es una nueva fecha de calendario ni una excepción global.
+  Fechas inválidas, nuevas inscripciones y otros ciclos conservan sus validaciones.
+- Decisión técnica: `originalDateApproved` exige una clasificación base/especial y
+  no puede combinarse con una fecha efectiva distinta. El adaptador solo la importa
+  cuando la matriz confirma la clasificación individual y la aceptación del original.
+- Decisión técnica: revisar una versión publicada sustituida o un borrador cuya base
+  ya cambió falla antes de crear la propuesta. La transacción comprueba la fuente
+  vigente, conserva la versión esperada para publicar y admite reintentos idénticos.
+  No fusionar automáticamente dos revisiones concurrentes: cargar la ganadora y
+  revisar explícitamente la siguiente decisión, preservando las anteriores.
+- Conciliación privada actual: 75 revisiones resueltas, 2.661 principales, cuatro
+  personas excluidas y cero pendientes/diferencias contra la matriz. El cambio de
+  principal solicitado y la conservación de las 2.873 inscripciones originales se
+  comprueban privadamente. Siguen pendientes actividades, asignatura/inscripción,
+  calendario Virtual, piloto institucional y nube; no se publicaron datos reales.

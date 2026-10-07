@@ -99,6 +99,44 @@ test("paquete privado sintético: observación, corrección administrativa, reva
   await expect(page.getByTestId(`job-${correctedId}`)).toContainText(
     "Publicado",
   );
+  // Una pestaña antigua no puede sustituir la fuente publicada con una copia
+  // que omita su decisión. El rechazo viene del servidor y se muestra en UI.
+  await page
+    .getByTestId(`job-${initialId}`)
+    .getByRole("button", { name: "Revisar academicPackage" })
+    .click();
+  const oldObservation = page
+    .locator("details")
+    .filter({
+      has: page.getByText("000SINT01 · 27-1 LAF 11 01A · pendiente", {
+        exact: true,
+      }),
+    });
+  if ((await oldObservation.getAttribute("open")) === null)
+    await oldObservation.locator("summary").click();
+  await page
+    .getByRole("button", { name: "Registrar revisión de 000SINT01" })
+    .click();
+  await page.getByLabel("Fecha efectiva (opcional)").fill("2026-08-31");
+  await page.getByLabel("Regla o decisión").fill("DEC-sintética-antigua");
+  await page
+    .getByLabel("Motivo de la corrección")
+    .fill("Intento desde una propuesta anterior");
+  await page.getByLabel("Fecha de la decisión").fill("2026-10-07");
+  await page
+    .getByLabel("Referencia de autorización")
+    .fill("Acta de prueba anterior");
+  await page.getByRole("button", { name: "Guardar nueva propuesta" }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "Observaciones académicas" })
+      .getByRole("status"),
+  ).toContainText("Actualiza y revisa la propuesta");
+  await expect(candidates).toHaveCount(2);
+  expect(
+    (await stores().db.doc("cycles/27-1").get()).data()!.sources
+      .academicPackage,
+  ).toBe(correctedId);
   await page.getByLabel("Corte de seguimiento").selectOption("corte-1");
   await page
     .getByRole("button", {
