@@ -159,6 +159,7 @@ export function resolveAcademicPackage(
     ];
   });
   const result = resolveAffiliations(enrollments, {
+    trackingSchedule: p.schedule,
     rulesVersion: p.rulesVersion,
     enrollmentDecisions: decisions,
     cycle,

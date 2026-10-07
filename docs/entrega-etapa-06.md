@@ -6,6 +6,11 @@ se consignan en el PR para evitar un SHA autorreferente dentro de su commit.
 No merge, despliegue, cambio de protecciones, eliminación de fuentes ni mensajes
 a responsables. El usuario confirma que aún se creará el proyecto Firebase.
 
+La ampliación actual de [integración de reportes](integracion-reportes.md) incorpora
+seguimiento por principal, Virtual independiente, unidades y parciales acumulativos.
+Ese informe contiene los cálculos nuevos y los controles privados actualizados;
+las mediciones y capturas anteriores de este documento conservan su fecha y alcance.
+
 ## Alcance
 
 - Piloto reproducible de 45 y 230 cursos mediante API, worker, Auth, Firestore y

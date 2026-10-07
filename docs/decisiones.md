@@ -408,3 +408,45 @@ Contrato, procedimiento, cálculos y agregados en
   principal solicitado y la conservación de las 2.873 inscripciones originales se
   comprueban privadamente. Siguen pendientes actividades, asignatura/inscripción,
   calendario Virtual, piloto institucional y nube; no se publicaron datos reales.
+
+## Integración de reportes por afiliación principal (2026-10-07)
+
+Esta autorización sustituye los pendientes anteriores de correspondencia
+curso/inscripción, calendario Virtual y reconocimiento de actividades. Conserva
+íntegras DEC-01 a DEC-36 y las decisiones individuales. No modifica fotografías
+de cortes anteriores ni concede permisos a responsables del catálogo.
+
+- Regla aprobada: la matrícula enlaza cada fila con la principal conciliada,
+  incluso principal C.A. El grupo principal es de seguimiento; el grupo de
+  impartición y la inscripción específica permanecen no determinados, sin bloqueo.
+  Matrícula desconocida, principal pendiente, ciclo incompatible y curso ambiguo
+  conservan sus validaciones. No se enlazan personas por nombre.
+- Regla aprobada: Escolarizado acumula bloques 1–2, 3–5 y 6–7; Ejecutivo y Virtual
+  acumulan una unidad por semana vencida, hasta siete, como modalidades distintas.
+  La configuración se versiona con el paquete del ciclo y las fuentes del corte.
+  Cargas flexibles conservan datos aún fuera de las unidades previstas.
+- Aclaración institucional: sesiones numeradas corresponden a sus unidades;
+  cierre/final corresponde a unidad 7. Actividades sin unidad reconocible son
+  adicionales, computables con nota numérica, incluido cero. Totales y subtotales
+  no son actividades; guion, vacío, inválido y columna ausente se distinguen.
+- Decisión técnica: `principal-modality-v1` incluye `firstWeekEnd` civil explícito.
+  Los ejemplos usan 2026-09-06; la fecha debe revisarse al configurar cada ciclo.
+  No se deduce de las fechas individuales de inscripción ni se altera el calendario
+  de clasificación de DEC-35/36. Escolarizado usa `schoolCut` explícito (1–3) en
+  la fotografía del corte; su bloque no se deduce de semanas ni cambia al editar
+  la fecha. Un lote de calendario escolarizado asigna los ordinales en orden; un
+  lote semanal requiere indicar el bloque escolarizado que lo acompaña.
+- Decisión técnica: publicar bajo esta política conserva una selección versionada
+  de los IDs conocidos, actor y selección anterior en la misma transacción.
+  El panel intersecta esa selección con la modalidad y fecha del alumno. La selección
+  administrativa explícita sigue disponible y requiere revisión para cada versión.
+- Decisión técnica: identidad operativa estable por matrícula normalizada, instancia
+  interna y ciclo. El número externo del archivo no se presume ID interno Moodle.
+  Prefijos de muestra etiquetados se separan; dos números sin etiqueta se rechazan
+  para revisión. Nombre original, hash y decisiones administrativas se conservan.
+- Decisión técnica: IDs de actividad derivados del encabezado exacto, estables ante
+  reordenación. Renombrar no crea equivalencia automática; cambiar un mapeo previo
+  exige conservar explícitamente sus IDs. Datos ausentes se arrastran con procedencia;
+  una celda vacía presente sí actualiza el estado. Reintentos no duplican relaciones.
+
+Pruebas, cálculos y limitaciones: [integración de reportes](integracion-reportes.md).

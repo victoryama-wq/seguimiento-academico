@@ -5,6 +5,7 @@ import { correctionOperation } from "./corrections";
 import { closeHistoricalCut, historyOperation } from "./history";
 import { historyOperations } from "../../src/domain/history-contract";
 import { dashboard, configureMetrics } from "./metrics";
+import { academicPackageSchema } from "../../src/domain/decision-package";
 import {
   operationSchemas,
   type Operation,
@@ -19,6 +20,7 @@ import {
   db,
   denied,
   hash,
+  jsonFile,
   membership,
   saveImmutable,
 } from "./store";
@@ -34,6 +36,7 @@ import {
   type Cut,
   type Cycle,
   type Job,
+  type Artifact,
 } from "./jobs";
 
 const missing = () => new HttpsError("not-found", "Recurso no disponible.");
@@ -168,6 +171,20 @@ export async function academicOperation(
             "failed-precondition",
             "Publica padrón y catálogo antes del corte.",
           );
+        if (cycle.sources.academicPackage) {
+          const source = (
+            await tx.get(db.doc(`sources/${cycle.sources.academicPackage}`))
+          ).data()!;
+          const artifact = await jsonFile<Artifact>(String(source.artifact));
+          if (
+            academicPackageSchema.parse(artifact.data).schedule.tracking &&
+            input.schoolCut === undefined
+          )
+            throw new HttpsError(
+              "failed-precondition",
+              "Indica el número de corte escolarizado (1, 2 o 3) para el seguimiento por modalidad.",
+            );
+        }
         if (input.carryCutId) {
           const carry = (
             await tx.get(db.doc(`cuts/${input.carryCutId}`))
@@ -535,6 +552,31 @@ export async function academicOperation(
             "Confirma explícitamente la sustitución.",
           );
         const revision = Number(current?.revision ?? 0) + 1;
+        const selectedRef = db.doc(
+          `cuts/${cut.id}/activitySelections/${course.id}`,
+        );
+        const previousSelection = job.automaticActivities
+          ? (await tx.get(selectedRef)).data()
+          : undefined;
+        if (job.automaticActivities) {
+          const selection = {
+            id: hash(canonical(["principal-modality-v1", job.id])),
+            versionId: job.id,
+            activities: [...(job.activityIds ?? [])].sort(),
+            teachers: previousSelection?.teachers ?? null,
+            reason:
+              "Política institucional versionada: actividades por modalidad principal y semana vencida",
+            actor,
+            previous: previousSelection?.id ?? null,
+          };
+          tx.create(db.doc(`activitySelectionHistory/${selection.id}`), {
+            ...selection,
+            cutId: cut.id,
+            courseId: course.id,
+            createdAt: Date.now(),
+          });
+          tx.set(selectedRef, selection);
+        }
         tx.create(db.doc(`publications/${job.id}`), {
           versionId: job.id,
           cutId: cut.id,
@@ -640,7 +682,7 @@ export async function academicOperation(
         return `"${(/^[\s]*[=+@-]/.test(value) ? "'" + value : value).replaceAll('"', '""')}"`;
       };
       const csv = [
-        "matricula,actividad,estado,original,version,version_celda",
+        "matricula,actividad,estado,original,version,version_celda,relacion_curso_ciclo,grupo_principal_seguimiento,modalidad_principal,grupo_imparticion,correspondencia_inscripcion,encabezado_actividad",
         ...page.rows.flatMap((r) =>
           r.values.map((v) =>
             [
@@ -650,6 +692,12 @@ export async function academicOperation(
               v.raw,
               id,
               v.sourceVersion ?? id,
+              r.relationship?.id ?? "",
+              r.relationship?.trackingGroup ?? "",
+              r.relationship?.trackingModality ?? "",
+              "no determinado",
+              "no determinada",
+              v.label ?? v.activityId,
             ]
               .map(escape)
               .join(","),

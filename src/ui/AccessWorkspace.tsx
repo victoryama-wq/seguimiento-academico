@@ -16,6 +16,7 @@ import {
   type User,
 } from "firebase/auth";
 import { z } from "zod";
+import { courseFilename } from "../domain/academic";
 import { observationSchema } from "../domain/decision-package";
 import { Observations } from "./Observations";
 import { firebaseServices } from "../infrastructure/firebase";
@@ -251,6 +252,13 @@ export function AccessWorkspace({ section }: { section: string }) {
                       { name: "cycleId", label: "Ciclo del corte" },
                       { name: "id", label: "Identificador del corte" },
                       {
+                        name: "schoolCut",
+                        label:
+                          "Número de corte Escolarizado (1–3, política por modalidad)",
+                        optional: true,
+                        type: "number",
+                      },
+                      {
                         name: "date",
                         label: "Fecha civil del corte",
                         type: "date",
@@ -267,7 +275,14 @@ export function AccessWorkspace({ section }: { section: string }) {
                       },
                     ]}
                     transform={(v) =>
-                      Object.fromEntries(Object.entries(v).filter(([, x]) => x))
+                      Object.fromEntries(
+                        Object.entries(v)
+                          .filter(([, x]) => x)
+                          .map(([key, value]) => [
+                            key,
+                            key === "schoolCut" ? Number(value) : value,
+                          ]),
+                      )
                     }
                     done={refresh}
                   />
@@ -530,6 +545,12 @@ function Imports({ overview }: { overview: Overview }) {
     <>
       <h3>Fuentes e importaciones</h3>
       <p>
+        El reporte vincula matrícula, curso y ciclo. Carrera, grupo y modalidad
+        corresponden al principal de seguimiento; el grupo de impartición y la
+        inscripción específica de la materia no están determinados. No se
+        requiere elegirlos para cargar.
+      </p>
+      <p>
         Hasta 20 archivos por lote, 8 MiB por archivo y 40 MiB en total. Tras
         confirmar el envío, el servidor continúa aunque cierres esta página.
       </p>
@@ -610,9 +631,20 @@ function Imports({ overview }: { overview: Overview }) {
                 setFiles(
                   Array.from(e.target.files ?? []).map((file) => ({
                     file,
-                    courseId: "",
-                    mapping:
-                      '{"identity":{"header":"Correo"},"columns":[{"selector":{"header":"Nota"},"kind":"activity","activityId":"actividad-1"}]}',
+                    courseId: (() => {
+                      try {
+                        const named = courseFilename(file.name);
+                        const matches = overview.courses.filter(
+                          (c) =>
+                            c.cycleId === named.cycle &&
+                            c.externalId === named.externalId,
+                        );
+                        return matches.length === 1 ? matches[0]!.id : "";
+                      } catch {
+                        return "";
+                      }
+                    })(),
+                    mapping: '{"profile":"moodle-institutional-v1"}',
                     progress: "Pendiente de envío",
                     filenameResolution: "",
                   })),
@@ -789,7 +821,7 @@ function Imports({ overview }: { overview: Overview }) {
                       {r.values
                         .map(
                           (v) =>
-                            `${v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
+                            `${v.label ?? v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
                         )
                         .join("; ")}
                     </td>

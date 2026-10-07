@@ -6,6 +6,7 @@ import {
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
+import { unitsForPrincipal } from "../../src/domain/report-policy";
 import {
   emptyCounts,
   addValue,
@@ -461,6 +462,15 @@ export async function dashboard(
             continue;
           const { owned, special } = scopedPerson(row.identity)!;
           if (!specialMatch(row.identity)) continue;
+          const schedule = academic.context.trackingSchedule;
+          const expectedUnits = schedule?.tracking
+            ? unitsForPrincipal(
+                schedule,
+                base.parsed.modality ?? "",
+                cut.date,
+                cut.schoolCut,
+              )
+            : undefined;
           let values = row.values.filter((v) =>
             activities.includes(v.activityId),
           );
@@ -473,8 +483,12 @@ export async function dashboard(
               "failed-precondition",
               "Observaciones incompletas o duplicadas: revisar versión publicada.",
             );
-          values = values.filter(
-            (v) => !v.additional || v.state === "numerica",
+          values = values.filter((v) =>
+            v.additional
+              ? v.state === "numerica"
+              : !expectedUnits ||
+                v.unit === undefined ||
+                expectedUnits.includes(v.unit),
           );
           if (f.activity || activityByCourse)
             values = values.filter(
@@ -501,6 +515,11 @@ export async function dashboard(
               base.kind === "especial"
                 ? "principal_especial_confirmada"
                 : "grupo_base_confirmado",
+            ...(row.relationship
+              ? { relationshipId: row.relationship.id }
+              : {}),
+            teachingAssignment: "no_determinada",
+            ...(expectedUnits ? { expectedUnits } : {}),
             enrollmentIds: owned.map((e) => e.id),
             sourceVersions: cut.sources,
             issues: [
@@ -552,6 +571,7 @@ export async function dashboard(
       versionId: job?.id ?? null,
       selectionId: entry.selection?.id ?? null,
       available: job ? available(job) : [],
+      activityLabels: job?.activityLabels ?? {},
       activities: activityByCourse
         ? activities.filter((a) => a === activityByCourse.get(course.id))
         : activities,
@@ -872,7 +892,7 @@ export async function dashboard(
       "Version",
       "Matricula",
       "Carrera",
-      "Grupo base",
+      "Grupo principal de seguimiento",
       "Modalidad",
       "Turno",
       "Especial",
@@ -883,6 +903,11 @@ export async function dashboard(
       "Fuentes",
       "Incidencias",
       "Version de celda",
+      "Encabezado original de actividad",
+      "Relacion matricula curso ciclo",
+      "Grupo de imparticion",
+      "Correspondencia inscripcion",
+      "Unidades previstas",
     ],
     ...details.flatMap((r) =>
       r.values.map((v) => [
@@ -902,6 +927,11 @@ export async function dashboard(
         canonical(r.sourceVersions),
         r.issues.join(" | "),
         v.sourceVersion ?? r.versionId,
+        v.label ?? v.activityId,
+        r.relationshipId ?? "",
+        "no determinado",
+        "no determinada",
+        r.expectedUnits?.join(" | ") ?? "",
       ]),
     ),
     [

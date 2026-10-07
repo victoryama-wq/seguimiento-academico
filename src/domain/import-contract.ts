@@ -72,6 +72,7 @@ export const operationSchemas = {
     cycleId: keySchema,
     id: keySchema,
     date: civilDateSchema,
+    schoolCut: z.number().int().min(1).max(3).optional(),
     parentId: keySchema.optional(),
     carryCutId: keySchema.optional(),
     reason: label.optional(),
@@ -164,9 +165,23 @@ export const rowViewSchema = z.object({
   identity: z.string(),
   careerId: z.string(),
   row: z.number(),
+  relationship: z
+    .object({
+      id: z.string(),
+      cycleId: z.string(),
+      courseId: z.string(),
+      trackingEnrollmentId: z.string(),
+      trackingGroup: z.string(),
+      trackingModality: z.string(),
+      teachingEnrollmentId: z.null(),
+      teachingGroup: z.null(),
+      teachingAssignment: z.literal("no_determinada"),
+    })
+    .optional(),
   values: z.array(
     z.object({
       activityId: z.string(),
+      label: z.string().optional(),
       state: z.string(),
       raw: z.unknown(),
       additional: z.boolean().optional(),

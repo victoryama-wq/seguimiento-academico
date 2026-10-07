@@ -6,6 +6,12 @@ Las fuentes reales, sus decisiones individuales y los informes detallados están
 en `private/`, ignorado por Git. No se modifican los originales. No se publica en
 Firebase, no se crean cuentas ni se asignan permisos a partir del catálogo.
 
+Actualización vigente: [integración de reportes](integracion-reportes.md) sustituye
+los pendientes históricos de Virtual, reconocimiento de actividades y relación
+curso/inscripción que se describen más abajo. La principal organiza el seguimiento;
+la inscripción de impartición permanece no determinada, sin bloquear la operación.
+DEC-01–36 y las fotografías previas se conservan.
+
 ## Comportamiento implementado
 
 El administrador incorpora un **paquete académico JSON** como fuente versionada.

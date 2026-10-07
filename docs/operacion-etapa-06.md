@@ -116,7 +116,8 @@ importar el paquete privado en emuladores, revisar incidencias, registrar una
 corrección, publicar su fuente y volver a validar reportes. No mezclar el paquete
 completo con la anexión del suplemento ya integrado. Ninguna etiqueta de responsable
 crea una cuenta o permiso. DEC-35/36 resuelven las dos observaciones de fecha sin
-alterar los originales; el calendario de Virtual continúa pendiente. La validación
+alterar los originales. La [integración de reportes](integracion-reportes.md) añade
+el calendario semanal independiente de Virtual y seguimiento por principal. La validación
 local no autoriza importar datos reales a Firebase ni desplegar.
 
 Si una revisión se rechaza porque la fuente cambió, actualizar trabajos y abrir la

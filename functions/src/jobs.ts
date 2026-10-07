@@ -8,11 +8,17 @@ import {
   catalogSchema,
   contextSchema,
   courseFilename,
+  courseNameKey,
   resolveCourseFilename,
   resolveAffiliations,
   supplementSchema,
 } from "../../src/domain/academic";
 import { readTable } from "../../src/importing/files";
+import {
+  institutionalMapping,
+  reportProfile,
+} from "../../src/importing/report-layout";
+import { unitsForPrincipal } from "../../src/domain/report-policy";
 import {
   mapRecords,
   parseMoodle,
@@ -56,6 +62,7 @@ export type Cut = {
   id: string;
   cycleId: string;
   date: string;
+  schoolCut?: number;
   status: "open" | "closed";
   sources: SourceRefs;
   dates: Cycle["dates"];
@@ -76,6 +83,8 @@ export type Job = {
   sources?: SourceRefs;
   cumulative?: boolean;
   activityIds?: string[];
+  activityLabels?: Record<string, string>;
+  automaticActivities?: boolean;
   carryVersion?: string | null;
   revalidationOf?: string;
   revalidatedBy?: string;
@@ -331,12 +340,18 @@ async function report(
         approvedBy: job.uid,
         version: job.id,
       })
-    : courseFilename(job.file.name);
+    : (() => {
+        try {
+          return courseFilename(job.file.name);
+        } catch {
+          throw new InvalidSource("identificacion_curso_ambigua");
+        }
+      })();
   if (
     fileCourse.cycle !== cut.cycleId ||
     fileCourse.externalId !== course.externalId
   )
-    throw new InvalidSource();
+    throw new InvalidSource("curso_o_ciclo_incompatible");
   let table = readTable(bytes, job.file.name);
   const { resolutions, ...mapping } = job.file.mapping;
   const audits: unknown[] = [];
@@ -353,12 +368,21 @@ async function report(
       table = resolved.table;
       audits.push(resolved.audit);
     }
+  const academic = await academicSnapshot(cut);
+  const schedule = academic.context.trackingSchedule;
+  if (
+    schedule?.tracking &&
+    courseNameKey(fileCourse.name) !== courseNameKey(course.name)
+  )
+    throw new InvalidSource("nombre_curso_incompatible");
+  const autoMapping = mapping.profile === reportProfile;
+  if (autoMapping && Object.keys(mapping).length !== 1)
+    throw new Error("Perfil automático con campos ambiguos");
   const parsed = parseMoodle(table, {
-    ...mapping,
+    ...(autoMapping ? institutionalMapping(table) : mapping),
     approvedBy: job.uid,
     version: job.id,
   });
-  const academic = await academicSnapshot(cut);
   const observations: Observation[] = [];
   if (cut.sources.academicPackage) {
     const source = (
@@ -489,9 +513,23 @@ async function report(
       identity: String(row.person.original),
       careerId: base.careerId,
       row: row.row,
+      relationship: {
+        id: hash(canonical([cut.cycleId, course.id, row.person.normalized])),
+        cycleId: cut.cycleId,
+        courseId: course.id,
+        trackingEnrollmentId: base.id,
+        trackingGroup: base.parsed.normalized,
+        trackingModality: base.parsed.modality ?? "",
+        teachingEnrollmentId: null,
+        teachingGroup: null,
+        teachingAssignment: "no_determinada",
+      },
       values: row.values.map((v) => ({
         activityId: v.activityId,
         state: v.grade.state,
+        label: parsed.mapping.columns.find(
+          (c) => c.activityId === v.activityId,
+        )!.selector.header,
         raw: v.grade.raw,
         sourceVersion: job.id,
         ...(parsed.mapping.columns.find((c) => c.activityId === v.activityId)
@@ -539,6 +577,28 @@ async function report(
       if (before.length > 10000) throw new InvalidSource();
       cursor = page.cursor ?? undefined;
     } while (cursor);
+    if (autoMapping) {
+      const existingIds = new Map<string, Set<string>>();
+      for (const row of before)
+        for (const v of row.values) {
+          if (!v.label)
+            throw new Error(
+              "Versión sin encabezados auditados: conservar su mapeo explícito antes de cambiar al perfil automático",
+            );
+          const ids = existingIds.get(v.label) ?? new Set<string>();
+          ids.add(v.activityId);
+          existingIds.set(v.label, ids);
+        }
+      if (
+        parsed.activities.some((a) => {
+          const ids = existingIds.get(a.selector.header);
+          return ids && (ids.size !== 1 || !ids.has(a.activityId!));
+        })
+      )
+        throw new Error(
+          "Cambio de mapeo: conservar los IDs de actividades ya publicados mediante revisión explícita",
+        );
+    }
     const eligible: RowView[] = [];
     for (const row of before) {
       const person = persons.get(identity(row.identity).normalized ?? "");
@@ -546,7 +606,27 @@ async function report(
         ? enrollments.get(person.baseEnrollmentId)
         : undefined;
       if (base && course.careers.includes(base.careerId))
-        eligible.push({ ...row, careerId: base.careerId });
+        eligible.push({
+          ...row,
+          careerId: base.careerId,
+          relationship: {
+            id: hash(
+              canonical([
+                cut.cycleId,
+                course.id,
+                identity(row.identity).normalized,
+              ]),
+            ),
+            cycleId: cut.cycleId,
+            courseId: course.id,
+            trackingEnrollmentId: base.id,
+            trackingGroup: base.parsed.normalized,
+            trackingModality: base.parsed.modality ?? "",
+            teachingEnrollmentId: null,
+            teachingGroup: null,
+            teachingAssignment: "no_determinada",
+          },
+        });
       else {
         const records =
           person?.enrollmentIds.map((id) => enrollments.get(id)!) ?? [];
@@ -573,6 +653,22 @@ async function report(
     }
     rows = accumulateRows(eligible, rows);
   }
+  if (schedule?.tracking)
+    for (const row of rows) {
+      try {
+        unitsForPrincipal(
+          schedule,
+          row.relationship?.trackingModality ?? "",
+          cut.date,
+          cut.schoolCut,
+        );
+      } catch {
+        issues.push({
+          code: "modalidad_principal_sin_calendario",
+          refs: [String(row.row)],
+        });
+      }
+    }
   for (let i = 0; i < rows.length; i += 200) {
     const batch = db.batch();
     for (const row of rows.slice(i, i + 200)) {
@@ -590,12 +686,21 @@ async function report(
     filename: fileCourse,
     data: {
       mapping: parsed.mapping,
+      automaticActivities: !!schedule?.tracking,
+      activityLabels: Object.fromEntries(
+        rows.flatMap((r) =>
+          r.values.map((v) => [v.activityId, v.label ?? v.activityId]),
+        ),
+      ),
       audits,
       sources: cut.sources,
       teachers: parsed.teachers,
       academicIssues: academic.issues,
       activityIds: [
-        ...new Set(rows.flatMap((r) => r.values.map((v) => v.activityId))),
+        ...new Set([
+          ...parsed.activities.map((a) => a.activityId!),
+          ...rows.flatMap((r) => r.values.map((v) => v.activityId)),
+        ]),
       ],
       carryVersion: job.carryVersion ?? null,
     },
@@ -645,11 +750,8 @@ export async function processJob(id: string) {
           : await administrative(job, bytes);
     } catch (error) {
       // Errores del parser y del contrato son permanentes; fallos de infraestructura se reintentan.
-      if (
-        error instanceof z.ZodError ||
-        error instanceof InvalidSource ||
-        !(error as { code?: unknown }).code
-      )
+      if (error instanceof InvalidSource) throw error;
+      if (error instanceof z.ZodError || !(error as { code?: unknown }).code)
         throw new InvalidSource();
       throw error;
     }
@@ -666,10 +768,16 @@ export async function processJob(id: string) {
       tx.update(ref, {
         status: "ready",
         artifact: path,
-        ...(job.kind === "report" && job.cumulative
+        ...(job.kind === "report"
           ? {
               activityIds: (artifact.data as { activityIds: string[] })
                 .activityIds,
+              automaticActivities: !!(
+                artifact.data as { automaticActivities?: boolean }
+              ).automaticActivities,
+              activityLabels: (
+                artifact.data as { activityLabels: Record<string, string> }
+              ).activityLabels,
             }
           : {}),
         // Una nota inválida es un estado publicable, no una identidad sin resolver.
@@ -695,7 +803,7 @@ export async function processJob(id: string) {
               : "queued",
         error:
           error instanceof InvalidSource
-            ? "archivo_o_mapeo_invalido"
+            ? error.message || "archivo_o_mapeo_invalido"
             : "fallo_temporal",
         lease: 0,
       });

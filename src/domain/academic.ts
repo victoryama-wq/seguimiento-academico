@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
+import { scheduleSchema } from "./report-policy";
 
 export type Issue = { code: string; refs: string[] };
 const text = z.string().trim().min(1);
@@ -186,6 +187,7 @@ export const enrollmentDecisionSchema = z.strictObject({
   sourceReference: text,
 });
 export const contextSchema = z.strictObject({
+  trackingSchedule: scheduleSchema.optional(),
   rulesVersion: z.literal("approved-2026-10").optional(),
   enrollmentDecisions: z.array(enrollmentDecisionSchema).optional(),
   cycle: text,
@@ -526,16 +528,37 @@ export function grade(raw: unknown) {
   return { state: "invalida" as const, raw };
 }
 
+export function courseNameKey(name: string) {
+  return name
+    .normalize("NFC")
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 export function courseFilename(original: string) {
+  // Solo un prefijo etiquetado se puede separar sin adivinar cuál número es el ID.
+  const prefix = /^(?:muestra|orden)\s+(\d+)\s*[-_]\s*/i.exec(original);
+  const filename = prefix ? original.slice(prefix[0].length) : original;
   const match =
-    /^(\d+)\s+(.+?)\s+(\d{2}-\d+)(?:[-_ ](?:calificaciones|grades))?\.(ods|xlsx|csv)$/i.exec(
-      original,
+    /^(\d+)(?:\._|[ _]+)(.+?)[ _]+(\d{2}-\d+)(?:[-_ ](?:calificaciones|grades))?\.(ods|xlsx|csv)$/i.exec(
+      filename,
     );
-  if (!match || /^\d+\s/.test(match[2]!) || /\b\d{2}-\d+\b/.test(match[2]!))
+  if (
+    !match ||
+    /^\d+(?:\._|[ ._-])/.test(match[2]!) ||
+    /\b\d{2}-\d+\b/.test(match[2]!)
+  )
     throw new Error(
       "Nombre de curso ambiguo: confirmar ID, nombre y ciclo mediante mapeo revisado",
     );
-  return { original, externalId: match[1]!, name: match[2]!, cycle: match[3]! };
+  return {
+    original,
+    externalId: match[1]!,
+    name: match[2]!.replaceAll("_", " "),
+    cycle: match[3]!,
+    ...(prefix ? { orderPrefix: prefix[0] } : {}),
+  };
 }
 
 export const courseFilenameResolutionSchema = z.strictObject({

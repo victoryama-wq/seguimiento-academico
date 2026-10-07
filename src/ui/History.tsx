@@ -74,6 +74,7 @@ function Calendar({ overview }: { overview: Overview }) {
           firstDate: v.firstDate,
           count: Number(v.count),
           ...(v.modality ? { modality: v.modality } : {}),
+          ...(v.schoolCut ? { schoolCut: Number(v.schoolCut) } : {}),
         },
         okSchema,
       );
@@ -129,6 +130,7 @@ function Calendar({ overview }: { overview: Overview }) {
                 <strong>{c.id}</strong> · {c.date} ·{" "}
                 {c.status === "closed" ? "Cerrado" : "Abierto"} · Pendientes de
                 carga: {c.pending}
+                {c.schoolCut && <p>Corte Escolarizado: {c.schoolCut}</p>}
                 {c.parentId && (
                   <p>
                     Revisión de {c.parentId}: {c.reason} · Autor: {c.author}
@@ -166,22 +168,29 @@ function Calendar({ overview }: { overview: Overview }) {
         <details>
           <summary>Proponer calendario de cortes</summary>
           <p>
-            El perfil aprobado usa semanas vencidas según modalidad y unidades;
-            el perfil anterior conserva intervalos de 21 días. Virtual requiere
-            su propio calendario. Son fechas de referencia flexibles. La fecha
-            académica puede ajustarse antes de aceptar archivos; después
-            requiere una revisión.
+            Escolarizado usa el número de corte; Ejecutivo y Virtual usan
+            semanas vencidas. El perfil anterior conserva intervalos de 21 días.
+            Virtual tiene calendario independiente en la nueva configuración del
+            ciclo. Son fechas de referencia flexibles. La fecha académica puede
+            ajustarse antes de aceptar archivos; después requiere una revisión.
           </p>
           <form onSubmit={(e) => void plan(e)}>
+            <label>
+              Bloque Escolarizado para cortes semanales (1–3)
+              <input name="schoolCut" type="number" min="1" max="3" />
+            </label>
+            <p>
+              En calendario Escolarizado se asignan cortes 1, 2 y 3. En un lote
+              semanal, indica el bloque de seguimiento Escolarizado; si cambia,
+              crea otro lote. Cambiar la fecha conserva ese bloque.
+            </p>
             <label>
               Modalidad del calendario
               <select name="modality">
                 <option value="">Perfil anterior (21 días)</option>
                 <option value="escolarizado">Escolarizado</option>
                 <option value="ejecutivo">Ejecutivo</option>
-                <option value="virtual">
-                  Virtual (requiere configuración)
-                </option>
+                <option value="virtual">Virtual</option>
               </select>
             </label>
             <label>

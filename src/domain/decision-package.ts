@@ -5,6 +5,7 @@ import {
   enrollmentDecisionSchema,
 } from "./academic";
 import { civilDateSchema } from "./schemas";
+import { scheduleSchema } from "./report-policy";
 
 const text = z.string().trim().min(1).max(4000);
 export const originalEnrollmentSchema = z.strictObject({
@@ -46,19 +47,7 @@ export const academicPackageSchema = z.strictObject({
     civilDateSchema,
     z.enum(["base", "especial", "practica", "excluida"]),
   ),
-  schedule: z.strictObject({
-    escolarizado: z
-      .array(z.array(z.number().int().min(1).max(100)).min(1))
-      .min(1),
-    ejecutivo: z.array(z.array(z.number().int().min(1).max(100)).min(1)).min(1),
-    virtual: z
-      .array(z.array(z.number().int().min(1).max(100)).min(1))
-      .min(1)
-      .nullable(),
-    flexible: z.literal(true),
-    cumulative: z.literal(true),
-    completedWeek: z.literal(true),
-  }),
+  schedule: scheduleSchema,
   sources: z
     .array(
       z.strictObject({

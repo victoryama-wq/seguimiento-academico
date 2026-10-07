@@ -109,10 +109,10 @@ export function mapRecords(
 export function suggestColumn(
   header: string,
 ): "total" | "category" | "metadata" | "activity" | "review" {
-  if (/^total\b|^course total\b/i.test(header)) return "total";
+  if (/^(?:total|subtotal)\b|^course total\b/i.test(header)) return "total";
   if (/^categor[ií]a[: ]/i.test(header)) return "category";
   if (/^Último descargado desde este curso$/i.test(header)) return "metadata";
-  if (/^(tarea|cuestionario|foro|assignment|quiz)[: ]/i.test(header))
+  if (/^(tarea|cuestionario|examen|foro|assignment|quiz)[: ]/i.test(header))
     return "activity";
   return "review";
 }
@@ -159,6 +159,12 @@ export function parseMoodle(table: Table, mappingInput: unknown) {
   )
     throw new Error("Mapear cada columna exactamente una vez");
   const activities = columns.filter((c) => c.kind === "activity");
+  if (
+    activities.some((c) =>
+      ["total", "category"].includes(suggestColumn(c.selector.header)),
+    )
+  )
+    throw new Error("Un total o categoría no es una actividad");
   if (
     activities.some((c) => !c.activityId) ||
     new Set(activities.map((c) => c.activityId)).size !== activities.length ||

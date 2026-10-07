@@ -8,6 +8,10 @@ const {
 } = require("../functions/lib/src/importing/decisions.js");
 const { readTable } = require("../functions/lib/src/importing/files.js");
 const { parseMoodle } = require("../functions/lib/src/importing/mapping.js");
+const {
+  institutionalMapping,
+  reportProfile,
+} = require("../functions/lib/src/importing/report-layout.js");
 const root = fs.realpathSync("private");
 const local = (file) => {
   const resolved = fs.realpathSync(file);
@@ -30,7 +34,9 @@ const records = new Map(result.academic.enrollments.map((e) => [e.id, e]));
 const files = manifest.books.map((book, i) => {
   const table = readTable(fs.readFileSync(book.path), path.basename(book.path));
   const parsed = parseMoodle(table, {
-    ...book.mapping,
+    ...(book.mapping.profile === reportProfile
+      ? institutionalMapping(table)
+      : book.mapping),
     version: `M0${i + 1}`,
     approvedBy: "conciliacion-local",
   });
@@ -82,7 +88,7 @@ const files = manifest.books.map((book, i) => {
 });
 const report = {
   status:
-    "conciliacion privada; sin publicación; selección de actividades requiere validación por corte",
+    "conciliacion privada sin publicación; reconocimiento de actividades y afiliación; no sustituye la aceptación operativa del corte",
   files,
   pendingSourceObservations: result.observations.filter(
     (o) => o.state === "pendiente",

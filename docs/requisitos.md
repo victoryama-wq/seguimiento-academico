@@ -150,6 +150,14 @@ las membresías del sistema se asignan por separado.
 
 Para el perfil aprobado, Escolarizado sigue bloques 1–2, 3–5, 6–7 y Ejecutivo
 unidades semanales, por semana vencida y con fechas flexibles. Virtual tiene horario
-confirmado, pero calendario pendiente. Las cargas parciales acumulan datos por ID
+confirmado y calendario semanal independiente aprobado en la integración de
+reportes. Las cargas parciales acumulan datos por ID
 estable de actividad sin convertir ausencias en cero. La prioridad de excepciones
 individuales se limita a su inscripción y ciclo; no se alteran cortes cerrados.
+
+La relación operativa es matrícula + instancia de curso + ciclo. La afiliación
+principal conciliada (también C.A.) organiza carrera, grupo, modalidad y ámbito.
+La inscripción específica de impartición no está determinada y no bloquea cargas.
+El perfil institucional reconoce unidades/sesiones 1–7, cierre/final como unidad 7,
+y adicionales con nota numérica, incluido cero; excluye totales y subtotales.
+Contrato y límites en [integración de reportes](integracion-reportes.md).

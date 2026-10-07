@@ -122,6 +122,7 @@ export async function historyOperation(
       admin(member);
       const input = historyOperations.planCalendar.parse(raw);
       let dates = calendarDates(input.firstDate, input.count);
+      let tracking = false;
       await db.runTransaction(async (tx) => {
         admin(await membership(uid, tx));
         const cycle = (
@@ -142,6 +143,16 @@ export async function historyOperation(
             await tx.get(db.doc(`sources/${cycle.sources.academicPackage}`))
           ).data()!;
           const artifact = await jsonFile<Artifact>(String(source.artifact));
+          tracking = !!academicPackageSchema.parse(artifact.data).schedule
+            .tracking;
+          if (
+            tracking &&
+            input.modality !== "escolarizado" &&
+            input.schoolCut === undefined
+          )
+            throw precondition(
+              "Indica el bloque escolarizado 1–3 que acompaña a estos cortes semanales; para cambiar de bloque, planifica otro lote.",
+            );
           try {
             dates = approvedCalendarDates(
               academicPackageSchema.parse(artifact.data),
@@ -167,6 +178,12 @@ export async function historyOperation(
             id: refs[i]!.id,
             cycleId: cycle.id,
             date: dates[i],
+            ...(tracking
+              ? {
+                  schoolCut:
+                    input.modality === "escolarizado" ? i + 1 : input.schoolCut,
+                }
+              : {}),
             sources: cycle.sources,
             dates: cycle.dates,
             status: "open",
@@ -228,6 +245,7 @@ export async function historyOperation(
         cuts.push({
           id: c.id,
           date: c.date,
+          ...(c.schoolCut ? { schoolCut: c.schoolCut } : {}),
           status: c.status,
           parentId: c.parentId,
           reason: c.reason,

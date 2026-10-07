@@ -17,7 +17,7 @@ const labels = {
   institucion: "Institución / alcance autorizado",
   coordinacion: "Coordinación",
   carrera: "Carrera y plan",
-  grupo: "Grupo base",
+  grupo: "Grupo principal de seguimiento",
   modalidad: "Modalidad",
   turno: "Turno",
   asignatura: "Asignatura",
@@ -29,7 +29,7 @@ const dimensions = {
   coordination: "Coordinación",
   careerId: "Carrera",
   plan: "Plan",
-  group: "Grupo base",
+  group: "Grupo principal de seguimiento",
   modality: "Modalidad",
   shift: "Turno",
   teacher: "Docente conocido",
@@ -478,12 +478,23 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                           <td>
                             {r.group} · {r.modality} · {r.shift}{" "}
                             {r.special && "· Con especial separado"}
+                            <small>
+                              Grupo principal de seguimiento. Grupo de
+                              impartición: no determinado.
+                            </small>
+                            {r.expectedUnits && (
+                              <small>
+                                Unidades previstas:{" "}
+                                {r.expectedUnits.join(", ") ||
+                                  "ninguna por semana vencida"}
+                              </small>
+                            )}
                           </td>
                           <td>
                             {r.values
                               .map(
                                 (v) =>
-                                  `${v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
+                                  `${v.label ?? v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
                               )
                               .join("; ")}
                           </td>
@@ -642,7 +653,7 @@ function Selection({
               value={a}
               defaultChecked={course.activities.includes(a)}
             />
-            {a}
+            {course.activityLabels?.[a] ?? a}
           </label>
         ))}
       </fieldset>
