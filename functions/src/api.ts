@@ -1,3 +1,4 @@
+import { progressSchema } from "../../src/domain/report-policy";
 import { FieldPath } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
@@ -80,6 +81,7 @@ export async function academicOperation(
             date: v.date,
             status: v.status,
             sources: v.sources,
+            ...(v.progress ? { progress: v.progress } : {}),
           };
         }),
         courses: courses.docs
@@ -154,6 +156,41 @@ export async function academicOperation(
       });
       return { ok: true };
     }
+    case "configureProgress": {
+      admin(member);
+      const input = operationSchemas.configureProgress.parse(raw);
+      await db.runTransaction(async (tx) => {
+        admin(await membership(actor, tx));
+        const ref = db.doc(`cuts/${input.cutId}`);
+        const cut = (await tx.get(ref)).data() as Cut | undefined;
+        if (!cut || cut.status !== "open" || !cut.progress)
+          throw new HttpsError(
+            "failed-precondition",
+            "Requiere un corte abierto con política explícita; conserva la política de los cortes históricos.",
+          );
+        if (cut.progress.id !== input.expected)
+          throw new HttpsError(
+            "aborted",
+            "El avance cambió. Actualiza y revisa la configuración.",
+          );
+        const id = hash(canonical(input));
+        const progress = progressSchema.parse({
+          ...input.progress,
+          id,
+          policy: "explicit-progress-v1",
+          actor,
+          recordedAt: Date.now(),
+          previous: input.expected,
+          reason: input.reason,
+        });
+        tx.create(db.doc(`progressHistory/${id}`), {
+          ...progress,
+          cutId: cut.id,
+        });
+        tx.update(ref, { progress });
+      });
+      return { ok: true };
+    }
     case "createCut": {
       admin(member);
       const input = operationSchemas.createCut.parse(raw);
@@ -178,7 +215,8 @@ export async function academicOperation(
           const artifact = await jsonFile<Artifact>(String(source.artifact));
           if (
             academicPackageSchema.parse(artifact.data).schedule.tracking &&
-            input.schoolCut === undefined
+            input.schoolCut === undefined &&
+            !input.progress
           )
             throw new HttpsError(
               "failed-precondition",
@@ -219,8 +257,36 @@ export async function academicOperation(
             "invalid-argument",
             "El motivo requiere corte de origen.",
           );
+        const date =
+          input.date ??
+          new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Cancun",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date());
+        const progress = input.progress
+          ? progressSchema.parse({
+              ...input.progress,
+              id: hash(
+                canonical({ cutId: input.id, progress: input.progress }),
+              ),
+              policy: "explicit-progress-v1",
+              actor,
+              recordedAt: Date.now(),
+              previous: null,
+              reason: "Selección inicial explícita",
+            })
+          : undefined;
+        if (progress)
+          tx.create(db.doc(`progressHistory/${progress.id}`), {
+            ...progress,
+            cutId: input.id,
+          });
         tx.create(db.doc(`cuts/${input.id}`), {
           ...input,
+          date,
+          ...(progress ? { progress, academicDate: date } : {}),
           sources: cycle.sources,
           dates: cycle.dates,
           status: "open",
@@ -345,6 +411,7 @@ export async function academicOperation(
             kind: "report",
             sources: cut.sources,
             cumulative: !!cut.sources.academicPackage,
+            progressId: cut.progress?.id ?? null,
             carryVersion:
               (pointer.data()?.versionId as string | undefined) ??
               (carry?.data()?.versionId as string | undefined) ??
@@ -524,6 +591,11 @@ export async function academicOperation(
         if (job.status === "published") return;
         const cut = (await tx.get(db.doc(`cuts/${job.cutId}`))).data() as Cut;
         if (cut.status !== "open") throw closed();
+        if ((job.progressId ?? null) !== (cut.progress?.id ?? null))
+          throw new HttpsError(
+            "aborted",
+            "El avance cambió; vuelve a revisar el original.",
+          );
         if (job.sources && canonical(job.sources) !== canonical(cut.sources))
           throw new HttpsError(
             "failed-precondition",

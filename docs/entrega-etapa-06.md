@@ -11,6 +11,10 @@ seguimiento por principal, Virtual independiente, unidades y parciales acumulati
 Ese informe contiene los cálculos nuevos y los controles privados actualizados;
 las mediciones y capturas anteriores de este documento conservan su fecha y alcance.
 
+Continuación actual: [avance explícito y revisión acumulativa](avance-explicito.md),
+sobre `96f6526f9fb75e57747e4877223e9052e9d572e2`. Selecciones por modalidad
+independientes de la agenda, revisión por celda y protección de versiones anteriores.
+
 ## Alcance
 
 - Piloto reproducible de 45 y 230 cursos mediante API, worker, Auth, Firestore y

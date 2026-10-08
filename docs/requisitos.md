@@ -161,3 +161,15 @@ La inscripción específica de impartición no está determinada y no bloquea ca
 El perfil institucional reconoce unidades/sesiones 1–7, cierre/final como unidad 7,
 y adicionales con nota numérica, incluido cero; excluye totales y subtotales.
 Contrato y límites en [integración de reportes](integracion-reportes.md).
+
+### Continuación aprobada: avance explícito (2026-10-08)
+
+Para los nuevos cortes, el avance deja de depender de semanas vencidas o fechas
+operativas: Escolarizado selecciona corte 1/2/3 (acumulado 1–2/1–5/1–7), y
+Ejecutivo/Virtual seleccionan por separado unidad 1–7. La configuración se versiona
+por corte con auditoría de servidor; la fecha es opcional y no determina unidades.
+Las unidades posteriores se guardan sin contribuir a N ni D hasta seleccionarlas.
+Las cargas parciales conservan ausencias y no modifican el avance. La revisión
+señala notas nuevas, modificadas, sin cambios y numéricos reemplazados por vacío/guion.
+Los cálculos anteriores y cortes cerrados conservan sus políticas y fotografías.
+Detalles y pruebas en [avance explícito](avance-explicito.md); DEC-01–36 no cambian.

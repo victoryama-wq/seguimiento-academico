@@ -1,3 +1,4 @@
+import { Progress } from "./Progress";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import {
@@ -350,6 +351,16 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                 Fuente: versiones publicadas. Las páginas y exportación
                 conservan la fotografía consultada hasta actualizar versiones.
               </p>
+              {data.progress && (
+                <Progress
+                  cutId={data.cutId}
+                  progress={data.progress}
+                  editable={false}
+                  done={async () => {
+                    reload();
+                  }}
+                />
+              )}
               <p className="metric-context">
                 Filtros aplicados: {JSON.stringify(filters)} · Fotografía{" "}
                 {data.snapshotId}
@@ -482,6 +493,13 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                               Grupo principal de seguimiento. Grupo de
                               impartición: no determinado.
                             </small>
+                            {r.deferredUnits && r.deferredUnits.length > 0 && (
+                              <small>
+                                Unidades conservadas para después:{" "}
+                                {r.deferredUnits.join(", ")}. Fuera del cálculo
+                                actual.
+                              </small>
+                            )}
                             {r.expectedUnits && (
                               <small>
                                 Unidades previstas:{" "}

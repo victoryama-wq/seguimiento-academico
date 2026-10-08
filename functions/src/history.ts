@@ -1,3 +1,4 @@
+import { progressSchema } from "../../src/domain/report-policy";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
@@ -134,7 +135,7 @@ export async function historyOperation(
             (!cycle.sources.roster || !cycle.sources.catalog))
         )
           throw precondition("Publica padrón y catálogo antes de planificar.");
-        if (cycle.sources.academicPackage) {
+        if (cycle.sources.academicPackage && !input.progress) {
           if (!input.modality)
             throw precondition(
               "Selecciona modalidad para el calendario aprobado; Virtual requiere configuración explícita.",
@@ -148,7 +149,8 @@ export async function historyOperation(
           if (
             tracking &&
             input.modality !== "escolarizado" &&
-            input.schoolCut === undefined
+            input.schoolCut === undefined &&
+            !input.progress
           )
             throw precondition(
               "Indica el bloque escolarizado 1–3 que acompaña a estos cortes semanales; para cambiar de bloque, planifica otro lote.",
@@ -168,17 +170,36 @@ export async function historyOperation(
         }
         const refs = dates.map((date) =>
           db.doc(
-            `cuts/${input.cycleId}-${date}${cycle.sources.academicPackage ? `-${input.modality}` : ""}`,
+            `cuts/${input.cycleId}-${date}${cycle.sources.academicPackage && !input.progress ? `-${input.modality}` : ""}`,
           ),
         );
         const previous = await tx.getAll(...refs);
         for (let i = 0; i < refs.length; i++) {
           if (previous[i]!.exists) continue; // Reenvío conserva fechas editadas y cortes cerrados.
+          const progress = input.progress
+            ? progressSchema.parse({
+                ...input.progress,
+                id: hash(
+                  canonical({ cutId: refs[i]!.id, progress: input.progress }),
+                ),
+                policy: "explicit-progress-v1",
+                actor: uid,
+                recordedAt: Date.now(),
+                previous: null,
+                reason: "Planificación con avance explícito",
+              })
+            : undefined;
+          if (progress)
+            tx.create(db.doc(`progressHistory/${progress.id}`), {
+              ...progress,
+              cutId: refs[i]!.id,
+            });
           tx.create(refs[i]!, {
             id: refs[i]!.id,
             cycleId: cycle.id,
             date: dates[i],
-            ...(tracking
+            ...(progress ? { progress, academicDate: dates[i] } : {}),
+            ...(tracking && !input.progress
               ? {
                   schoolCut:
                     input.modality === "escolarizado" ? i + 1 : input.schoolCut,
@@ -211,7 +232,7 @@ export async function historyOperation(
         const jobs = await tx.get(
           db.collection("jobs").where("cutId", "==", cut.id).limit(1),
         );
-        if (cut.status !== "open" || !jobs.empty)
+        if (cut.status !== "open" || (!cut.progress && !jobs.empty))
           throw precondition(
             "La fecha académica solo se edita antes de aceptar archivos; después crea una revisión atribuible.",
           );
@@ -245,6 +266,7 @@ export async function historyOperation(
         cuts.push({
           id: c.id,
           date: c.date,
+          ...(c.progress ? { progress: c.progress } : {}),
           ...(c.schoolCut ? { schoolCut: c.schoolCut } : {}),
           status: c.status,
           parentId: c.parentId,

@@ -6,7 +6,10 @@ import {
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
-import { unitsForPrincipal } from "../../src/domain/report-policy";
+import {
+  unitsForProgress,
+  unitsForPrincipal,
+} from "../../src/domain/report-policy";
 import {
   emptyCounts,
   addValue,
@@ -463,14 +466,16 @@ export async function dashboard(
           const { owned, special } = scopedPerson(row.identity)!;
           if (!specialMatch(row.identity)) continue;
           const schedule = academic.context.trackingSchedule;
-          const expectedUnits = schedule?.tracking
-            ? unitsForPrincipal(
-                schedule,
-                base.parsed.modality ?? "",
-                cut.date,
-                cut.schoolCut,
-              )
-            : undefined;
+          const expectedUnits = cut.progress
+            ? unitsForProgress(cut.progress, base.parsed.modality ?? "")
+            : schedule?.tracking
+              ? unitsForPrincipal(
+                  schedule,
+                  base.parsed.modality ?? "",
+                  cut.date,
+                  cut.schoolCut,
+                )
+              : undefined;
           let values = row.values.filter((v) =>
             activities.includes(v.activityId),
           );
@@ -519,7 +524,23 @@ export async function dashboard(
               ? { relationshipId: row.relationship.id }
               : {}),
             teachingAssignment: "no_determinada",
-            ...(expectedUnits ? { expectedUnits } : {}),
+            ...(expectedUnits
+              ? {
+                  expectedUnits,
+                  deferredUnits: [
+                    ...new Set(
+                      row.values
+                        .filter(
+                          (v) =>
+                            !v.additional &&
+                            v.unit !== undefined &&
+                            !expectedUnits.includes(v.unit),
+                        )
+                        .map((v) => v.unit!),
+                    ),
+                  ].sort((a, b) => a - b),
+                }
+              : {}),
             enrollmentIds: owned.map((e) => e.id),
             sourceVersions: cut.sources,
             issues: [
@@ -752,6 +773,7 @@ export async function dashboard(
     cutId: cut.id,
     cycleId: cut.cycleId,
     date: cut.date,
+    ...(cut.progress ? { progress: cut.progress } : {}),
     closed: cut.status === "closed",
     counts,
     ...percentages(counts),
@@ -808,6 +830,12 @@ export async function dashboard(
       snap.id,
     ],
     ["Filtros", canonical(f), "Vista", input.view],
+    [
+      "Avance explicito",
+      cut.progress ? canonical(cut.progress) : "Politica historica",
+      "Fecha de referencia academica",
+      cut.academicDate ?? cut.date,
+    ],
     [
       "N",
       "G",
@@ -908,6 +936,7 @@ export async function dashboard(
       "Grupo de imparticion",
       "Correspondencia inscripcion",
       "Unidades previstas",
+      "Unidades conservadas para despues",
     ],
     ...details.flatMap((r) =>
       r.values.map((v) => [
@@ -932,6 +961,7 @@ export async function dashboard(
         "no determinado",
         "no determinada",
         r.expectedUnits?.join(" | ") ?? "",
+        r.deferredUnits?.join(" | ") ?? "",
       ]),
     ),
     [

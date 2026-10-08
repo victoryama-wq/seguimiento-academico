@@ -164,8 +164,12 @@ export async function correctionOperation(
     if (cut.status !== "open") throw conflict();
     const expected = (await tx.get(pointerRef(cut.id, course.id))).data()
       ?.versionId as string | undefined;
+    const freshJob = (await tx.get(db.doc(`jobs/${old.id}`))).data() as Job;
+    if (freshJob.status === "published" && expected !== old.id)
+      throw conflict();
     const id = hash(
       canonical({
+        progressId: cut.progress?.id ?? null,
         revalidationOf: old.id,
         sources: cut.sources,
         expected: expected ?? null,
@@ -187,6 +191,7 @@ export async function correctionOperation(
       id,
       sources: cut.sources,
       cumulative: !!cut.sources.academicPackage,
+      progressId: cut.progress?.id ?? null,
       carryVersion: expected ?? carry ?? null,
       revalidationOf: old.id,
       revalidatedBy: actor,

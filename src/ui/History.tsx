@@ -1,3 +1,4 @@
+import { Progress, ProgressFields } from "./Progress";
 import { useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import type { Overview } from "../domain/import-contract";
@@ -26,7 +27,13 @@ const percentage = (v: number | null) =>
   v === null
     ? "No comparable"
     : v.toLocaleString("es-MX", { maximumFractionDigits: 2 });
-export default function History({ overview }: { overview: Overview }) {
+export default function History({
+  overview,
+  changed,
+}: {
+  overview: Overview;
+  changed: () => Promise<void>;
+}) {
   return (
     <div className="history-workspace">
       <p>
@@ -34,13 +41,19 @@ export default function History({ overview }: { overview: Overview }) {
         fotografía no conserva permisos revocados. No se envían recordatorios ni
         mensajes.
       </p>
-      <Calendar overview={overview} />
+      <Calendar overview={overview} changed={changed} />
       <Comparison overview={overview} />
       <CaseLog overview={overview} />
     </div>
   );
 }
-function Calendar({ overview }: { overview: Overview }) {
+function Calendar({
+  overview,
+  changed,
+}: {
+  overview: Overview;
+  changed: () => Promise<void>;
+}) {
   const [cycle, setCycle] = useState(overview.cycles[0]?.id ?? "");
   const [data, setData] = useState<z.infer<typeof calendarSchema> | null>(null);
   const [busy, setBusy] = useState(false),
@@ -74,11 +87,16 @@ function Calendar({ overview }: { overview: Overview }) {
           firstDate: v.firstDate,
           count: Number(v.count),
           ...(v.modality ? { modality: v.modality } : {}),
-          ...(v.schoolCut ? { schoolCut: Number(v.schoolCut) } : {}),
+          progress: {
+            schoolCut: Number(v.schoolCut),
+            executiveUnit: Number(v.executiveUnit),
+            virtualUnit: Number(v.virtualUnit),
+          },
         },
         okSchema,
       );
       await load();
+      await changed();
     } catch (e) {
       setMessage(errorText(e));
     } finally {
@@ -91,6 +109,7 @@ function Calendar({ overview }: { overview: Overview }) {
     try {
       await callAcademic("editCutDate", v, okSchema);
       await load();
+      await changed();
     } catch (e) {
       setMessage(errorText(e));
     } finally {
@@ -130,6 +149,19 @@ function Calendar({ overview }: { overview: Overview }) {
                 <strong>{c.id}</strong> · {c.date} ·{" "}
                 {c.status === "closed" ? "Cerrado" : "Abierto"} · Pendientes de
                 carga: {c.pending}
+                {c.progress && (
+                  <Progress
+                    cutId={c.id}
+                    progress={c.progress}
+                    editable={
+                      overview.member.role === "admin" && c.status === "open"
+                    }
+                    done={async () => {
+                      await load();
+                      await changed();
+                    }}
+                  />
+                )}
                 {c.schoolCut && <p>Corte Escolarizado: {c.schoolCut}</p>}
                 {c.parentId && (
                   <p>
@@ -168,31 +200,12 @@ function Calendar({ overview }: { overview: Overview }) {
         <details>
           <summary>Proponer calendario de cortes</summary>
           <p>
-            Escolarizado usa el número de corte; Ejecutivo y Virtual usan
-            semanas vencidas. El perfil anterior conserva intervalos de 21 días.
-            Virtual tiene calendario independiente en la nueva configuración del
-            ciclo. Son fechas de referencia flexibles. La fecha académica puede
-            ajustarse antes de aceptar archivos; después requiere una revisión.
+            Las fechas organizan la operación. Selecciona explícitamente el
+            avance inicial de cada modalidad; podrás versionarlo en cada corte
+            abierto. No se exige completar todas las cargas o unidades.
           </p>
           <form onSubmit={(e) => void plan(e)}>
-            <label>
-              Bloque Escolarizado para cortes semanales (1–3)
-              <input name="schoolCut" type="number" min="1" max="3" />
-            </label>
-            <p>
-              En calendario Escolarizado se asignan cortes 1, 2 y 3. En un lote
-              semanal, indica el bloque de seguimiento Escolarizado; si cambia,
-              crea otro lote. Cambiar la fecha conserva ese bloque.
-            </p>
-            <label>
-              Modalidad del calendario
-              <select name="modality">
-                <option value="">Perfil anterior (21 días)</option>
-                <option value="escolarizado">Escolarizado</option>
-                <option value="ejecutivo">Ejecutivo</option>
-                <option value="virtual">Virtual</option>
-              </select>
-            </label>
+            <ProgressFields />
             <label>
               Primer corte
               <input type="date" name="firstDate" required />

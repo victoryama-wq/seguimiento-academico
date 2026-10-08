@@ -1,3 +1,4 @@
+import { progressSchema, progressInputSchema } from "./report-policy";
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
 import {
@@ -30,6 +31,7 @@ const comparisonRequest = z.strictObject({
 const target = { cutId: key, courseId: key, student: text };
 export const historyOperations = {
   planCalendar: z.strictObject({
+    progress: progressInputSchema.optional(),
     schoolCut: z.number().int().min(1).max(3).optional(),
     modality: z.enum(["escolarizado", "ejecutivo", "virtual"]).optional(),
     cycleId: key,
@@ -135,6 +137,7 @@ export const calendarSchema = z.object({
       id: z.string(),
       date: z.string(),
       schoolCut: z.number().int().min(1).max(3).optional(),
+      progress: progressSchema.optional(),
       status: z.string(),
       parentId: z.string().nullable(),
       reason: z.string().nullable(),

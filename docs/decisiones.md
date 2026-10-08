@@ -450,3 +450,23 @@ de cortes anteriores ni concede permisos a responsables del catálogo.
   una celda vacía presente sí actualiza el estado. Reintentos no duplican relaciones.
 
 Pruebas, cálculos y limitaciones: [integración de reportes](integracion-reportes.md).
+
+## Continuación aprobada 2026-10-08: avance explícito del corte
+
+Para los nuevos cortes, la selección explícita sustituye la dependencia de semanas
+vencidas y fechas operativas descrita en la decisión anterior. Escolarizado elige
+1/2/3 (U1–2/U1–5/U1–7); Ejecutivo y Virtual eligen independientemente U1–7.
+Cada estudiante utiliza su modalidad principal conciliada. Los archivos y sus
+reintentos no cambian el avance. Unidades posteriores se guardan fuera del cálculo;
+adicionales numéricas, incluido cero, conservan su regla aprobada.
+
+Decisión técnica: configuración `explicit-progress-v1` por corte, validada en API,
+historial inmutable con actor, hora del servidor, motivo y predecesor; CAS al editar
+y comprobación de versión al publicar. Fecha operativa editable separada de la
+referencia académica inicial. Los cortes anteriores conservan su política y sus
+cálculos; ninguna migración automática. Cierre, paginación y exportación congelan
+también la configuración de avance. La revisión acumulativa muestra antes/después
+y advierte numéricos reemplazados por vacío/guion, limitada a carreras autorizadas.
+No cambia DEC-01–36, sus originales ni la conciliación aprobada.
+
+Contrato, ejemplos manuales y evidencia: [avance explícito](avance-explicito.md).

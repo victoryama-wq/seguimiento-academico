@@ -1,6 +1,42 @@
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
 
+export const progressInputSchema = z.strictObject({
+  schoolCut: z.number().int().min(1).max(3),
+  executiveUnit: z.number().int().min(1).max(7),
+  virtualUnit: z.number().int().min(1).max(7),
+});
+export const progressSchema = progressInputSchema.extend({
+  id: z.string(),
+  policy: z.literal("explicit-progress-v1"),
+  actor: z.string(),
+  recordedAt: z.number(),
+  previous: z.string().nullable(),
+  reason: z.string(),
+});
+export type AcademicProgress = z.infer<typeof progressSchema>;
+export function unitsForProgress(
+  progress: z.infer<typeof progressInputSchema>,
+  modality: string,
+): number[] {
+  const p = progressInputSchema.parse({
+    schoolCut: progress.schoolCut,
+    executiveUnit: progress.executiveUnit,
+    virtualUnit: progress.virtualUnit,
+  });
+  const key = modality.trim().toLowerCase();
+  const end =
+    key === "escolarizado"
+      ? [2, 5, 7][p.schoolCut - 1]
+      : key === "ejecutivo"
+        ? p.executiveUnit
+        : key === "virtual"
+          ? p.virtualUnit
+          : undefined;
+  if (!end) throw new Error("Modalidad principal sin avance confirmado");
+  return Array.from({ length: end }, (_, i) => i + 1);
+}
+
 const blocks = z.array(z.array(z.number().int().min(1).max(100)).min(1)).min(1);
 export const scheduleSchema = z
   .strictObject({

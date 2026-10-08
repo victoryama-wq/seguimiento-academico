@@ -1,3 +1,4 @@
+import { progressSchema } from "./report-policy";
 import { z } from "zod";
 import { countsSchema } from "./metrics";
 
@@ -85,6 +86,7 @@ export const metricDetail = z.object({
   relationshipId: z.string().optional(),
   teachingAssignment: z.literal("no_determinada").optional(),
   expectedUnits: z.array(z.number()).optional(),
+  deferredUnits: z.array(z.number()).optional(),
   enrollmentIds: z.array(z.string()),
   sourceVersions: z.record(z.string(), z.string()),
   issues: z.array(z.string()),
@@ -128,6 +130,7 @@ export const metricExclusion = z.object({
   provenance: z.string(),
 });
 export const dashboardSchema = z.object({
+  progress: progressSchema.optional(),
   snapshotId: z.string(),
   cutId: z.string(),
   cycleId: z.string(),

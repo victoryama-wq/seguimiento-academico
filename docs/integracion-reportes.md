@@ -3,6 +3,10 @@
 Ampliación del PR #5 sobre `3e2a0694581b0e75822ebfbdb82a3d4ff9f91d1c`.
 Sin merge, despliegue ni conexión de datos privados a Firebase.
 
+**Actualización 2026-10-08:** para los cortes nuevos, el [avance explícito](avance-explicito.md)
+sustituye la política de fechas descrita abajo. Este documento conserva la evidencia
+y los cálculos de la implementación anterior, que continúan aplicando a sus versiones.
+
 ## Contrato y operación
 
 El perfil `moodle-institutional-v1` reconoce los encabezados de los cuatro libros

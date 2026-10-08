@@ -18,7 +18,11 @@ import {
   institutionalMapping,
   reportProfile,
 } from "../../src/importing/report-layout";
-import { unitsForPrincipal } from "../../src/domain/report-policy";
+import {
+  unitsForProgress,
+  type AcademicProgress,
+  unitsForPrincipal,
+} from "../../src/domain/report-policy";
 import {
   mapRecords,
   parseMoodle,
@@ -30,7 +34,11 @@ import {
   validateAcademicPackage,
 } from "../../src/importing/decisions";
 import type { Observation } from "../../src/domain/decision-package";
-import { accumulateRows } from "../../src/domain/accumulation";
+import type { ReviewSummary } from "../../src/domain/import-contract";
+import {
+  reviewAccumulation,
+  accumulateRows,
+} from "../../src/domain/accumulation";
 import {
   type Member,
   type RowView,
@@ -63,6 +71,8 @@ export type Cut = {
   cycleId: string;
   date: string;
   schoolCut?: number;
+  progress?: AcademicProgress;
+  academicDate?: string;
   status: "open" | "closed";
   sources: SourceRefs;
   dates: Cycle["dates"];
@@ -80,6 +90,7 @@ export type Course = {
   careers: string[];
 };
 export type Job = {
+  progressId?: string | null;
   sources?: SourceRefs;
   cumulative?: boolean;
   activityIds?: string[];
@@ -134,6 +145,7 @@ export function jobView(job: Job) {
   };
 }
 export type Artifact = {
+  review?: Record<string, ReviewSummary>;
   observations?: Observation[];
   filename?:
     | ReturnType<typeof resolveCourseFilename>
@@ -299,7 +311,7 @@ export async function academicSnapshot(
       loaded.academicPackage.data,
       cut.cycleId,
       cut.id,
-      cut.date,
+      cut.academicDate ?? cut.date,
       id,
       String(source.approvedBy),
     ).academic;
@@ -315,7 +327,7 @@ export async function academicSnapshot(
   return resolveAffiliations(supplemented.active, {
     cycle: cut.cycleId,
     cutId: cut.id,
-    cutDate: cut.date,
+    cutDate: cut.academicDate ?? cut.date,
     catalogVersion: cut.sources.catalog,
     catalog: loaded.catalog?.data,
     calendar: { cycle: cut.cycleId, dates: cut.dates },
@@ -371,7 +383,7 @@ async function report(
   const academic = await academicSnapshot(cut);
   const schedule = academic.context.trackingSchedule;
   if (
-    schedule?.tracking &&
+    (cut.progress || schedule?.tracking) &&
     courseNameKey(fileCourse.name) !== courseNameKey(course.name)
   )
     throw new InvalidSource("nombre_curso_incompatible");
@@ -393,7 +405,7 @@ async function report(
       stored.data,
       cut.cycleId,
       cut.id,
-      cut.date,
+      cut.academicDate ?? cut.date,
       cut.sources.academicPackage,
       String(source.approvedBy),
     ).observations;
@@ -555,6 +567,8 @@ async function report(
       throw new InvalidSource();
     rows.push(value);
   }
+  let review = reviewAccumulation([], rows);
+  rows = review.rows;
   if (job.cumulative && job.carryVersion) {
     const previous = await getJob(job.carryVersion);
     if (
@@ -651,17 +665,24 @@ async function report(
           });
       }
     }
-    rows = accumulateRows(eligible, rows);
+    review = reviewAccumulation(eligible, rows);
+    rows = accumulateRows(eligible, review.rows);
   }
-  if (schedule?.tracking)
+  if (cut.progress || schedule?.tracking)
     for (const row of rows) {
       try {
-        unitsForPrincipal(
-          schedule,
-          row.relationship?.trackingModality ?? "",
-          cut.date,
-          cut.schoolCut,
-        );
+        if (cut.progress)
+          unitsForProgress(
+            cut.progress,
+            row.relationship?.trackingModality ?? "",
+          );
+        else if (schedule?.tracking)
+          unitsForPrincipal(
+            schedule,
+            row.relationship?.trackingModality ?? "",
+            cut.academicDate ?? cut.date,
+            cut.schoolCut,
+          );
       } catch {
         issues.push({
           code: "modalidad_principal_sin_calendario",
@@ -683,10 +704,11 @@ async function report(
   }
   return {
     observations,
+    review: review.summaries,
     filename: fileCourse,
     data: {
       mapping: parsed.mapping,
-      automaticActivities: !!schedule?.tracking,
+      automaticActivities: !!cut.progress || !!schedule?.tracking,
       activityLabels: Object.fromEntries(
         rows.flatMap((r) =>
           r.values.map((v) => [v.activityId, v.label ?? v.activityId]),
@@ -854,7 +876,30 @@ export async function previewJob(
         o.careerId === careerId &&
         member.careers.includes(o.careerId)),
   );
+  const summary: ReviewSummary = {
+    newActivities: [],
+    added: 0,
+    changed: 0,
+    unchanged: 0,
+    preserved: 0,
+    numericCleared: 0,
+  };
+  for (const [id, value] of Object.entries(artifact?.review ?? {})) {
+    if (careerId ? id !== careerId : member.role !== "admin") continue;
+    summary.newActivities = [
+      ...new Set([...summary.newActivities, ...value.newActivities]),
+    ];
+    for (const key of [
+      "added",
+      "changed",
+      "unchanged",
+      "preserved",
+      "numericCleared",
+    ] as const)
+      summary[key] += value[key];
+  }
   return {
+    review: artifact?.review ? summary : null,
     observations: observations.slice(
       observationOffset,
       observationOffset + 100,

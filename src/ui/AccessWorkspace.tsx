@@ -1,3 +1,4 @@
+import { Progress } from "./Progress";
 import {
   lazy,
   Suspense,
@@ -31,6 +32,7 @@ import {
   jobViewSchema,
   overviewSchema,
   rowViewSchema,
+  reviewSummarySchema,
   type JobView,
   type Overview,
 } from "../domain/import-contract";
@@ -40,6 +42,7 @@ const jobsSchema = z.object({
   cursor: z.string().nullable().optional(),
 });
 const previewSchema = z.object({
+  review: reviewSummarySchema.nullable().optional(),
   observations: z.array(observationSchema),
   observationsCount: z.number(),
   observationNext: z.number().nullable(),
@@ -253,14 +256,23 @@ export function AccessWorkspace({ section }: { section: string }) {
                       { name: "id", label: "Identificador del corte" },
                       {
                         name: "schoolCut",
-                        label:
-                          "Número de corte Escolarizado (1–3, política por modalidad)",
-                        optional: true,
-                        type: "number",
+                        label: "Corte Escolarizado (1: U1–2; 2: U1–5; 3: U1–7)",
+                        options: ["1", "2", "3"],
+                      },
+                      {
+                        name: "executiveUnit",
+                        label: "Unidad de avance Ejecutivo",
+                        options: ["1", "2", "3", "4", "5", "6", "7"],
+                      },
+                      {
+                        name: "virtualUnit",
+                        label: "Unidad de avance Virtual",
+                        options: ["1", "2", "3", "4", "5", "6", "7"],
                       },
                       {
                         name: "date",
-                        label: "Fecha civil del corte",
+                        label: "Fecha operativa opcional (no determina avance)",
+                        optional: true,
                         type: "date",
                       },
                       {
@@ -274,16 +286,21 @@ export function AccessWorkspace({ section }: { section: string }) {
                         optional: true,
                       },
                     ]}
-                    transform={(v) =>
-                      Object.fromEntries(
-                        Object.entries(v)
-                          .filter(([, x]) => x)
-                          .map(([key, value]) => [
-                            key,
-                            key === "schoolCut" ? Number(value) : value,
-                          ]),
-                      )
-                    }
+                    transform={({
+                      schoolCut,
+                      executiveUnit,
+                      virtualUnit,
+                      ...v
+                    }) => ({
+                      ...Object.fromEntries(
+                        Object.entries(v).filter(([, x]) => x),
+                      ),
+                      progress: {
+                        schoolCut: Number(schoolCut),
+                        executiveUnit: Number(executiveUnit),
+                        virtualUnit: Number(virtualUnit),
+                      },
+                    })}
                     done={refresh}
                   />
                   <AdminForm
@@ -298,7 +315,7 @@ export function AccessWorkspace({ section }: { section: string }) {
           )}
           {section === "Historial y seguimiento" && (
             <Suspense fallback={<p role="status">Cargando historial…</p>}>
-              <History overview={overview} />
+              <History overview={overview} changed={refresh} />
             </Suspense>
           )}
           {section === "Fuentes" && <Imports overview={overview} />}
@@ -320,6 +337,7 @@ type Field = {
   area?: boolean;
   type?: string;
   optional?: boolean;
+  options?: string[];
 };
 function AdminForm({
   title,
@@ -360,7 +378,14 @@ function AdminForm({
         {fields.map((f) => (
           <label key={f.name}>
             {f.label}
-            {f.area ? (
+            {f.options ? (
+              <select name={f.name} required={!f.optional} defaultValue="">
+                <option value="">Selecciona</option>
+                {f.options.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            ) : f.area ? (
               <textarea
                 name={f.name}
                 defaultValue={f.value}
@@ -589,6 +614,17 @@ function Imports({ overview }: { overview: Overview }) {
           }
         />
       </label>
+      {overview.cuts
+        .filter((c) => c.id === cutId && c.progress)
+        .map((c) => (
+          <Progress
+            key={c.id}
+            cutId={c.id}
+            progress={c.progress!}
+            editable={false}
+            done={refresh}
+          />
+        ))}
       {!cutId && overview.member.role === "admin" ? (
         <SourceUpload cycles={overview.cycles} done={refresh} />
       ) : (
@@ -802,6 +838,30 @@ function Imports({ overview }: { overview: Overview }) {
               </li>
             ))}
           </ul>
+          {preview.review && (
+            <section aria-label="Cambios de esta propuesta">
+              <p>
+                Actividades nuevas: {preview.review.newActivities.length}.
+                Valores nuevos: {preview.review.added}; modificados:{" "}
+                {preview.review.changed}; sin cambios:{" "}
+                {preview.review.unchanged}; ausentes conservados:{" "}
+                {preview.review.preserved}.
+              </p>
+              {preview.review.numericCleared > 0 && (
+                <p role="alert">
+                  Atención: {preview.review.numericCleared} calificaciones
+                  numéricas serán sustituidas por vacío o guion. Revisa el valor
+                  anterior y su procedencia antes de confirmar.
+                </p>
+              )}
+              <p>
+                El resumen corresponde al alcance autorizado completo; el
+                detalle se pagina. Una columna ausente conserva su información.
+                Las unidades posteriores se guardan para después y no cambian el
+                avance.
+              </p>
+            </section>
+          )}
           <div className="table-scroll">
             <table>
               <thead>
@@ -825,7 +885,21 @@ function Imports({ overview }: { overview: Overview }) {
                         )
                         .join("; ")}
                     </td>
-                    <td>{r.issues.join(", ")}</td>
+                    <td>
+                      {r.issues.join(", ")}
+                      {r.review
+                        ?.filter((v) => v.kind === "changed")
+                        .map((v) => (
+                          <p key={v.activityId}>
+                            {v.numericCleared ? "Atención: " : "Cambio: "}
+                            {v.label}: {String(v.before?.raw ?? "")} (
+                            {v.before?.state}, versión{" "}
+                            {v.before?.sourceVersion ?? "anterior"}) →{" "}
+                            {String(v.after.raw ?? "")} ({v.after.state},
+                            versión {v.after.sourceVersion}).
+                          </p>
+                        ))}
+                    </td>
                   </tr>
                 ))}
               </tbody>

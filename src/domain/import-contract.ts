@@ -4,6 +4,7 @@ import { courseFilenameResolutionSchema } from "./academic";
 import { historyOperations } from "./history-contract";
 import { metricOperations } from "./metrics-contract";
 import { packageDecisionSchema } from "./decision-package";
+import { progressInputSchema, progressSchema } from "./report-policy";
 
 export const filenameResolutionSchema = courseFilenameResolutionSchema
   .omit({ approvedBy: true, version: true })
@@ -49,6 +50,12 @@ export const operationSchemas = {
   ...metricOperations,
   ...historyOperations,
   overview: z.strictObject({}),
+  configureProgress: z.strictObject({
+    cutId: keySchema,
+    expected: keySchema,
+    progress: progressInputSchema,
+    reason: label,
+  }),
   reviseAcademicDecision: z.strictObject({
     jobId: keySchema,
     decision: packageDecisionSchema,
@@ -68,15 +75,21 @@ export const operationSchemas = {
     name: label,
     careers: z.array(keySchema).min(1).max(100),
   }),
-  createCut: z.strictObject({
-    cycleId: keySchema,
-    id: keySchema,
-    date: civilDateSchema,
-    schoolCut: z.number().int().min(1).max(3).optional(),
-    parentId: keySchema.optional(),
-    carryCutId: keySchema.optional(),
-    reason: label.optional(),
-  }),
+  createCut: z
+    .strictObject({
+      cycleId: keySchema,
+      id: keySchema,
+      date: civilDateSchema.optional(),
+      progress: progressInputSchema.optional(),
+      schoolCut: z.number().int().min(1).max(3).optional(),
+      parentId: keySchema.optional(),
+      carryCutId: keySchema.optional(),
+      reason: label.optional(),
+    })
+    .refine(
+      (v) => !!v.progress || !!v.date,
+      "Indica el avance explícito o una fecha para la política histórica",
+    ),
   closeCut: z.strictObject({ cutId: keySchema }),
   createSource: z.strictObject({
     cycleId: keySchema,
@@ -160,11 +173,37 @@ export const jobViewSchema = z.object({
   replaces: z.string().nullable(),
 });
 export type JobView = z.infer<typeof jobViewSchema>;
+const reviewValue = z.object({
+  state: z.string(),
+  raw: z.unknown(),
+  sourceVersion: z.string().optional(),
+});
+export const reviewSummarySchema = z.object({
+  newActivities: z.array(z.string()),
+  added: z.number(),
+  changed: z.number(),
+  unchanged: z.number(),
+  preserved: z.number(),
+  numericCleared: z.number(),
+});
+export type ReviewSummary = z.infer<typeof reviewSummarySchema>;
 export const rowViewSchema = z.object({
   id: z.string(),
   identity: z.string(),
   careerId: z.string(),
   row: z.number(),
+  review: z
+    .array(
+      z.object({
+        activityId: z.string(),
+        label: z.string(),
+        before: reviewValue.nullable(),
+        after: reviewValue,
+        kind: z.enum(["added", "changed", "unchanged"]),
+        numericCleared: z.boolean(),
+      }),
+    )
+    .optional(),
   relationship: z
     .object({
       id: z.string(),
@@ -201,6 +240,7 @@ export const overviewSchema = z.object({
       cycleId: z.string(),
       status: z.string(),
       date: z.string(),
+      progress: progressSchema.optional(),
       sources: z.record(z.string(), z.string()).optional(),
     }),
   ),

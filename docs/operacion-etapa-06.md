@@ -5,6 +5,12 @@ no despliega. `firebase.staging.json` es configuración revisable de Hosting,
 Functions Node 22, Rules e índices existentes, sin alias a proyecto real.
 `config/staging.example.json` enumera decisiones sin secretos.
 
+Actualización operativa: al crear un corte nuevo se seleccionan explícitamente
+corte Escolarizado y unidades de avance Ejecutivo/Virtual. El [avance explícito](avance-explicito.md)
+no depende de fechas ni de la unidad máxima de un archivo. Revisar las sustituciones
+de notas numéricas por vacío/guion antes de confirmar. Configurar cambios de avance
+desde Historial, con motivo; los cortes anteriores conservan su política.
+
 ## Prerrequisitos antes de autorizar staging
 
 1. Identificar un proyecto separado de producción, propietario, región de Firestore,

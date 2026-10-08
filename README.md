@@ -21,6 +21,12 @@ recuperación y preparación revisable de publicación. Consulte la
 El proyecto Firebase de destino no existe todavía; el runtime sigue limitado a
 demo. La conciliación privada provisional no sustituye aceptación académica.
 
+El PR #5 incorpora [avance explícito y revisión acumulativa](docs/avance-explicito.md):
+corte Escolarizado y unidad Ejecutivo/Virtual independientes de fechas, actividades
+posteriores conservadas y advertencias antes de sustituir notas por vacío/guion.
+Se mantienen DEC-01–36, originales privados y cálculos históricos. El informe
+enlazado contiene las comprobaciones actuales; la validación en nube sigue pendiente.
+
 ## Arranque y comprobaciones
 
 Node 22.12 o posterior de la rama 22, npm y Java 21. Internet para instalar el
@@ -101,10 +107,11 @@ Las fórmulas y el fixture de referencia están en [cálculos](docs/calculos-eta
 
 - [Entrega y criterios de etapa 04](docs/entrega-etapa-04.md), [modelo implementado](docs/modelo-datos.md)
   y [decisiones](docs/decisiones.md).
-- [Dependencias y bundle](docs/dependencias-y-bundle.md): 14 alertas pendientes,
-  sin actualizaciones automáticas ni aumento del umbral de Vite.
-- Sin conciliación con archivos privados, usuarios reales, prueba de carga de
-  45/230 cursos, costos medidos, recuperación/retención aprobadas ni validación nube.
+- [Dependencias](docs/dependencias-etapa-06.md) y [bundle de esta entrega](docs/avance-explicito.md):
+  pendientes conservados, sin actualizaciones automáticas ni aumento del umbral de Vite.
+- Conciliación privada y piloto sintético 45/230 documentados en etapa 06. Pendientes:
+  aceptación operativa institucional, usuarios reales, costos medidos, políticas de
+  recuperación/retención aprobadas y validación en nube.
 - El mapeo se confirma como JSON por archivo; ZIP de lotes no está implementado.
   Las correspondencias históricas también requieren revisión explícita. No se
   infiere equivalencia entre ciclos ni entre instancias de curso diferentes.
