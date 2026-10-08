@@ -100,6 +100,14 @@ test("selección explícita sin fecha y revisión de pérdida numérica en curso
   await waitJob(job!.id);
   await api("publish", { jobId: job!.id, replace: false }, s.a);
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  // El click inicia signOut, pero no espera su persistencia asíncrona. No
+  // navegar hasta que Auth confirme la salida mediante el formulario visible.
+  await expect(
+    page.getByRole("heading", { name: "Acceso institucional" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar sesión" })).toHaveCount(
+    0,
+  );
   await login(page, people.a);
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
   await page.getByLabel("Corte de seguimiento").selectOption("explicit-ui");

@@ -4,7 +4,8 @@ Fecha de inspección: 2026-10-08. Base revisada: `3fff0c4a40696c79d49c6cbd06af43
 PR #5, rama `etapa-06-piloto-y-publicacion`. La consulta remota y el árbol local
 confirmaron esa referencia, sin avances posteriores que reemplazar.
 
-**Nube bloqueada por destino no identificado. Aceptación del usuario pendiente.**
+**Nube bloqueada: el usuario confirmó que aún no se ha creado el proyecto Firebase
+de pruebas (2026-10-08). Aceptación del usuario pendiente.**
 Firebase CLI pudo listar proyectos con la sesión del equipo, pero ninguno identifica
 inequívocamente las pruebas de este proyecto. No se reutilizan proyectos de otras
 aplicaciones, ni se publica su inventario. Falta el ID del proyecto de pruebas
@@ -241,3 +242,17 @@ privada no se ha importado, alterado ni vuelto a ejecutar en esta fase.
 
 El PR registra SHA final, URL del CI automático y resultado exacto de sus checks.
 La aprobación de ese CI no cierra las aceptaciones cloud/usuario pendientes.
+
+Primer CI de esta continuación, `4a3e479`, ejecución
+[37826480058](https://github.com/victoryama-wq/seguimiento-academico/actions/runs/37826480058):
+calidad y reglas aprobadas; E2E 39/40. El caso móvil de avance explícito agotó
+120 s esperando «Correo» al cambiar de administrador a coordinador
+(`tests/e2e/explicit-progress.spec.ts`, llamada a `login` posterior a cerrar sesión).
+La prueba navegaba inmediatamente tras el click de `signOut`, sin esperar que
+Auth completara la salida. Se añade la comprobación de formulario de acceso
+visible y ausencia del botón de cierre **antes** de navegar. El límite de tiempo,
+los asserts académicos, el workflow y sus suites se mantienen intactos. El piloto
+remoto de esa ejecución no llegó a iniciarse. La validación del ajuste y su nuevo
+CI se registran en el PR; no se considera exitosa la ejecución fallida anterior.
+Revalidación local del ajuste: lint y tipos aprobados; suite E2E completa con
+40 pruebas aprobadas en 5,1 minutos, incluidos ambos casos de avance explícito.
