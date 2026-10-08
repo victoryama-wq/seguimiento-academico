@@ -1,7 +1,9 @@
 # Operación y preparación de staging
 
-Estado: proyecto Firebase y región **pendientes de creación/decisión**. Esta etapa
-no despliega. `firebase.staging.json` es configuración revisable de Hosting,
+Estado actualizado en fase 2: proyecto Firebase y región **pendientes de identificación/decisión**.
+La validación en pruebas está autorizada una vez verificado el destino, pero todavía
+no se ha desplegado. [Preparación de nube y aceptación](validacion-nube-fase-2.md).
+`firebase.staging.json` es configuración revisable de Hosting,
 Functions Node 22, Rules e índices existentes, sin alias a proyecto real.
 `config/staging.example.json` enumera decisiones sin secretos.
 
@@ -30,11 +32,11 @@ desde Historial, con motivo; los cortes anteriores conservan su política.
 4. Acordar admin inicial mediante usuario Auth existente, UID verificado y operación
    privilegiada auditada de bootstrap. El script demo actual rechaza proyectos
    reales: **no quitarle su guardia ni ejecutarlo contra nube**.
-5. Aprobar y probar una activación explícita del runtime de nube para el proyecto
-   exacto, su bucket y región. El frontend y Functions siguen deliberadamente
-   limitados a emuladores; esta configuración no hace operativa la nube. No hay
-   fallback por error de conexión. Ese paso depende del destino, requiere revisión
-   y pruebas negativas; publicar ahora el bundle demo no produciría staging usable.
+5. Revisar `config/staging-target.json` con proyecto, bucket, región y sitio exactos.
+   El runtime de fase 2 admite staging explícito y verifica proyecto/SHA en ambos
+   extremos; el destino pendiente bloquea su uso. Sus pruebas negativas son locales.
+   No hay fallback por error de conexión ni nube habilitada por publicar un bundle
+   demo. Ejecutar `npm run build:staging` solo tras confirmar el destino y su app web.
 6. Validar permisos e índices reales, revocación, subida, triggers y recuperación,
    límites/costos, App Check según política institucional, y smoke de los cinco
    responsables con datos sintéticos. Registrar evidencia aparte de emuladores.

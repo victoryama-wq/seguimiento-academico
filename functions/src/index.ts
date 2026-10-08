@@ -1,22 +1,28 @@
 import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { isEmulatorEnvironment } from "./environment";
+import { runtimeEnvironment } from "./environment";
+import target from "../../config/staging-target.json";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { z } from "zod";
 import { academicOperation, requestSchema } from "./api";
 import { processJob } from "./jobs";
-import { localOnly } from "./store";
+import { requireRuntime } from "./store";
 import { pilotMeasure } from "./pilot-telemetry";
+
+const region =
+  process.env.FUNCTIONS_EMULATOR === "true"
+    ? "us-central1"
+    : (target.region ?? "us-central1");
 
 export const academicApi = onCall(
   {
-    region: "us-central1",
+    region,
     timeoutSeconds: 120,
     memory: "512MiB",
     concurrency: 4,
     maxInstances: 3,
   },
   async (request) => {
-    localOnly();
+    requireRuntime();
     try {
       const data = requestSchema.parse(request.data);
       return await pilotMeasure(data.op, () =>
@@ -37,7 +43,7 @@ export const academicApi = onCall(
 export const importWorker = onDocumentWritten(
   {
     document: "jobs/{jobId}",
-    region: "us-central1",
+    region,
     retry: true,
     timeoutSeconds: 120,
     memory: "1GiB",
@@ -51,23 +57,23 @@ export const importWorker = onDocumentWritten(
 );
 
 // Contrato de diagnóstico de etapa 01 conservado; no concede permisos académicos.
-export const environmentStatus = onCall(
-  { region: "us-central1" },
-  (request) => {
-    if (!isEmulatorEnvironment(process.env)) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Solo disponible con emuladores completos.",
-      );
-    }
-    if (
-      request.data === null ||
-      typeof request.data !== "object" ||
-      Array.isArray(request.data) ||
-      Object.keys(request.data).length !== 0
-    ) {
-      throw new HttpsError("invalid-argument", "Se espera un objeto vacío.");
-    }
-    return { mode: "emulator", stage: "01", status: "ready" };
-  },
-);
+export const environmentStatus = onCall({ region }, (request) => {
+  requireRuntime();
+  if (
+    request.data === null ||
+    typeof request.data !== "object" ||
+    Array.isArray(request.data) ||
+    Object.keys(request.data).length !== 0
+  ) {
+    throw new HttpsError("invalid-argument", "Se espera un objeto vacío.");
+  }
+  const config = runtimeEnvironment(process.env);
+  return config.mode === "emulator"
+    ? { mode: "emulator", stage: "01", status: "ready" }
+    : {
+        mode: "staging",
+        projectId: config.projectId,
+        release: config.release,
+        status: "ready",
+      };
+});

@@ -470,3 +470,20 @@ y advierte numéricos reemplazados por vacío/guion, limitada a carreras autoriz
 No cambia DEC-01–36, sus originales ni la conciliación aprobada.
 
 Contrato, ejemplos manuales y evidencia: [avance explícito](avance-explicito.md).
+
+## Fase 2: preparación de nube (2026-10-08)
+
+Decisión técnica: staging necesita un destino compartido explícito, proyecto de
+ejecución coincidente, bucket/Hosting/región revisados y SHA idéntico entre web y
+Functions. `null` bloquea nube; modo demo no hace fallback. Los emuladores y sus
+credenciales aisladas siguen siendo el entorno de CI. No se asume ningún proyecto
+listado como destino, ni se crean recursos facturables. La aceptación del usuario
+y las mediciones cloud se registran separadas de pruebas locales.
+
+Decisión técnica: cliente utiliza únicamente Auth y Functions; Firestore y Storage
+se acceden por backend autorizado. Se difiere el espacio de trabajo y se conserva
+un estado de recuperación ante fallo de descarga. Corrección gRPC dirigida con
+override y lockfile, sin actualizar dependencias masivamente. No cambia ninguna
+regla académica, DEC-01–36, afiliación principal, exclusión ni corte histórico.
+
+Evidencia, riesgos restantes y procedimiento: [fase 2](validacion-nube-fase-2.md).

@@ -245,3 +245,10 @@ obsoletas/concurrentes; resultados actuales en el informe de integración.
 Bundle actual: `index-AHv9mtQj.js`, 819.132 bytes, gzip 244,71 kB. Las mediciones anteriores se
 conservan como antecedentes. Nuevas capturas, cálculos, procedimiento y límites en
 [integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
+
+## Continuación: fase 2 de validación y aceptación
+
+La preparación, diagnóstico actualizado y resultados de esta continuación están
+en [validación en nube](validacion-nube-fase-2.md) y la [guía de aceptación](aceptacion-operativa.md).
+El destino de pruebas sigue pendiente de identificación. Las evidencias locales
+anteriores de este informe no constituyen validación en Firebase real.

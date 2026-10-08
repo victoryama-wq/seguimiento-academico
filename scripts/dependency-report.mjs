@@ -56,7 +56,7 @@ for (let i = 0; i < queue.length; i++) {
 const lines = [
   "# Dependencias: etapa 06",
   "",
-  `Consulta npm audit: ${new Date().toISOString()}. Lockfile sin actualizaciones.`,
+  `Informe generado: ${new Date().toISOString()}. Resultado del audit suministrado; rutas del lockfile actual.`,
   "",
   "## Resultado de la herramienta",
   "",
@@ -90,7 +90,7 @@ lines.push(
   "",
   "## Valoración técnica separada",
   "",
-  "La presencia en el árbol no prueba explotabilidad. Las rutas de producción requieren priorización y reproducción; las herramientas de desarrollo también procesan archivos y ejecutan CI. `fixAvailable: true` informa disponibilidad según npm, no garantiza que una actualización aislada sea compatible ni suficiente. Los objetos con `isSemVerMajor` requieren revisión explícita; no se ejecutó audit fix, force, downgrade ni actualización masiva. SheetJS proviene del tarball 0.20.3 fijado y no queda cubierto plenamente por avisos del registro npm. Quedan pendientes análisis de alcance y remediaciones acotadas con las seis regresiones. No se declara producción segura por obtener CI verde.",
+  "La presencia en el árbol no prueba explotabilidad. `fixAvailable` informa disponibilidad según npm, no garantiza compatibilidad ni suficiencia. No se ejecuta audit fix desde este generador. SheetJS proviene del tarball 0.20.3 fijado y no queda cubierto plenamente por avisos del registro npm. La valoración de exposición y cambios comprobados está separada en [validación de fase 2](validacion-nube-fase-2.md). No se declara producción segura por obtener CI verde.",
   "",
 );
 writeFileSync("docs/dependencias-etapa-06.md", lines.join("\n"));

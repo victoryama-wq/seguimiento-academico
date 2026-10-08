@@ -55,7 +55,7 @@ import {
   db,
   hash,
   jsonFile,
-  localOnly,
+  requireRuntime,
   saveImmutable,
 } from "./store";
 
@@ -736,7 +736,7 @@ async function report(
 // Los eventos pueden repetirse. El token de arrendamiento impide que un worker
 // antiguo cambie el resultado; los intentos incompletos nunca son publicables.
 export async function processJob(id: string) {
-  localOnly();
+  requireRuntime();
   const ref = db.doc(`jobs/${id}`);
   const job = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);

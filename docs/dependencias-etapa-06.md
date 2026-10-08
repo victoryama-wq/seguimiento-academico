@@ -1,23 +1,18 @@
 # Dependencias: etapa 06
 
-Consulta npm audit: 2026-10-05T21:49:46.144Z. Lockfile sin actualizaciones.
+Informe generado: 2026-10-08T18:18:50.615Z. Resultado del audit suministrado; rutas del lockfile actual.
 
 ## Resultado de la herramienta
 
-Conteo por paquetes afectados (incluye propagación a dependientes): {"info":0,"low":0,"moderate":4,"high":12,"critical":0,"total":16}. No es un conteo de CVE únicos.
+Conteo por paquetes afectados (incluye propagación a dependientes): {"info":0,"low":0,"moderate":4,"high":7,"critical":0,"total":11}. No es un conteo de CVE únicos.
 
 | Paquete | Severidad npm | Relación | Uso/rutas en lockfile | Corrección que informa npm |
 |---|---|---|---|---|
-| @firebase/firestore | high | transitiva | produccion: aplicacion (dependencies) → firebase → @firebase/firestore | {"name":"firebase","version":"9.14.0","isSemVerMajor":true} |
-| @firebase/firestore-compat | high | transitiva | produccion: aplicacion (dependencies) → firebase → @firebase/firestore-compat | {"name":"firebase","version":"9.14.0","isSemVerMajor":true} |
-| @firebase/rules-unit-testing | high | directa | desarrollo: aplicacion (devDependencies) → @firebase/rules-unit-testing | {"name":"@firebase/rules-unit-testing","version":"2.0.7","isSemVerMajor":true} |
 | @google-cloud/pubsub | moderate | transitiva | desarrollo: aplicacion (devDependencies) → firebase-tools → @google-cloud/pubsub | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
-| @grpc/grpc-js | high | transitiva | produccion: aplicacion (dependencies) → firebase → @firebase/firestore → @grpc/grpc-js | {"name":"firebase","version":"9.14.0","isSemVerMajor":true} |
 | @opentelemetry/core | moderate | transitiva | desarrollo: aplicacion (devDependencies) → firebase-tools → @google-cloud/pubsub → @opentelemetry/core | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
 | basic-ftp | high | transitiva | desarrollo: aplicacion (devDependencies) → firebase-tools → proxy-agent → pac-proxy-agent → get-uri → basic-ftp | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
 | braces | high | transitiva | desarrollo: aplicacion (devDependencies) → firebase-tools → chokidar → braces | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
 | chokidar | high | transitiva | desarrollo: aplicacion (devDependencies) → firebase-tools → chokidar | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
-| firebase | high | directa | produccion: aplicacion (dependencies) → firebase | {"name":"firebase","version":"9.14.0","isSemVerMajor":true} |
 | firebase-tools | high | directa | desarrollo: aplicacion (devDependencies) → firebase-tools | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
 | gaxios | moderate | transitiva | produccion: functions (dependencies) → firebase-admin → @google-cloud/storage → gaxios<br>desarrollo: aplicacion (devDependencies) → firebase-tools → gaxios | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
 | get-uri | high | transitiva | desarrollo: aplicacion (devDependencies) → firebase-tools → proxy-agent → pac-proxy-agent → get-uri | {"name":"firebase-tools","version":"14.23.0","isSemVerMajor":true} |
@@ -27,8 +22,6 @@ Conteo por paquetes afectados (incluye propagación a dependientes): {"info":0,"
 
 ### Avisos individuales
 
-- @grpc/grpc-js: [@grpc/grpc-js: In certain configurations, getAuthContext can return unauthorized certificates as though they were authorized](https://github.com/advisories/GHSA-m9gg-hp2v-232j); severidad high; rango <1.13.6.
-- @grpc/grpc-js: [@grpc/grpc-js: The server transmits some error messages thrown by method handlers to the client in status messages](https://github.com/advisories/GHSA-f596-whhp-79r4); severidad low; rango <1.13.6.
 - @opentelemetry/core: [OpenTelemetry Core: Unbounded memory allocation in W3C Baggage propagation](https://github.com/advisories/GHSA-8988-4f7v-96qf); severidad moderate; rango <2.8.0.
 - basic-ftp: [basic-ftp: Quadratic-time CPU denial of service in Client.list() Unix directory-listing parser (RE_LINE backtracking)](https://github.com/advisories/GHSA-c475-qrg2-pj4r); severidad high; rango <=6.2.0.
 - braces: [braces vulnerable to stack-exhaustion denial of service through deeply nested patterns](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm); severidad high; rango <=3.0.3.
@@ -36,11 +29,4 @@ Conteo por paquetes afectados (incluye propagación a dependientes): {"info":0,"
 
 ## Valoración técnica separada
 
-Respecto al informe anterior de 14 paquetes (10 altos/4 moderados), aparecen
-`braces` y su propagación a `chokidar` en desarrollo: 16 (12 altos/4 moderados).
-No se corrigió ni ocultó ninguna alerta en esta etapa. Las propuestas concretas
-de npm para Firebase 9.14.0, firebase-tools 14.23.0 y rules-unit-testing 2.0.7 son
-degradaciones mayores respecto al lockfile actual; quedan rechazadas como remedio
-automático. Revisar rutas y parche compatible en un cambio acotado posterior.
-
-La presencia en el árbol no prueba explotabilidad. Las rutas de producción requieren priorización y reproducción; las herramientas de desarrollo también procesan archivos y ejecutan CI. `fixAvailable: true` informa disponibilidad según npm, no garantiza que una actualización aislada sea compatible ni suficiente. Los objetos con `isSemVerMajor` requieren revisión explícita; no se ejecutó audit fix, force, downgrade ni actualización masiva. SheetJS proviene del tarball 0.20.3 fijado y no queda cubierto plenamente por avisos del registro npm. Quedan pendientes análisis de alcance y remediaciones acotadas con las seis regresiones. No se declara producción segura por obtener CI verde.
+La presencia en el árbol no prueba explotabilidad. `fixAvailable` informa disponibilidad según npm, no garantiza compatibilidad ni suficiencia. No se ejecuta audit fix desde este generador. SheetJS proviene del tarball 0.20.3 fijado y no queda cubierto plenamente por avisos del registro npm. La valoración de exposición y cambios comprobados está separada en [validación de fase 2](validacion-nube-fase-2.md). No se declara producción segura por obtener CI verde.

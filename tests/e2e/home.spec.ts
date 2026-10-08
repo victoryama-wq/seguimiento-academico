@@ -1,5 +1,22 @@
 import { expect, test } from "@playwright/test";
 
+test("un fallo de descarga del espacio diferido permite reintentar sin pantalla en blanco", async ({
+  page,
+}) => {
+  await page.route("**/src/ui/AccessWorkspace.tsx*", (route) => route.abort());
+  await page.goto("/");
+  await expect(page.getByRole("alert")).toContainText(
+    "No se pudo cargar el espacio de trabajo",
+  );
+  await page.unroute("**/src/ui/AccessWorkspace.tsx*");
+  await page
+    .getByRole("button", { name: "Recargar espacio de trabajo" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Acceso institucional" }),
+  ).toBeVisible();
+});
+
 test("pantalla inicial sin cifras inventadas, conexión real y navegación", async ({
   page,
 }, testInfo) => {
@@ -16,7 +33,9 @@ test("pantalla inicial sin cifras inventadas, conexión real y navegación", asy
     page.getByRole("heading", { name: "Acceso institucional" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Inicia sesión con una cuenta habilitada por administración."),
+    page.getByText(
+      "Inicia sesión con una cuenta habilitada por administración.",
+    ),
   ).toBeVisible();
   await expect(page.getByText(/\d+\s*%/)).toHaveCount(0);
   expect(
@@ -28,7 +47,9 @@ test("pantalla inicial sin cifras inventadas, conexión real y navegación", asy
     path: testInfo.outputPath("panel.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Ciclos y cortes", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Ciclos y cortes", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Ciclos y cortes", exact: true }),
   ).toBeVisible();

@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
-import { checkEnvironment } from "../infrastructure/firebase";
-import { AccessWorkspace } from "./AccessWorkspace";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { WorkspaceBoundary } from "./WorkspaceBoundary";
+
+const AccessWorkspace = lazy(() =>
+  import("./AccessWorkspace").then((module) => ({
+    default: module.AccessWorkspace,
+  })),
+);
 
 const sections = [
   "Panel",
@@ -11,6 +16,7 @@ const sections = [
 ] as const;
 type Section = (typeof sections)[number];
 type Connection = "loading" | "ready" | "error";
+const staging = import.meta.env.VITE_FIREBASE_MODE === "staging";
 
 export function App() {
   const [section, setSection] = useState<Section>("Panel");
@@ -18,14 +24,16 @@ export function App() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    checkEnvironment().then(
-      () => {
-        if (active) setConnection("ready");
-      },
-      () => {
-        if (active) setConnection("error");
-      },
-    );
+    import("../infrastructure/firebase")
+      .then((module) => module.checkEnvironment())
+      .then(
+        () => {
+          if (active) setConnection("ready");
+        },
+        () => {
+          if (active) setConnection("error");
+        },
+      );
     return () => {
       active = false;
     };
@@ -64,7 +72,8 @@ export function App() {
         </nav>
         <div className="sidebar-note">
           <span className="status-dot" />
-          Desarrollo local<p>Etapa 05 · Historial y seguimiento</p>
+          {staging ? "Pruebas en Firebase" : "Desarrollo local"}
+          <p>Validación sintética · Aceptación pendiente</p>
         </div>
       </aside>
       <div className="workspace">
@@ -72,7 +81,9 @@ export function App() {
           <span>
             Gestión académica <span className="separator">/</span> {section}
           </span>
-          <span className="environment">ENTORNO EMULADO</span>
+          <span className="environment">
+            {staging ? "ENTORNO DE PRUEBAS" : "ENTORNO EMULADO"}
+          </span>
         </header>
         <main id="main" tabIndex={-1}>
           <div className="page-title">
@@ -87,20 +98,25 @@ export function App() {
             {connection === "loading" && (
               <p role="status">
                 <span className="spinner" aria-hidden="true" />
-                Comprobando conexión con los emuladores…
+                {staging
+                  ? "Comprobando entorno de pruebas…"
+                  : "Comprobando conexión con los emuladores…"}
               </p>
             )}
             {connection === "ready" && (
               <p role="status">
                 <span className="status-dot" />
-                Conexión local verificada
+                {staging
+                  ? "Entorno y versión de pruebas verificados"
+                  : "Conexión local verificada"}
               </p>
             )}
             {connection === "error" && (
               <div role="alert">
                 <p>
-                  No se pudo verificar la conexión local. Revisa la
-                  configuración e inicia los emuladores.
+                  {staging
+                    ? "No se pudo verificar el entorno o la versión de pruebas. Revisa el despliegue antes de continuar."
+                    : "No se pudo verificar la conexión local. Revisa la configuración e inicia los emuladores."}
                 </p>
                 <button
                   className="secondary-button"
@@ -114,10 +130,20 @@ export function App() {
               </div>
             )}
           </div>
-          {connection === "ready" && <AccessWorkspace section={section} />}
+          {connection === "ready" && (
+            <WorkspaceBoundary>
+              <Suspense fallback={<p>Cargando acceso institucional…</p>}>
+                <AccessWorkspace section={section} />
+              </Suspense>
+            </WorkspaceBoundary>
+          )}
           <footer>
             Seguimiento académico{" "}
-            <span>Base local · Sin conexión a producción</span>
+            <span>
+              {staging
+                ? `Pruebas sintéticas · Versión ${import.meta.env.VITE_RELEASE_SHA ?? "sin configurar"}`
+                : "Base local · Sin conexión a producción"}
+            </span>
           </footer>
         </main>
       </div>

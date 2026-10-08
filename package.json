@@ -19,7 +19,11 @@
     "test:emulators": "node scripts/emulators.mjs integration",
     "test:e2e": "node scripts/emulators.mjs e2e",
     "test:pilot": "node scripts/emulators.mjs pilot",
-    "verify:hosting": "node scripts/verify-public-build.mjs"
+    "verify:hosting": "node scripts/verify-public-build.mjs",
+    "measure:bundle": "node scripts/measure-bundle.mjs",
+    "prepare:staging": "npm run build --workspace functions && node scripts/prepare-staging.mjs",
+    "prepare:cloud-fixtures": "node scripts/prepare-cloud-fixtures.mjs",
+    "build:staging": "npm run prepare:staging && npm run typecheck && vite build --mode staging && npm run verify:hosting"
   },
   "dependencies": {
     "firebase": "12.19.0",
@@ -27,6 +31,11 @@
     "react-dom": "19.3.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "4.3.6"
+  },
+  "overrides": {
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "1.14.6"
+    }
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
