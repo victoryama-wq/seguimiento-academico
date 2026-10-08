@@ -487,3 +487,23 @@ override y lockfile, sin actualizar dependencias masivamente. No cambia ninguna
 regla académica, DEC-01–36, afiliación principal, exclusión ni corte histórico.
 
 Evidencia, riesgos restantes y procedimiento: [fase 2](validacion-nube-fase-2.md).
+
+### Destino de pruebas confirmado
+
+El propietario aprobó `indicadores-academia`, Blaze y región `us-central1`.
+Hosting fija el sitio del mismo ID; Firestore `(default)`, Auth, bucket
+`indicadores-academia.firebasestorage.app` y Functions permanecen en ese proyecto.
+Cuenta `seguimiento-runtime` sin claves: `roles/datastore.user` y
+`roles/firebaseauth.viewer` en el proyecto; `roles/storage.objectCreator` y
+`roles/storage.objectViewer` solo en el bucket. Alcance expresamente autorizado;
+sin Owner/Editor ni permiso para borrar objetos. Firestore tiene protección contra
+eliminación; el bucket impide acceso público por IAM. Las Rules siguen vigentes.
+No se eliminan fuentes ni se activa una política de retención destructiva.
+
+Validación cloud separada: `CONFIRM_STAGING_PROJECT=indicadores-academia` y
+`node scripts/validate-staging.mjs smoke` (después `45` y `230`). Requiere árbol
+limpio, backend del mismo SHA, app y cuentas de prueba en `private/`, más el
+manifest generado por `npm run prepare:cloud-fixtures`. No usa seed/reset demo,
+SDK administrativo ni claves. Cada ejecución crea cortes nuevos identificables,
+conserva los anteriores y registra resultados/tiempos privados. Los tiempos y
+lecturas del cliente no sustituyen métricas facturadas ni aceptación del usuario.

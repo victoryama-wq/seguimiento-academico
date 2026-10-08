@@ -1,8 +1,8 @@
 # Operación y preparación de staging
 
-Estado actualizado en fase 2: proyecto Firebase y región **pendientes de identificación/decisión**.
-La validación en pruebas está autorizada una vez verificado el destino, pero todavía
-no se ha desplegado. [Preparación de nube y aceptación](validacion-nube-fase-2.md).
+Estado actualizado en fase 2: proyecto de pruebas `indicadores-academia`, Blaze
+verificado y región `us-central1` confirmada por el propietario. Estado del despliegue
+y pruebas por SHA en el PR y [preparación de nube y aceptación](validacion-nube-fase-2.md).
 `firebase.staging.json` es configuración revisable de Hosting,
 Functions Node 22, Rules e índices existentes, sin alias a proyecto real.
 `config/staging.example.json` enumera decisiones sin secretos.

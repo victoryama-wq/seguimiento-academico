@@ -4,20 +4,22 @@ Fecha de inspección: 2026-10-08. Base revisada: `3fff0c4a40696c79d49c6cbd06af43
 PR #5, rama `etapa-06-piloto-y-publicacion`. La consulta remota y el árbol local
 confirmaron esa referencia, sin avances posteriores que reemplazar.
 
-**Nube bloqueada: el usuario confirmó que aún no se ha creado el proyecto Firebase
-de pruebas (2026-10-08). Aceptación del usuario pendiente.**
-Firebase CLI pudo listar proyectos con la sesión del equipo, pero ninguno identifica
-inequívocamente las pruebas de este proyecto. No se reutilizan proyectos de otras
-aplicaciones, ni se publica su inventario. Falta el ID del proyecto de pruebas
-designado por el propietario; después se comprobarán recursos, región e IAM.
-No se crearon recursos, cuentas, facturación ni despliegues. No existe aún URL
-de pruebas ni SHA desplegado. Los resultados locales no son evidencia de nube.
+**Actualización 2026-10-08:** el propietario creó `indicadores-academia`, activó
+Blaze y confirmó `us-central1`. La sesión Firebase verificó ID y facturación.
+Se registró una app web, se crearon Firestore Standard `(default)` y el bucket
+`indicadores-academia.firebasestorage.app` en esa región y se habilitó Auth
+correo/contraseña. Cuenta de ejecución dedicada sin claves, con roles autorizados
+de Firestore/consulta Auth y creación/lectura de objetos en ese bucket; no borrado
+de objetos. Se conserva auditoría del bootstrap inicial y cuentas sintéticas con
+contraseñas aleatorias en archivos privados. No se modifica el bootstrap demo.
+Despliegue y pruebas cloud se registran en el PR por SHA, separados de los
+resultados locales siguientes. **Aceptación institucional pendiente.**
 
 ## Cambios de preparación
 
 - Runtime de staging explícito, separado del demo. `config/staging-target.json`
-  conserva valores `null`: frontend y servidor fallan cerrados hasta revisar un
-  destino exacto. No se habilita producción ni un fallback al fallar emuladores.
+  fija el proyecto de pruebas verificado. La regresión del destino `null` permanece
+  mediante fixture independiente; no se habilita producción ni fallback al fallar emuladores.
 - El destino compartido fija proyecto, región, bucket exacto y sitio Hosting.
   Auth utiliza el proyecto/app web y su dominio Firebase; Firestore usa el
   proyecto de ejecución de Functions. Storage usa el bucket aprobado, sin deducir

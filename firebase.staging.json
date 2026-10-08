@@ -32,6 +32,7 @@
   },
   "storage": { "rules": "storage.rules" },
   "hosting": {
+    "site": "indicadores-academia",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "predeploy": ["npm run verify:hosting"],

@@ -1,7 +1,7 @@
 {
   "purpose": "staging",
-  "projectId": null,
-  "region": null,
-  "storageBucket": null,
-  "hostingSite": null
+  "projectId": "indicadores-academia",
+  "region": "us-central1",
+  "storageBucket": "indicadores-academia.firebasestorage.app",
+  "hostingSite": "indicadores-academia"
 }

@@ -12,10 +12,18 @@ const region =
   process.env.FUNCTIONS_EMULATOR === "true"
     ? "us-central1"
     : (target.region ?? "us-central1");
+// Identidad dedicada del destino revisado; nunca se utiliza en los emuladores.
+const executionIdentity =
+  process.env.FUNCTIONS_EMULATOR !== "true" && target.projectId
+    ? {
+        serviceAccount: `seguimiento-runtime@${target.projectId}.iam.gserviceaccount.com`,
+      }
+    : {};
 
 export const academicApi = onCall(
   {
     region,
+    ...executionIdentity,
     timeoutSeconds: 120,
     memory: "512MiB",
     concurrency: 4,
@@ -44,6 +52,7 @@ export const importWorker = onDocumentWritten(
   {
     document: "jobs/{jobId}",
     region,
+    ...executionIdentity,
     retry: true,
     timeoutSeconds: 120,
     memory: "1GiB",
@@ -57,23 +66,26 @@ export const importWorker = onDocumentWritten(
 );
 
 // Contrato de diagnóstico de etapa 01 conservado; no concede permisos académicos.
-export const environmentStatus = onCall({ region }, (request) => {
-  requireRuntime();
-  if (
-    request.data === null ||
-    typeof request.data !== "object" ||
-    Array.isArray(request.data) ||
-    Object.keys(request.data).length !== 0
-  ) {
-    throw new HttpsError("invalid-argument", "Se espera un objeto vacío.");
-  }
-  const config = runtimeEnvironment(process.env);
-  return config.mode === "emulator"
-    ? { mode: "emulator", stage: "01", status: "ready" }
-    : {
-        mode: "staging",
-        projectId: config.projectId,
-        release: config.release,
-        status: "ready",
-      };
-});
+export const environmentStatus = onCall(
+  { region, ...executionIdentity, maxInstances: 2 },
+  (request) => {
+    requireRuntime();
+    if (
+      request.data === null ||
+      typeof request.data !== "object" ||
+      Array.isArray(request.data) ||
+      Object.keys(request.data).length !== 0
+    ) {
+      throw new HttpsError("invalid-argument", "Se espera un objeto vacío.");
+    }
+    const config = runtimeEnvironment(process.env);
+    return config.mode === "emulator"
+      ? { mode: "emulator", stage: "01", status: "ready" }
+      : {
+          mode: "staging",
+          projectId: config.projectId,
+          release: config.release,
+          status: "ready",
+        };
+  },
+);

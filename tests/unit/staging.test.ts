@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import target from "../../config/staging-target.json";
 import {
   readRuntimeConfig,
   validateEnvironmentResponse,
@@ -12,6 +11,13 @@ const approved = {
   region: "us-central1",
   storageBucket: "synthetic-tracking-test.firebasestorage.app",
   hostingSite: "synthetic-tracking-test",
+};
+const target = {
+  purpose: "staging",
+  projectId: null,
+  region: null,
+  storageBucket: null,
+  hostingSite: null,
 };
 const sha = "a".repeat(40);
 const browser = {
