@@ -52,4 +52,61 @@ limitación de latencia institucional; esta entrega no promete capacidad product
 La aceptación del propietario y la publicación productiva permanecen pendientes.
 El verificador `scripts/validate-staging-intake.mjs` usa exclusivamente fuentes y
 cuentas sintéticas, API pública y navegador; no carga archivos académicos privados.
-La evidencia de despliegue y CI se añadirá tras verificar el SHA publicado.
+## Validación en Firebase de pruebas
+
+Aplicación desplegada: **`ddbcadb2e6cdb76a967cb155e3599eafcae684d8`**.
+URL: <https://indicadores-academia.web.app>. Solo proyecto `indicadores-academia`,
+región `us-central1`, Hosting, Authentication, Firestore, Storage y Functions.
+Las tres Functions están ACTIVE con ese SHA. Hosting publicó la versión
+`2999e23b7a02aba6` el 2026-10-09 a las 17:06:24 UTC. El trabajador continúa privado:
+llamada anónima 403, sin claves de usuario ni cambios IAM en esta entrega.
+
+El verificador ejecutó **12 comprobaciones aprobadas**, del 17:06:41 al 17:07:54 UTC,
+en escritorio y móvil. [Resultado íntegro sintético](evidencias/carga-institucional/nube.json).
+No son tiempos de capacidad productiva. Se verificaron:
+
+- CSV de cuatro inscripciones, catálogo XLSX de dos carreras y reporte Moodle ODS
+  desde la interfaz; reutilización de fuentes/columnas confirmadas en el ciclo.
+- Un archivo inválido en el lote no impide revisar/publicar el válido. La indicación
+  para volver a exportar es visible; el mensaje del parser queda en Diagnóstico.
+- Eventarc procesa efectivamente el reporte. Tres estudiantes medidos, principal
+  C.A. incluido y una baja fuera del denominador. Curso compartido: Escolarizado
+  U1–2, Ejecutivo U1–3 y Virtual U1–2; U4 conservada y fuera de los conteos.
+- Resultado manual inicial **D=4, N=3, G=1, V=0, E=0, Z=1**, cobertura 75 %.
+  Sustituir el cero de U1 por vacío da **D=4, N=2, G=1, V=1, E=0, Z=0**, cobertura
+  50 %. Las columnas y personas ausentes se conservan; la revisión advierte una
+  sustitución numérica antes de publicar.
+- Coordinadores A/B: D=3 y D=1 respectivamente; consultas y CSV ajenos denegados;
+  fuentes administrativas privadas denegadas. No se conceden permisos a partir
+  del nombre de la coordinadora en un archivo.
+- Recuperación de trabajos al recargar navegador, reenvío sin duplicados y una
+  publicación antigua que no revierte notas; cierre conserva indicadores y rechaza
+  nuevas cargas. Esta prueba no simula caída de contenedor ni restaura un respaldo.
+
+Capturas exclusivamente sintéticas: [escritorio](evidencias/carga-institucional/escritorio-sintetico.png)
+y [móvil](evidencias/carga-institucional/movil-sintetico.png).
+
+Reproducción, con Node 22 y las cuentas sintéticas locales ya autorizadas:
+
+```powershell
+$env:CONFIRM_STAGING_PROJECT='indicadores-academia'
+$env:STAGING_RELEASE_SHA='ddbcadb2e6cdb76a967cb155e3599eafcae684d8'
+node scripts/validate-staging-intake.mjs
+```
+
+Requiere árbol limpio, credenciales en los archivos privados documentados y backend
+con el SHA exacto. No ejecutar con archivos reales ni reutilizar ciclos privados.
+Los ciclos 99-91/99-92 y las cuentas sintéticas están reservados a este verificador;
+conserva versiones y no elimina las fuentes anteriores.
+
+El [primer CI de esta implementación](https://github.com/victoryama-wq/seguimiento-academico/actions/runs/37962086215)
+aprobó calidad, integración, 44 E2E y ambos pilotos de 45/230 cursos en emuladores.
+El CI automático del último commit de entrega se comprueba en los
+[checks del PR #5](https://github.com/victoryama-wq/seguimiento-academico/pull/5/checks).
+La evidencia posterior al despliegue tiene un SHA Git distinto: no se atribuye ese
+commit documental al código desplegado. No hubo merge ni despliegue productivo.
+
+Para revertir en pruebas, detener nuevas publicaciones y reconstruir/desplegar
+Hosting y Functions juntos desde la versión anterior compatible `3f2b2c9a1dcc157cb60685909394230aad79be6c`,
+con destino explícito `indicadores-academia`. Conservar originales, trabajos y cortes;
+no restaurar fuentes por sobrescritura. Procedimiento documentado, **no ejecutado**.
