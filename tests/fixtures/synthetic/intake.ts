@@ -87,6 +87,30 @@ export const csv = (rows: unknown[][]) =>
       )
       .join("\n"),
   );
+// Libro ancho con filas de formato: reproduce estructura, nunca datos privados.
+export function wideMoodleRows(): unknown[][] {
+  const totals = Array.from(
+    { length: 27 },
+    (_, i) => `Total categoría sintética ${i + 1}`,
+  );
+  return [
+    [
+      "Dirección Email",
+      "Tarea: Unidad 1",
+      "Tarea: Unidad 3",
+      "Tarea: Unidad 4",
+      "Total del curso",
+      ...totals,
+    ],
+    ...[
+      ["000ESC@example.invalid", 0, 7, 9, 999],
+      ["000EJE@example.invalid", "-", 8, 9, 999],
+      ["000VIR@example.invalid", 7, 8, 9, 999],
+      ["000BAJA@example.invalid", 10, 10, 10, 999],
+    ].map((r) => [...r, ...totals.map(() => 999)]),
+    ...Array.from({ length: 995 }, () => Array.from({ length: 32 }, () => "")),
+  ];
+}
 export function book(
   rows: unknown[][],
   type: "xlsx" | "ods" = "xlsx",

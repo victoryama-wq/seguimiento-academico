@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { grade, identity, type Issue } from "../domain/academic";
-import type { Cell, Table } from "./files";
+import { isEmptyRow, type Cell, type Table } from "./files";
 
 const selectorSchema = z.strictObject({
   header: z.string().min(1),
@@ -172,31 +172,33 @@ export function parseMoodle(table: Table, mappingInput: unknown) {
   )
     throw new Error("IDs de actividades ausentes o repetidos");
   const issues: Issue[] = [];
-  const parsed = table.rows.map((row) => {
-    const cell = row.cells[identityColumn]!;
-    const person = identity(
-      cell.formula || cell.type === "e" ? null : cell.raw,
-    );
-    if (!person.normalized)
-      issues.push({
-        code: "identidad_faltante_o_no_literal",
-        refs: [String(row.row)],
-      });
-    const values = activities.map((c) => {
-      const source = row.cells[c.index]!;
-      const result =
-        source.formula || source.type === "e"
-          ? { state: "invalida" as const, raw: source.raw }
-          : grade(source.raw);
-      if (result.state === "invalida")
+  const parsed = table.rows
+    .filter((row) => !isEmptyRow(row))
+    .map((row) => {
+      const cell = row.cells[identityColumn]!;
+      const person = identity(
+        cell.formula || cell.type === "e" ? null : cell.raw,
+      );
+      if (!person.normalized)
         issues.push({
-          code: "calificacion_invalida",
-          refs: [String(row.row), c.activityId!],
+          code: "identidad_faltante_o_no_literal",
+          refs: [String(row.row)],
         });
-      return { activityId: c.activityId!, grade: result, source };
+      const values = activities.map((c) => {
+        const source = row.cells[c.index]!;
+        const result =
+          source.formula || source.type === "e"
+            ? { state: "invalida" as const, raw: source.raw }
+            : grade(source.raw);
+        if (result.state === "invalida")
+          issues.push({
+            code: "calificacion_invalida",
+            refs: [String(row.row), c.activityId!],
+          });
+        return { activityId: c.activityId!, grade: result, source };
+      });
+      return { row: row.row, person, values, original: row.cells };
     });
-    return { row: row.row, person, values, original: row.cells };
-  });
   const accepted: typeof parsed = [],
     teachers: typeof parsed = [],
     unresolved: typeof parsed = [];

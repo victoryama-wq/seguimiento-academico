@@ -688,6 +688,19 @@ footer {
 .guided-intake .table-scroll table {
   min-width: 650px;
 }
+.guided-intake .original-table table {
+  table-layout: fixed;
+}
+.guided-intake .original-table th,
+.guided-intake .original-table td {
+  vertical-align: top;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.guided-intake .original-table:focus-visible {
+  outline: 3px solid #14766b;
+  outline-offset: 2px;
+}
 .guided-intake button {
   margin: 8px 8px 8px 0;
 }

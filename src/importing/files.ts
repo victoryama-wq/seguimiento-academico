@@ -30,6 +30,17 @@ export type Table = {
   rows: { row: number; cells: Cell[] }[];
 };
 
+// Una fila de formato no es una inscripción ni una calificación. Fórmulas,
+// errores, cero y false siguen siendo contenido y conservan sus validaciones.
+export const isEmptyRow = (row: Table["rows"][number]) =>
+  row.cells.every(
+    (cell) =>
+      !cell.formula &&
+      cell.type !== "e" &&
+      (cell.raw === null ||
+        (typeof cell.raw === "string" && cell.raw.trim() === "")),
+  );
+
 function crc32(bytes: Uint8Array) {
   let crc = 0xffffffff;
   for (const byte of bytes) {

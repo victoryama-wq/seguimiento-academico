@@ -11,7 +11,12 @@ import {
   group,
   identity,
 } from "../../src/domain/academic";
-import { readTable, workbookData, type Table } from "../../src/importing/files";
+import {
+  isEmptyRow,
+  readTable,
+  workbookData,
+  type Table,
+} from "../../src/importing/files";
 import { institutionalMapping } from "../../src/importing/report-layout";
 import { parseMoodle, suggestColumn } from "../../src/importing/mapping";
 import {
@@ -143,11 +148,20 @@ async function fileView(
     const table = readTable(bytes, file.name, options);
     result.headers = table.headers;
     result.columns = suggestFields(table.headers, file.kind);
-    result.count = table.rows.length;
-    result.samples = table.rows
+    const contentRows =
+      file.kind === "report"
+        ? table.rows.filter((row) => !isEmptyRow(row))
+        : table.rows;
+    const emptyRows = table.rows.length - contentRows.length;
+    if (emptyRows)
+      result.messages.push(
+        `${emptyRows} filas totalmente vacías de formato omitidas. No representan alumnos ni calificaciones; el archivo original se conserva íntegro.`,
+      );
+    result.count = contentRows.length;
+    result.samples = contentRows
       .slice(offset, offset + 25)
       .map((r) => ({ row: r.row, values: r.cells.map((c) => c.raw) }));
-    result.next = offset + 25 < table.rows.length ? offset + 25 : null;
+    result.next = offset + 25 < contentRows.length ? offset + 25 : null;
     if (file.kind === "report")
       result.activities = table.headers.flatMap<
         OriginalView["activities"][number]
@@ -361,6 +375,45 @@ export async function intakeOperation(
   if (op === "readOriginal") {
     const v = intakeOperations.readOriginal.parse(raw);
     return fileView((await original(v.id)).file, v.options, v.offset);
+  }
+  if (op === "inspectCutSources") {
+    const v = intakeOperations.inspectCutSources.parse(raw);
+    const cut = (await db.doc(`cuts/${v.cutId}`).get()).data() as
+      Cut | undefined;
+    if (!cut) throw new HttpsError("not-found", "No se encontró el corte.");
+    const cycle = (await db.doc(`cycles/${cut.cycleId}`).get()).data() as
+      Cycle | undefined;
+    const academic = await academicSnapshot(cut);
+    const sourceId = cut.sources.academicPackage ?? cut.sources.roster;
+    let name = "Padrón de la versión fijada en el corte";
+    if (sourceId) {
+      const proposal = (
+        await db.doc(`intakeProposals/${sourceId}`).get()
+      ).data();
+      if (proposal?.path) {
+        const saved = await jsonFile<Proposal>(String(proposal.path));
+        const configuration = intakeOperations.prepareAdministration.parse(
+          saved.mappings,
+        );
+        const file = (
+          await db.doc(`intakeFiles/${configuration.roster.id}`).get()
+        ).data();
+        if (file?.name) name = String(file.name);
+      } else {
+        const job = (await db.doc(`jobs/${sourceId}`).get()).data() as
+          Job | undefined;
+        if (job?.file.name) name = job.file.name;
+      }
+    }
+    // La misma política administrativa que la selección de originales: no exponer
+    // conteos institucionales o nombres de fuentes a coordinaciones.
+    admin(await membership(actor));
+    return {
+      name,
+      enrollments: academic.enrollments.length,
+      principals: academic.persons.filter((p) => p.baseEnrollmentId).length,
+      current: canonical(cut.sources) === canonical(cycle?.sources ?? {}),
+    };
   }
   if (op === "administrationContext") {
     const v = intakeOperations.administrationContext.parse(raw),
@@ -774,7 +827,7 @@ export async function intakeOperation(
       if (!careers.length)
         throw new HttpsError(
           "failed-precondition",
-          "No se encontró ninguna matrícula con carrera resuelta. Revisa el padrón y las matrículas antes de crear el curso.",
+          `Ninguna matrícula del reporte coincide con una carrera resuelta en el padrón fijado en este corte (${academic.persons.length} personas). Comprueba la columna de matrícula/correo y el padrón indicado en el paso 3. Si aún usas el padrón de prueba o confirmaste otro después, confirma tus fuentes y prepara un nuevo corte con ellas. Este corte conserva su versión anterior.`,
         );
       const id = `curso-${hash(`${cut.cycleId}:${identification.externalId}`).slice(0, 30)}`;
       tx.create(externalRef, { courseId: id });

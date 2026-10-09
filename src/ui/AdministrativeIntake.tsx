@@ -46,6 +46,12 @@ const previewSchema = z.object({
   excluded: z.array(z.object({ identity: z.string(), reason: z.string() })),
   review: reviewSummarySchema.nullable().optional(),
 });
+const cutSourcesSchema = z.object({
+  name: z.string(),
+  enrollments: z.number().int().nonnegative(),
+  principals: z.number().int().nonnegative(),
+  current: z.boolean(),
+});
 const diagnostic = (error: unknown) =>
   error instanceof Error
     ? error.message.replace(/^Firebase:\s*/i, "")
@@ -197,8 +203,21 @@ function Columns({
             {file.count} filas leídas. Se muestran hasta 25 originales; no están
             publicados.
           </p>
-          <div className="table-scroll">
-            <table>
+          <p>
+            Desplaza la tabla horizontalmente para ver todas las columnas.
+            También puedes enfocarla y usar las flechas del teclado.
+          </p>
+          <div
+            className="table-scroll original-table"
+            role="region"
+            aria-label={`Filas originales de ${file.name}`}
+            tabIndex={0}
+          >
+            <table
+              style={{
+                minWidth: `${Math.max(650, (file.headers.length + 1) * 170)}px`,
+              }}
+            >
               <thead>
                 <tr>
                   <th>Fila</th>
@@ -273,6 +292,31 @@ export default function AdministrativeIntake({
       executiveUnit: 1,
       virtualUnit: 1,
     });
+  const [cutSource, setCutSource] = useState<{
+    cutId: string;
+    value: z.infer<typeof cutSourcesSchema> | null;
+    error: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!cutId) return;
+    let active = true;
+    void callAcademic("inspectCutSources", { cutId }, cutSourcesSchema)
+      .then((value) => {
+        if (active) setCutSource({ cutId, value, error: "" });
+      })
+      .catch(() => {
+        if (active)
+          setCutSource({
+            cutId,
+            value: null,
+            error:
+              "No se pudo consultar el padrón de este corte. Vuelve a seleccionar el corte para comprobarlo.",
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [cutId, overview.cuts]);
   const [reports, setReports] = useState<OriginalView[]>([]),
     [reportJobs, setReportJobs] = useState<
       { id: string; name: string; status: string }[]
@@ -1198,6 +1242,36 @@ export default function AdministrativeIntake({
               ))}
           </select>
         </label>
+        {cutId && (
+          <section aria-label="Padrón utilizado por el corte">
+            {cutSource?.cutId !== cutId ? (
+              <p role="status">Consultando el padrón fijado en este corte…</p>
+            ) : cutSource.value ? (
+              <>
+                <p>
+                  <strong>Padrón fijado en este corte:</strong>{" "}
+                  {cutSource.value.name}. {cutSource.value.enrollments}{" "}
+                  inscripciones; {cutSource.value.principals} personas con
+                  afiliación principal.
+                </p>
+                <p>
+                  Comprueba que corresponde a tus alumnos antes de cargar
+                  Moodle. Confirmar un padrón nuevo no cambia los cortes
+                  anteriores.
+                </p>
+                {!cutSource.value.current && (
+                  <p role="status">
+                    Hay fuentes más recientes en este ciclo. Para usarlas,
+                    selecciona «Preparar un nuevo corte» después de confirmar
+                    tus fuentes. Este corte conserva su padrón anterior.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p role="alert">{cutSource.error}</p>
+            )}
+          </section>
+        )}
         {selectedCut?.progress ? (
           <Progress
             cutId={selectedCut.id}

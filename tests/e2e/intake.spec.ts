@@ -13,6 +13,7 @@ import {
   rosterHeaders,
   catalogRows,
   catalogHeaders,
+  wideMoodleRows,
 } from "../fixtures/synthetic/intake";
 
 test.setTimeout(120000);
@@ -73,27 +74,16 @@ test("administrador: originales → revisión → avance → Moodle → publicac
     .getByRole("button", { name: "Preparar corte con este avance" })
     .click();
   await expect(flow.getByLabel("Corte de trabajo")).not.toHaveValue("");
-  const reportName = "911._Curso_Compartido_27-1 Calificaciones.ods";
+  await expect(
+    flow.getByRole("region", { name: "Padrón utilizado por el corte" }),
+  ).toContainText("4 inscripciones; 3 personas con afiliación principal");
+  const reportName = "911._Curso_Compartido_27-1 Calificaciones.xlsx";
   await flow.getByLabel("Seleccionar reportes originales").setInputFiles([
     {
       name: reportName,
-      mimeType: "application/vnd.oasis.opendocument.spreadsheet",
-      buffer: book(
-        [
-          [
-            "Dirección Email",
-            "Tarea: Unidad 1",
-            "Tarea: Unidad 3",
-            "Tarea: Unidad 4",
-            "Total del curso",
-          ],
-          ["000ESC@example.invalid", 0, 7, 9, 999],
-          ["000EJE@example.invalid", "-", 8, 9, 999],
-          ["000VIR@example.invalid", 7, 8, 9, 999],
-          ["000BAJA@example.invalid", 10, 10, 10, 999],
-        ],
-        "ods",
-      ),
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: book(wideMoodleRows()),
     },
     {
       name: "reporte-invalido.xlsx",
@@ -118,6 +108,29 @@ test("administrador: originales → revisión → avance → Moodle → publicac
     .getByText("Diagnóstico del archivo reporte-invalido.xlsx", { exact: true })
     .click();
   await expect(flow).toContainText("Curso detectado: 911");
+  const original = flow.getByRole("region", {
+    name: `Filas originales de ${reportName}`,
+    exact: true,
+  });
+  await expect(original.getByRole("row")).toHaveCount(5);
+  await expect(flow).toContainText("995 filas totalmente vacías");
+  const sizes = await original.evaluate((el) => ({
+    overflow: el.scrollWidth > el.clientWidth,
+    width: Math.min(
+      ...Array.from(el.querySelectorAll("th")).map(
+        (c) => c.getBoundingClientRect().width,
+      ),
+    ),
+    height: el.querySelector("tbody tr")!.getBoundingClientRect().height,
+  }));
+  expect(sizes.overflow).toBe(true);
+  expect(sizes.width).toBeGreaterThan(150);
+  expect(sizes.height).toBeLessThan(120);
+  await original.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() => original.evaluate((el) => el.scrollLeft))
+    .toBeGreaterThan(0);
   await flow
     .getByRole("button", { name: `Validar reporte ${reportName}` })
     .click();

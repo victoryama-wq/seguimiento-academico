@@ -229,6 +229,11 @@ try {
       timeout: 60000,
     });
     const cutId = await flow.getByLabel("Corte de trabajo").inputValue();
+    await expect(
+      flow.getByRole("region", { name: "Padrón utilizado por el corte" }),
+    ).toContainText("4 inscripciones; 3 personas con afiliación principal", {
+      timeout: 60000,
+    });
     const name = `9801._Curso_Sintetico_Compartido_${cycle} Calificaciones.ods`;
     const columns = [
       "Dirección Email",
@@ -236,6 +241,10 @@ try {
       "Tarea: Unidad 3",
       "Tarea: Unidad 4",
       "Total del curso",
+      ...Array.from(
+        { length: 27 },
+        (_, i) => `Total categoría sintética ${i + 1}`,
+      ),
     ];
     await flow.getByLabel("Seleccionar reportes originales").setInputFiles([
       {
@@ -244,10 +253,15 @@ try {
         buffer: book(
           [
             columns,
-            ["000ESC@example.invalid", 0, 7, 9, 999],
-            ["000EJE@example.invalid", "-", 8, 9, 999],
-            ["000VIR@example.invalid", 7, 8, 9, 999],
-            ["000BAJA@example.invalid", 10, 10, 10, 999],
+            ...[
+              ["000ESC@example.invalid", 0, 7, 9, 999],
+              ["000EJE@example.invalid", "-", 8, 9, 999],
+              ["000VIR@example.invalid", 7, 8, 9, 999],
+              ["000BAJA@example.invalid", 10, 10, 10, 999],
+            ].map((row) => [...row, ...Array.from({ length: 27 }, () => 999)]),
+            ...Array.from({ length: 995 }, () =>
+              Array.from({ length: 32 }, () => ""),
+            ),
           ],
           "ods",
         ),
@@ -269,6 +283,28 @@ try {
     ).toBeHidden();
     record(
       `${device}: lote parcial conserva el reporte válido ante un archivo inválido`,
+    );
+    await expect(flow).toContainText("995 filas totalmente vacías", {
+      timeout: 60000,
+    });
+    const originals = flow.getByRole("region", {
+      name: `Filas originales de ${name}`,
+      exact: true,
+    });
+    await expect(originals.getByRole("row")).toHaveCount(5);
+    const widths = await originals.evaluate((el) => ({
+      overflow: el.scrollWidth > el.clientWidth,
+      minimum: Math.min(
+        ...Array.from(el.querySelectorAll("th")).map(
+          (c) => c.getBoundingClientRect().width,
+        ),
+      ),
+      rowHeight: el.querySelector("tbody tr").getBoundingClientRect().height,
+    }));
+    assert(widths.overflow && widths.minimum > 150 && widths.rowHeight < 120);
+    record(
+      `${device}: 32 columnas legibles, 999 filas físicas y solo cuatro registros; padrón del corte visible`,
+      widths,
     );
     await expect(
       flow.getByRole("button", {
@@ -337,6 +373,10 @@ try {
     ]) {
       await assert.rejects(
         api("administrationReview", { id: sourceId }, role),
+        /PERMISSION_DENIED/,
+      );
+      await assert.rejects(
+        api("inspectCutSources", { cutId }, role),
         /PERMISSION_DENIED/,
       );
       await assert.rejects(

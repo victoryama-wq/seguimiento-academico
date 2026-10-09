@@ -54,6 +54,11 @@ publicadas ni afectan los indicadores. No compartir capturas reales en GitHub.
 2. Seleccionar los reportes Moodle originales. Se aceptan CSV, XLSX y ODS, hasta
    8 MiB por archivo y 20 archivos/40 MiB por selección. Para más, usar otra carga.
    No es obligatorio incluir todas las asignaturas ni todas las unidades.
+   Antes de cargarlos, comprobar **Padrón fijado en este corte**: nombre de la
+   fuente, inscripciones y principales. Los cortes del piloto pueden contener
+   únicamente personas sintéticas. Si acabas de confirmar tu padrón y catálogo,
+   elige **Preparar un nuevo corte** para utilizarlos; los cortes anteriores no
+   adoptan silenciosamente fuentes nuevas.
 3. Revisar el número inicial, nombre de asignatura y ciclo reconocidos. Se distingue
    el prefijo de orden de las muestras del identificador del curso. Si la
    identificación es inequívoca, no hay que registrar el curso ni escribir su ID
@@ -102,3 +107,18 @@ Registrar por canal privado si fue posible completar los pasos, las observacione
 que requieren decisión institucional y si cantidades/grupos/exclusiones coinciden.
 La prueba técnica sintética y la conciliación local no sustituyen esta aceptación.
 No publicar matrículas, nombres, correos, originales o capturas reales.
+
+## Reportes anchos y filas de formato
+
+La vista original permite desplazamiento horizontal, también con las flechas del
+teclado cuando la tabla tiene el foco. No comprime las actividades a una letra por
+línea. Conserva los valores y números de fila originales; muestra 25 registros por
+página. Una fila totalmente vacía no representa un alumno: se informa cuántas se
+omitieron del procesamiento, sin modificar el archivo privado. Cero, guion, error
+o fórmula en una fila sin identidad siguen exigiendo revisión.
+
+Si aparece **ninguna matrícula coincide**, comprobar la columna de matrícula/correo
+y el padrón indicado en el paso 3. Primero confirmar las fuentes institucionales y
+después preparar un corte que las use. No seleccionar uno de los cortes sintéticos
+para cargar reportes reales. Si solo algunas matrículas no coinciden, revisar esas
+incidencias; no se hacen uniones por nombre ni se inventa una carrera o rol docente.

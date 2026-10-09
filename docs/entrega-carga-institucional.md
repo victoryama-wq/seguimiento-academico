@@ -1,5 +1,8 @@
 # Recorrido institucional desde originales — 2026-10-09
 
+Evidencia de la primera entrega. Corrección posterior:
+[reportes Moodle anchos, filas vacías y padrón del corte](correccion-reportes-moodle.md).
+
 Implementación permanente en el PR #5, sobre `903172f0eafeffe96638740f74ac4295a1be08f3`.
 No cambia DEC-01–36, las reglas de calificaciones ni los permisos de coordinadores.
 Guía del propietario: [pasos de carga](carga-institucional.md).

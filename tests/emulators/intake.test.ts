@@ -13,6 +13,7 @@ import {
   rosterRows,
   catalogHeaders,
   catalogRows,
+  wideMoodleRows,
 } from "../fixtures/synthetic/intake";
 import {
   originalViewSchema,
@@ -288,4 +289,53 @@ it("detecta propuestas de fuentes simultáneas sin modificar fuentes fijadas en 
   await expect(
     api("publish", { jobId: sent.jobId, replace: false }, sessions.admin),
   ).rejects.toThrow();
+});
+
+it("Moodle ancho: 999 filas físicas no crean incidencias vacías; muestra padrón fijado y explica cruces vacíos", async () => {
+  const before = (await stores().db.doc(`cuts/${cutId}`).get()).data()!.sources;
+  const detail = await api("inspectCutSources", { cutId }, sessions.admin);
+  expect(detail).toMatchObject({
+    name: "alumnos.csv",
+    enrollments: 4,
+    principals: 3,
+    current: false,
+  });
+  for (const token of [sessions.a, sessions.b])
+    await expect(api("inspectCutSources", { cutId }, token)).rejects.toThrow(
+      /PERMISSION_DENIED/,
+    );
+  const wide = await inspect(
+    "report",
+    "912._Reporte_Ancho_27-1 Calificaciones.xlsx",
+    book(wideMoodleRows()),
+  );
+  expect(wide.count).toBe(4);
+  expect(wide.samples.map((r) => r.row)).toEqual([2, 3, 4, 5]);
+  expect(wide.next).toBeNull();
+  expect(wide.messages.join(" ")).toContain("995 filas totalmente vacías");
+  const sent = (await api(
+    "prepareOperationalReport",
+    { cutId, file: selected(wide) },
+    sessions.admin,
+  )) as { jobId: string };
+  expect((await waitJob(sent.jobId)).status).toBe("ready");
+  await api("publish", { jobId: sent.jobId, replace: false }, sessions.admin);
+  const missing = await inspect(
+    "report",
+    "913._Sin_Cruce_27-1 Calificaciones.csv",
+    csv([
+      ["Dirección Email", "Tarea: Unidad 1"],
+      ["NO-ESTA@example.invalid", 0],
+    ]),
+  );
+  await expect(
+    api(
+      "prepareOperationalReport",
+      { cutId, file: selected(missing) },
+      sessions.admin,
+    ),
+  ).rejects.toThrow(/padrón fijado.*4 personas.*nuevo corte/);
+  expect(
+    (await stores().db.doc(`cuts/${cutId}`).get()).data()!.sources,
+  ).toEqual(before);
 });

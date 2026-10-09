@@ -98,6 +98,7 @@ export const intakeOperations = {
   administrationContext: z.strictObject({
     cycle: z.string().regex(/^\d{2}-\d+$/),
   }),
+  inspectCutSources: z.strictObject({ cutId: text }),
   administrationReview: z.strictObject({
     id,
     offset: z.number().int().min(0).max(20000).default(0),

@@ -558,3 +558,18 @@ fuera de Hosting. Las operaciones anteriores siguen disponibles como diagnóstic
 
 Guía: [carga institucional](carga-institucional.md). La aceptación del propietario
 y la publicación productiva siguen pendientes; la validación técnica usa sintéticos.
+
+### Reportes anchos y padrón del corte (corrección técnica, 2026-10-09)
+
+La previsualización mantiene ancho legible por columna y desplazamiento horizontal
+local al contenedor. Los límites de bytes, filas físicas, columnas y celdas se
+comprueban antes de omitir filas totalmente vacías del reporte Moodle. Fórmulas,
+errores, cero y valores booleanos no se consideran filas vacías; una nota sin
+matrícula mantiene su incidencia. Se conservan el original privado y los números
+de fila, sin convertir ausencia de contenido en una inscripción.
+
+Administración puede inspeccionar el nombre y conteos del padrón fijado en un corte;
+el servidor deniega esta consulta institucional a coordinadores. Si las fuentes
+vigentes cambiaron, se informa sin recalcular el corte. Un cruce vacío explica qué
+comprobar y cómo preparar otro corte después de confirmar las fuentes. No se
+modifican decisiones académicas, cortes existentes ni datos del piloto.
