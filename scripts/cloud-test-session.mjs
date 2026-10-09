@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { stagingIdentity } from "./staging-identity.mjs";
 import assert from "node:assert/strict";
 export const project = "indicadores-academia";
 if (process.env.CONFIRM_STAGING_PROJECT !== project)
@@ -11,14 +11,7 @@ for (const key of [
   "FIREBASE_STORAGE_EMULATOR_HOST",
 ])
   assert(!process.env[key], `Entorno incompatible: ${key}`);
-assert.equal(
-  execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim(),
-  "",
-  "Árbol limpio requerido",
-);
-export const sha = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim();
+export const { sha, revision } = stagingIdentity();
 const web = JSON.parse(readFileSync("private/staging-web.json", "utf8"));
 assert.equal(web.projectId, project);
 export const accounts = JSON.parse(

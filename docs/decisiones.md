@@ -523,3 +523,10 @@ La repetición medida, permisos y recuperación se documentan en
 [ejecución cloud](validacion-nube-ejecucion.md), separados de aceptación del usuario.
 La recuperación inyecta un lease vencido con auditoría solo en un trabajo sintético
 nuevo no publicado; no demuestra caída de contenedor ni restauración de respaldo.
+
+La evidencia añadida después del despliegue identifica por separado SHA de la
+aplicación y revisión del verificador. `STAGING_RELEASE_SHA` admite un ancestro
+solo con árbol limpio y diferencias de documentación, pruebas o verificadores
+cloud enumerados; rechaza cambios de build, aplicación, configuración y
+dependencias. La comprobación del backend permanece exacta. No se redespliega
+la aplicación solo para atribuir al informe un SHA nuevo.

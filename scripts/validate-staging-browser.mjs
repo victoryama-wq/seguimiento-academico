@@ -1,19 +1,13 @@
 import { chromium, expect, devices } from "@playwright/test";
 import assert from "node:assert/strict";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { stagingIdentity } from "./staging-identity.mjs";
 
 assert.equal(process.env.CONFIRM_STAGING_PROJECT, "indicadores-academia");
 assert(!process.env.CI, "El piloto cloud nunca se ejecuta desde CI");
 const project = "indicadores-academia",
   url = `https://${project}.web.app`;
-const sha = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim();
-assert.equal(
-  execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim(),
-  "",
-);
+const { sha, revision } = stagingIdentity();
 const health = await fetch(
   `https://us-central1-${project}.cloudfunctions.net/environmentStatus`,
   {
@@ -38,6 +32,7 @@ const evidence = {
   run,
   project,
   sha,
+  verifierRevision: revision,
   url,
   startedAt: new Date().toISOString(),
   cases: [],
@@ -72,11 +67,9 @@ try {
       .getByRole("button", { name: "Ciclos y cortes", exact: true })
       .click();
     await page.getByText("Crear corte", { exact: true }).first().click();
-    const form = page
-      .locator("form")
-      .filter({
-        has: page.getByLabel("Identificador del corte", { exact: true }),
-      });
+    const form = page.locator("form").filter({
+      has: page.getByLabel("Identificador del corte", { exact: true }),
+    });
     await form.getByLabel("Ciclo del corte", { exact: true }).fill("27-1");
     await form.getByLabel("Identificador del corte", { exact: true }).fill(cut);
     await form
@@ -96,15 +89,13 @@ try {
     await login(page, "a");
     await page.getByRole("button", { name: "Fuentes", exact: true }).click();
     await page.getByLabel("Corte de seguimiento").selectOption(cut);
-    await page
-      .getByLabel("Reportes Moodle")
-      .setInputFiles({
-        name: filename,
-        mimeType: "text/csv",
-        buffer: Buffer.from(
-          `${header}\n000ESC@example.invalid,1,2,3,4\n000EJE@example.invalid,0,2,3,4\n000VIR@example.invalid,1,2,3,4`,
-        ),
-      });
+    await page.getByLabel("Reportes Moodle").setInputFiles({
+      name: filename,
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        `${header}\n000ESC@example.invalid,1,2,3,4\n000EJE@example.invalid,0,2,3,4\n000VIR@example.invalid,1,2,3,4`,
+      ),
+    });
     await page
       .getByRole("button", { name: "Enviar lote", exact: true })
       .click();
@@ -125,13 +116,11 @@ try {
     await expect(page.locator(".preview")).not.toContainText(/000vir/i);
     await page.getByRole("button", { name: "Confirmar publicación" }).click();
     await expect(job).toContainText("Publicado", { timeout: 60000 });
-    await page
-      .getByLabel("Reportes Moodle")
-      .setInputFiles({
-        name: filename,
-        mimeType: "text/csv",
-        buffer: Buffer.from(`${header}\n000EJE@example.invalid,,-,3,4`),
-      });
+    await page.getByLabel("Reportes Moodle").setInputFiles({
+      name: filename,
+      mimeType: "text/csv",
+      buffer: Buffer.from(`${header}\n000EJE@example.invalid,,-,3,4`),
+    });
     await page
       .getByRole("button", { name: "Enviar lote", exact: true })
       .click();

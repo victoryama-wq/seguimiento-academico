@@ -90,10 +90,15 @@ try {
     payload.snapshot.cut.progress.id,
     stored.fields.progress.mapValue.fields.id.stringValue,
   );
-  await assert.rejects(
-    api("publish", { jobId: second, replace: true }, "a"),
-    /FAILED_PRECONDITION/,
-  );
+  if (pointer.fields.versionId.stringValue === second) {
+    // Reenviar la publicación ganadora es idempotente, incluso después del cierre.
+    await api("publish", { jobId: second, replace: true }, "a");
+  } else {
+    await assert.rejects(
+      api("publish", { jobId: second, replace: true }, "a"),
+      /FAILED_PRECONDITION/,
+    );
+  }
   assert.deepEqual((await api("dashboard", query)).counts, frozen.counts);
   out.status = "success";
   out.counts = frozen.counts;

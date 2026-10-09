@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { stagingIdentity } from "./staging-identity.mjs";
 import { setTimeout as delay } from "node:timers/promises";
 import { basename } from "node:path";
 
@@ -22,14 +22,7 @@ assert.equal(target.region, "us-central1");
 assert.equal(target.hostingSite, target.projectId);
 const web = JSON.parse(readFileSync("private/staging-web.json", "utf8"));
 assert.equal(web.projectId, target.projectId);
-const sha = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim();
-assert.equal(
-  execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim(),
-  "",
-  "Árbol limpio requerido",
-);
+const { sha, revision } = stagingIdentity();
 const base = `https://${target.region}-${target.projectId}.cloudfunctions.net`;
 const run = `cloud-${scenario}-${Date.now()}`;
 const out = `private/cloud-runs/${run}`;
@@ -37,6 +30,7 @@ mkdirSync(out, { recursive: true });
 const evidence = {
   run,
   sha,
+  verifierRevision: revision,
   project: target.projectId,
   region: target.region,
   scenario,

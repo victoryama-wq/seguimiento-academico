@@ -19,7 +19,7 @@ try {
   const note = {
     ...target,
     expected: null,
-    requestId: "cloud-initial",
+    requestId: `${cutId}-initial`,
     observation: "Observación sintética",
     responsible: "Responsable sintético A",
     contactDate: "2026-10-01",
@@ -29,7 +29,7 @@ try {
   const initial = await api("saveCase", note, "a");
   assert.deepEqual(await api("saveCase", note, "a"), initial);
   const race = await Promise.allSettled(
-    ["cloud-edit-a", "cloud-edit-b"].map((requestId) =>
+    [`${cutId}-edit-a`, `${cutId}-edit-b`].map((requestId) =>
       api(
         "saveCase",
         { ...note, expected: initial.head, requestId, observation: requestId },
@@ -50,7 +50,7 @@ try {
       {
         ...note,
         expected: history.head,
-        requestId: `cloud-edit-${n}`,
+        requestId: `${cutId}-edit-${n}`,
         observation: `Registro sintético ${n}`,
       },
       "a",
@@ -78,7 +78,7 @@ try {
   for (const [op, input] of [
     ["caseById", { id: history.id, cursor: history.cursor }],
     ["exportCase", target],
-    ["saveCase", { ...note, requestId: "cross" }],
+    ["saveCase", { ...note, requestId: `${cutId}-cross` }],
   ])
     await assert.rejects(api(op, input, "b"), /NOT_FOUND|PERMISSION_DENIED/);
   assert.deepEqual((await api("dashboard", query)).counts, before.counts);
