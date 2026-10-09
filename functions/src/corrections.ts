@@ -1,4 +1,5 @@
 import { HttpsError } from "firebase-functions/v2/https";
+import { identity } from "../../src/domain/academic";
 import { operationSchemas } from "../../src/domain/import-contract";
 import { validateAcademicPackage } from "../../src/importing/decisions";
 import {
@@ -32,7 +33,11 @@ const conflict = () =>
   );
 
 export async function correctionOperation(
-  op: "reviseAcademicDecision" | "refreshCutSources" | "revalidate",
+  op:
+    | "reviseAcademicDecision"
+    | "reviseCycleWithdrawal"
+    | "refreshCutSources"
+    | "revalidate",
   raw: unknown,
   actor: string,
 ) {
@@ -73,9 +78,9 @@ export async function correctionOperation(
     });
     return { ok: true };
   }
-  if (op === "reviseAcademicDecision") {
+  if (op === "reviseAcademicDecision" || op === "reviseCycleWithdrawal") {
     admin(member);
-    const input = operationSchemas.reviseAcademicDecision.parse(raw);
+    const input = operationSchemas[op].parse(raw);
     const old = await getJob(input.jobId);
     if (old.kind !== "academicPackage" || !old.artifact) throw conflict();
     const artifact = await jsonFile<Artifact>(old.artifact);
@@ -85,12 +90,33 @@ export async function correctionOperation(
         ...p,
         revisionOf: old.id,
         reason: input.decision.reason,
-        decisions: [
-          ...p.decisions.filter(
-            (d) => d.enrollmentId !== input.decision.enrollmentId,
-          ),
-          input.decision,
-        ],
+        ...("enrollmentId" in input.decision
+          ? {
+              decisions: [
+                ...p.decisions.filter(
+                  (d) =>
+                    d.enrollmentId !==
+                    ("enrollmentId" in input.decision
+                      ? input.decision.enrollmentId
+                      : null),
+                ),
+                input.decision,
+              ],
+            }
+          : {
+              cycleWithdrawals: [
+                ...(p.cycleWithdrawals ?? []).filter(
+                  (d) =>
+                    identity(d.identity).normalized !==
+                    identity(
+                      "identity" in input.decision
+                        ? input.decision.identity
+                        : null,
+                    ).normalized,
+                ),
+                input.decision,
+              ],
+            }),
       },
       old.cycleId,
     );
@@ -197,6 +223,7 @@ export async function correctionOperation(
       canonical({
         progressId: cut.progress?.id ?? null,
         revalidationOf: old.id,
+        reportPolicy: "active-roster-v1",
         ...(old.columnPolicyVersion !== undefined
           ? { columnPolicyVersion: course.columnPolicy?.version ?? null }
           : {}),

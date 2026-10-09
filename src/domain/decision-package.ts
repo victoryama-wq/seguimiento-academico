@@ -6,6 +6,7 @@ import {
 } from "./academic";
 import { civilDateSchema } from "./schemas";
 import { scheduleSchema } from "./report-policy";
+import { cycleWithdrawalSchema } from "./possible-withdrawals";
 
 const text = z.string().trim().min(1).max(4000);
 export const originalEnrollmentSchema = z.strictObject({
@@ -86,6 +87,7 @@ export const academicPackageSchema = z.strictObject({
     .min(1)
     .max(10000),
   decisions: z.array(packageDecisionSchema).max(10000),
+  cycleWithdrawals: z.array(cycleWithdrawalSchema).max(10000).optional(),
   reviews: z
     .array(
       z.strictObject({

@@ -45,6 +45,7 @@ import {
 } from "./store";
 import {
   academicSnapshot,
+  confirmedRoster,
   type Artifact,
   type Course,
   type Cut,
@@ -261,7 +262,7 @@ async function proposalView(id: string, offset = 0) {
   const byKey = new Map(p.package.enrollments.map((e) => [e.key, e]));
   const excludedKeys = new Set(
     p.resolved.observations
-      .filter((o) => o.state === "excluido")
+      .filter((o) => o.state === "excluido" && byKey.has(o.id))
       .map((o) => o.id),
   );
   return {
@@ -776,6 +777,7 @@ export async function intakeOperation(
     const academic = await academicSnapshot(cut);
     const identityIndex =
       v.file.columns.identity ?? table.headers.indexOf(mapping.identity.header);
+    const activeRoster = await confirmedRoster(cut, academic);
     const ids = new Set(
       table.rows
         .map((r) => identity(r.cells[identityIndex]?.raw).normalized)
@@ -824,7 +826,14 @@ export async function intakeOperation(
         });
         return id;
       }
-      if (!careers.length)
+      if (
+        !careers.length &&
+        !(
+          activeRoster &&
+          ids.size &&
+          [...ids].every((id) => !activeRoster.identities.has(id!))
+        )
+      )
         throw new HttpsError(
           "failed-precondition",
           `Ninguna matrícula del reporte coincide con una carrera resuelta en el padrón fijado en este corte (${academic.persons.length} personas). Comprueba la columna de matrícula/correo y el padrón indicado en el paso 3. Si aún usas el padrón de prueba o confirmaste otro después, confirma tus fuentes y prepara un nuevo corte con ellas. Este corte conserva su versión anterior.`,

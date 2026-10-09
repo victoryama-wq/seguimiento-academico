@@ -1,5 +1,6 @@
 import { chromium, expect, devices } from "@playwright/test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import XLSX from "xlsx";
@@ -62,9 +63,20 @@ try {
   ]) {
     const prior = await api("administrationContext", { cycle });
     if (prior.expected) {
-      const previous = await api("administrationDraft", { id: prior.expected });
+      const original = await api("original", { jobId: prior.expected });
+      const previous = JSON.parse(
+        Buffer.from(original.base64, "base64").toString("utf8"),
+      );
       assert(
-        previous.roster.name.startsWith("cloud-intake-synthetic-"),
+        previous.cycle === cycle &&
+          previous.enrollments.every((e) =>
+            ["000ESC", "000EJE", "000VIR", "000BAJA"].includes(
+              e.original.identity,
+            ),
+          ) &&
+          previous.sources.every((s) =>
+            s.name.startsWith("cloud-intake-synthetic-"),
+          ),
         "No sustituir fuentes ajenas al verificador",
       );
     }
@@ -235,6 +247,7 @@ try {
       timeout: 60000,
     });
     const name = `9801._Curso_Sintetico_Compartido_${cycle} Calificaciones.ods`;
+    const possibleIdentity = `SYN-${run}-${device}`;
     const columns = [
       "Dirección Email",
       "Tarea: Unidad 1",
@@ -258,6 +271,7 @@ try {
               ["000EJE@example.invalid", "-", 8, 9, 999],
               ["000VIR@example.invalid", 7, 8, 9, 999],
               ["000BAJA@example.invalid", 10, 10, 10, 999],
+              [possibleIdentity, 10, 10, 10, 999],
             ].map((row) => [...row, ...Array.from({ length: 27 }, () => 999)]),
             ...Array.from({ length: 995 }, () =>
               Array.from({ length: 32 }, () => ""),
@@ -291,7 +305,7 @@ try {
       name: `Filas originales de ${name}`,
       exact: true,
     });
-    await expect(originals.getByRole("row")).toHaveCount(5);
+    await expect(originals.getByRole("row")).toHaveCount(6);
     const widths = await originals.evaluate((el) => ({
       overflow: el.scrollWidth > el.clientWidth,
       minimum: Math.min(
@@ -303,7 +317,7 @@ try {
     }));
     assert(widths.overflow && widths.minimum > 150 && widths.rowHeight < 120);
     record(
-      `${device}: 32 columnas legibles, 999 filas físicas y solo cuatro registros; padrón del corte visible`,
+      `${device}: 32 columnas legibles, 1000 filas físicas y cinco registros; padrón del corte visible`,
       widths,
     );
     await expect(
@@ -322,6 +336,23 @@ try {
     await expect(
       flow.getByRole("region", { name: "Revisión de reporte" }),
     ).toContainText("Impartición no determinada", { timeout: 60000 });
+    const previewRegion = flow.getByRole("region", {
+      name: "Revisión de reporte",
+    });
+    await expect(previewRegion).toContainText(
+      "Alumnos incluidos: 3. Registros excluidos: 2",
+    );
+    await expect(previewRegion).toContainText(
+      "No pertenece al padrón activo del ciclo",
+    );
+    const resultWidths = await flow
+      .getByRole("region", { name: "Resultados del reporte" })
+      .evaluate((el) =>
+        Array.from(el.querySelectorAll("th"))
+          .slice(0, 2)
+          .map((c) => c.getBoundingClientRect().width),
+      );
+    assert(Math.min(...resultWidths) >= 200);
     await flow
       .getByLabel("Revisé este reporte, sus observaciones y sustituciones")
       .check();
@@ -339,6 +370,19 @@ try {
     });
     assert.deepEqual(panel.counts, { D: 4, N: 3, G: 1, V: 0, E: 0, Z: 1 });
     assert.equal(panel.students, 3);
+    const withdrawalQuery = {
+      cutId,
+      filters: {},
+      view: "institucion",
+      section: "possibleWithdrawals",
+    };
+    const possible = await api("dashboard", withdrawalQuery);
+    assert.equal(possible.possibleWithdrawalsCount, 1);
+    assert.equal(possible.possibleWithdrawals[0].status, "posible baja");
+    assert.equal(
+      possible.possibleWithdrawals[0].identity,
+      possibleIdentity.toLowerCase(),
+    );
     record(
       `${device}: Eventarc efectivo, curso automático, principal C.A., avance y exclusión`,
       { counts: panel.counts, students: panel.students },
@@ -398,6 +442,7 @@ try {
         role,
       );
       assert.equal(d.counts.D, role === "a" ? 3 : 1);
+      assert.equal(d.possibleWithdrawalsCount, 0);
       const exported = await api(
         "exportDashboard",
         {
@@ -415,6 +460,7 @@ try {
           .includes(role === "a" ? "000vir" : "000esc"),
         "Exportación fuera de ámbito",
       );
+      assert(!exported.csv.includes(possibleIdentity));
       await assert.rejects(
         api(
           "exportDashboard",
@@ -432,6 +478,18 @@ try {
     record(
       `${device}: coordinadores A/B aislados y fuentes privadas denegadas`,
     );
+    await page.getByRole("button", { name: "Panel", exact: true }).click();
+    await page
+      .getByRole("combobox", { name: "Ciclo y corte", exact: true })
+      .selectOption(cutId);
+    await page
+      .getByRole("button", { name: "Posibles bajas", exact: true })
+      .click();
+    await expect(page.getByRole("table")).toContainText(possibleIdentity);
+    await page.screenshot({
+      path: `${directory}/${device}-posibles-bajas-sinteticas.png`,
+      fullPage: true,
+    });
     await page.reload();
     await page.getByRole("button", { name: "Fuentes", exact: true }).click();
     await flow.getByLabel("Corte de trabajo").selectOption(cutId);
@@ -489,9 +547,70 @@ try {
       section: "details",
     });
     assert.deepEqual(closed.counts, after.counts);
+    assert.equal(closed.possibleWithdrawalsCount, 1);
     record(
       `${device}: actualización parcial, aviso numérico, reintento idempotente y corte cerrado conservado`,
       { counts: closed.counts },
+    );
+    const decision = {
+      jobId: sourceId,
+      decision: {
+        identity: possibleIdentity,
+        reason: "Baja confirmada sintética",
+        sourceReference: run,
+      },
+    };
+    await assert.rejects(
+      api("reviseCycleWithdrawal", decision, "a"),
+      /PERMISSION_DENIED/,
+    );
+    const revised = await api("reviseCycleWithdrawal", decision);
+    await ready(revised.id);
+    await api("publishSource", { jobId: revised.id, replace: true });
+    assert.equal((await api("reviseCycleWithdrawal", decision)).id, revised.id);
+    const nextCut = await api("prepareOperationalCut", {
+      cycle,
+      requestId: createHash("sha256").update(`${device}-${run}`).digest("hex"),
+      progress: { schoolCut: 1, executiveUnit: 3, virtualUnit: 2 },
+    });
+    const absentOriginal = await api("inspectOriginal", {
+      kind: "report",
+      name: name.replace(".ods", ".csv"),
+      base64: csv([
+        ["Nombre", "Dirección Email", "Tarea: Unidad 1"],
+        ["Nombre sintético", possibleIdentity, 0],
+      ]).toString("base64"),
+    });
+    const nextReport = await api("prepareOperationalReport", {
+      cutId: nextCut.id,
+      file: {
+        id: absentOriginal.id,
+        columns: absentOriginal.columns,
+        options: absentOriginal.options,
+      },
+    });
+    const nextPreview = await ready(nextReport.jobId);
+    assert.equal(nextPreview.blocking, false);
+    assert.equal(nextPreview.rows.length, 0);
+    await api("publish", { jobId: nextReport.jobId, replace: false });
+    const confirmed = await api("dashboard", {
+      ...withdrawalQuery,
+      cutId: nextCut.id,
+    });
+    assert.equal(confirmed.possibleWithdrawals[0].status, "baja confirmada");
+    assert.equal(confirmed.counts.D, 0);
+    assert.equal(confirmed.coverage, null);
+    const old = await api("dashboard", withdrawalQuery);
+    assert.equal(old.possibleWithdrawals[0].status, "posible baja");
+    const exportedCase = await api("exportDashboard", {
+      ...withdrawalQuery,
+      cutId: nextCut.id,
+      snapshotId: confirmed.snapshotId,
+    });
+    assert(exportedCase.csv.includes("baja confirmada"));
+    record(
+      `${device}: posible baja, confirmación auditada idempotente, CSV y cierre histórico inmutable`,
+      { unique: 1, D: confirmed.counts.D },
     );
     await context.close();
   }

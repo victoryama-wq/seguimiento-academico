@@ -63,6 +63,7 @@ export async function academicOperation(
     return historyOperation(op as keyof typeof historyOperations, raw, actor);
   switch (op) {
     case "reviseAcademicDecision":
+    case "reviseCycleWithdrawal":
     case "refreshCutSources":
     case "revalidate":
       return correctionOperation(op, raw, actor);

@@ -573,3 +573,25 @@ el servidor deniega esta consulta institucional a coordinadores. Si las fuentes
 vigentes cambiaron, se informa sin recalcular el corte. Un cruce vacío explica qué
 comprobar y cómo preparar otro corte después de confirmar las fuentes. No se
 modifican decisiones académicas, cortes existentes ni datos del piloto.
+
+### Padrón activo y posibles bajas (decisión institucional, 2026-10-09)
+
+El padrón confirmado y fijado define los activos del ciclo. Una matrícula válida
+ausente queda fuera de indicadores, sin bloquear los registros válidos, con motivo
+«No pertenece al padrón activo del ciclo». Identidades inválidas y afiliaciones
+pendientes mantienen revisión. Una fuente faltante, fallida o sin confirmar no
+autoriza exclusiones masivas. Esta decisión sustituye el bloqueo por matrícula
+desconocida para nuevas validaciones contra fuentes confirmadas; no reclasifica
+derivados históricos ni modifica cortes cerrados.
+
+La lista informativa **Posibles bajas** agrupa por matrícula, ciclo y corte,
+conserva nombres y cursos y distingue baja confirmada. Una decisión individual de
+baja puede existir sin inscripción; se versiona y audita por separado de las
+correspondencias generales y se conserva al actualizar las fuentes. No cambia
+DEC-01–36. Los datos de la decisión individual del propietario permanecen privados.
+
+Decisión técnica: filtrar atribuciones verificadas antes de contar/agrupar/exportar.
+Ni el cargador ni compartir una asignatura autorizan conocer a personas sin
+atribución. Administración conserva esos casos; los coordinadores solo ven los
+atribuibles a sus carreras vigentes. Originales, fuentes fijadas, CAS y fotografías
+cerradas se conservan. Ver [regla, cálculos y recuperación](padron-activo-y-posibles-bajas.md).

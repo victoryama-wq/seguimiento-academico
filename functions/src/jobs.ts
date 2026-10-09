@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { absentRosterReason } from "../../src/domain/possible-withdrawals";
 import { z } from "zod";
 import { HttpsError } from "firebase-functions/v2/https";
 import { FieldPath } from "firebase-admin/firestore";
@@ -159,6 +160,7 @@ export function jobView(job: Job) {
   };
 }
 export type Artifact = {
+  includedByCareer?: Record<string, number>;
   review?: Record<string, ReviewSummary>;
   observations?: Observation[];
   filename?:
@@ -173,8 +175,66 @@ export type Artifact = {
     careerId: string | null;
     row: number;
     reason: string;
+    name?: string;
+    withdrawalStatus?: "posible baja" | "baja confirmada";
+    sourceVersion?: string;
+    originalReports?: {
+      identity: string;
+      name: string;
+      sourceVersion: string;
+      row: number;
+    }[];
   }[];
 };
+// Solo una fuente íntegra, confirmada y fijada habilita la ausencia del padrón.
+// Las versiones antiguas publicadas conservan sus derivados, sin reclasificación.
+export async function confirmedRoster(
+  cut: Cut,
+  academic?: Awaited<ReturnType<typeof academicSnapshot>>,
+) {
+  const id = cut.sources.academicPackage ?? cut.sources.roster;
+  if (!id) return null;
+  const source = (await db.doc(`sources/${id}`).get()).data();
+  const job = (await db.doc(`jobs/${id}`).get()).data() as Job | undefined;
+  if (
+    !source?.approvedBy ||
+    !source.publishedAt ||
+    source.cycleId !== cut.cycleId ||
+    source.kind !==
+      (cut.sources.academicPackage ? "academicPackage" : "roster") ||
+    !job ||
+    job.status !== "published" ||
+    job.blocking ||
+    job.artifact !== source.artifact ||
+    !source.artifact
+  )
+    throw new InvalidSource("padron_activo_sin_confirmar");
+  const artifact = await jsonFile<Artifact>(source.artifact as string);
+  if (artifact.issues.length || !artifact.count)
+    throw new InvalidSource("padron_activo_incompleto");
+  if (!cut.sources.academicPackage) {
+    const resolved = academic ?? (await academicSnapshot(cut));
+    return {
+      id,
+      identities: new Set(
+        resolved.enrollments
+          .map((e) => identity(e.identity).normalized)
+          .filter((v): v is string => !!v),
+      ),
+    };
+  }
+  const p = validateAcademicPackage(artifact.data, cut.cycleId);
+  if (p.enrollments.length !== artifact.count)
+    throw new InvalidSource("padron_activo_incompleto");
+  return {
+    id,
+    identities: new Set(
+      p.enrollments
+        .map((e) => identity(e.original.identity).normalized)
+        .filter((v): v is string => !!v),
+    ),
+  };
+}
 async function administrative(job: Job, bytes: Buffer): Promise<Artifact> {
   const version = job.id;
   if (job.kind === "academicPackage") {
@@ -399,6 +459,7 @@ async function report(
       audits.push(resolved.audit);
     }
   const academic = await academicSnapshot(cut);
+  const roster = await confirmedRoster(cut, academic);
   const schedule = academic.context.trackingSchedule;
   if (
     (cut.progress || schedule?.tracking) &&
@@ -460,6 +521,11 @@ async function report(
     }),
   );
   let rows: RowView[] = [];
+  const nameColumns = table.headers.flatMap((h, i) =>
+    /^(nombre(?:\(s\))?|apellidos?(?:\(s\))?|nombre completo)$/i.test(h.trim())
+      ? [i]
+      : [],
+  );
   for (const row of [...parsed.accepted, ...parsed.unresolved]) {
     const person = row.person.normalized
       ? persons.get(row.person.normalized)
@@ -469,6 +535,51 @@ async function report(
       : undefined;
     const records =
       person?.enrollmentIds.map((id) => enrollments.get(id)!) ?? [];
+    const name = nameColumns
+      .map((i) => row.original[i]?.text ?? "")
+      .filter(Boolean)
+      .join(" ");
+    if (
+      roster &&
+      row.person.normalized &&
+      !roster.identities.has(row.person.normalized)
+    ) {
+      const confirmed = academic.context.withdrawals.some(
+        (w) =>
+          identity(w.identity).normalized === row.person.normalized &&
+          (w.effectiveDate
+            ? w.effectiveDate <= (cut.academicDate ?? cut.date)
+            : w.confirmedCutId === cut.id),
+      );
+      excluded.push({
+        identity: String(row.person.original),
+        name,
+        careerId: null,
+        row: row.row,
+        reason: absentRosterReason,
+        withdrawalStatus: confirmed ? "baja confirmada" : "posible baja",
+        sourceVersion: job.id,
+      });
+      observations.push({
+        id: `report-${row.row}-padron`,
+        identity: String(row.person.original),
+        careerId: null,
+        group: "",
+        file: table.source.originalName,
+        sheet: table.source.sheet,
+        row: row.row,
+        original: row.person.original,
+        effective: null,
+        reason: absentRosterReason,
+        rule: "padron_activo_confirmado",
+        state: "excluido",
+        action: confirmed
+          ? "Baja confirmada para el ciclo; conservar evidencia."
+          : "Administración puede revisar el padrón o confirmar la baja; no se incluyen calificaciones.",
+        sourceVersion: job.id,
+      });
+      continue;
+    }
     // Bajas y otras inscripciones excluidas se conservan en el original, sin publicar notas.
     if (
       records.length &&
@@ -484,6 +595,11 @@ async function report(
         reason: [
           ...new Set(records.map((e) => e.exclusionReason ?? e.kind)),
         ].join(", "),
+        name,
+        ...(records.some((e) => e.kind === "baja")
+          ? { withdrawalStatus: "baja confirmada" as const }
+          : {}),
+        sourceVersion: job.id,
       });
       continue;
     }
@@ -529,7 +645,16 @@ async function report(
           activityId: v.activityId,
           state: v.grade.state,
         })),
-        reason: code,
+        reason:
+          code === "calificacion_invalida"
+            ? "La calificación no se puede interpretar; se conserva el valor original como inválido."
+            : code === "identidad_faltante"
+              ? "La matrícula está vacía o no es texto."
+              : code === "filas_conflictivas"
+                ? "La matrícula aparece con valores contradictorios."
+                : code === "fila_duplicada"
+                  ? "La matrícula tiene filas repetidas que requieren revisión."
+                  : "La fila requiere revisión antes de publicar.",
         rule: "clasificacion_sin_coercion",
         state: code === "calificacion_invalida" ? "resuelto" : "pendiente",
         action:
@@ -597,6 +722,59 @@ async function report(
     )
       throw new InvalidSource();
     const before: RowView[] = [];
+    if (previous.artifact) {
+      const priorArtifact = await jsonFile<Artifact>(previous.artifact);
+      const reported = new Set(
+        [...parsed.accepted, ...parsed.unresolved, ...parsed.teachers].map(
+          (r) => r.person.normalized,
+        ),
+      );
+      const currentExcluded = new Map(
+        excluded.map((e) => [identity(e.identity).normalized, e]),
+      );
+      for (const e of priorArtifact.excluded ?? []) {
+        const id = identity(e.identity).normalized;
+        if (reported.has(id)) {
+          const current = currentExcluded.get(id);
+          if (current?.withdrawalStatus && e.withdrawalStatus) {
+            const originals = [
+              ...(current.originalReports ?? []),
+              ...(e.originalReports ?? []),
+              {
+                identity: e.identity,
+                name: e.name ?? "",
+                sourceVersion: e.sourceVersion ?? previous.id,
+                row: e.row,
+              },
+            ];
+            current.originalReports = [
+              ...new Map(originals.map((o) => [canonical(o), o])).values(),
+            ];
+          }
+          continue;
+        }
+        // Una nueva fuente puede dar de alta la identidad; sus notas requieren revalidar el original.
+        if (e.reason === absentRosterReason && roster?.identities.has(id ?? ""))
+          continue;
+        excluded.push({
+          ...e,
+          ...(e.reason === absentRosterReason
+            ? {
+                withdrawalStatus: academic.context.withdrawals.some(
+                  (w) =>
+                    identity(w.identity).normalized === id &&
+                    (w.effectiveDate
+                      ? w.effectiveDate <= (cut.academicDate ?? cut.date)
+                      : w.confirmedCutId === cut.id),
+                )
+                  ? ("baja confirmada" as const)
+                  : ("posible baja" as const),
+              }
+            : {}),
+          sourceVersion: e.sourceVersion ?? previous.id,
+        });
+      }
+    }
     let cursor: string | undefined;
     do {
       const page = await rowsPage(
@@ -633,6 +811,29 @@ async function report(
     }
     const eligible: RowView[] = [];
     for (const row of before) {
+      const normalized = identity(row.identity).normalized;
+      if (roster && normalized && !roster.identities.has(normalized)) {
+        if (
+          !excluded.some((e) => identity(e.identity).normalized === normalized)
+        )
+          excluded.push({
+            identity: row.identity,
+            careerId: null,
+            row: row.row,
+            reason: absentRosterReason,
+            withdrawalStatus: academic.context.withdrawals.some(
+              (w) =>
+                identity(w.identity).normalized === normalized &&
+                (w.effectiveDate
+                  ? w.effectiveDate <= (cut.academicDate ?? cut.date)
+                  : w.confirmedCutId === cut.id),
+            )
+              ? "baja confirmada"
+              : "posible baja",
+            sourceVersion: previous.id,
+          });
+        continue;
+      }
       const person = persons.get(identity(row.identity).normalized ?? "");
       const base = person?.baseEnrollmentId
         ? enrollments.get(person.baseEnrollmentId)
@@ -722,6 +923,12 @@ async function report(
   }
   return {
     observations,
+    includedByCareer: Object.fromEntries(
+      [...new Set(rows.map((r) => r.careerId))].map((id) => [
+        id,
+        rows.filter((r) => r.careerId === id).length,
+      ]),
+    ),
     review: review.summaries,
     filename: fileCourse,
     data: {
@@ -734,6 +941,7 @@ async function report(
       ),
       audits,
       sources: cut.sources,
+      reportPolicy: "active-roster-v1",
       teachers: parsed.teachers,
       academicIssues: academic.issues,
       activityIds: [
@@ -918,6 +1126,21 @@ export async function previewJob(
   }
   return {
     review: artifact?.review ? summary : null,
+    inclusion: {
+      included:
+        member.role === "admin"
+          ? (artifact?.count ?? 0)
+          : careerId && member.careers.includes(careerId)
+            ? (artifact?.includedByCareer?.[careerId] ?? 0)
+            : null,
+      excluded: (artifact?.excluded ?? []).filter(
+        (r) =>
+          member.role === "admin" ||
+          (r.careerId === careerId &&
+            r.careerId !== null &&
+            member.careers.includes(r.careerId)),
+      ).length,
+    },
     observations: observations.slice(
       observationOffset,
       observationOffset + 100,

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { civilDate, group, identity } from "../domain/academic";
 import type { AcademicPackage } from "../domain/decision-package";
 import { intakeOperations } from "../domain/intake-contract";
@@ -305,8 +306,7 @@ export function buildAdministration(
           "El catálogo previo tiene programas ambiguos para la misma abreviatura y plan. Revisa la fuente institucional.",
         );
       const same = matches[0];
-      const unchanged =
-        same && JSON.stringify(same.original) === JSON.stringify(original);
+      const unchanged = same && isDeepStrictEqual(same.original, original);
       const choice = config.catalogChoices.find((c) => c.row === row.row);
       const previousCatalog = base?.catalog.find(
         (c) => c.abbreviation === abbreviation && c.plan === cell("plan"),
@@ -553,6 +553,9 @@ export function buildAdministration(
     catalog: nextCatalog,
     enrollments,
     decisions,
+    ...(prior?.cycleWithdrawals
+      ? { cycleWithdrawals: prior.cycleWithdrawals }
+      : {}),
     reviews,
     ...(prior?.approvals ? { approvals: prior.approvals } : {}),
     catalogMappings: mappings.filter((m) =>

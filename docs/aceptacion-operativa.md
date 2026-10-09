@@ -2,7 +2,7 @@
 
 Estado: **pendiente de evaluación institucional**. Entorno exclusivo de pruebas:
 <https://indicadores-academia.web.app>, proyecto `indicadores-academia`, región
-`us-central1`. Último ajuste: [corrección de reportes Moodle](correccion-reportes-moodle.md),
+`us-central1`. Último ajuste: [padrón activo, posibles bajas y recuperación del reporte](padron-activo-y-posibles-bajas.md),
 con SHA y CI en la entrega del PR enlazada allí. Evidencia inicial del recorrido en
 [entrega institucional](entrega-carga-institucional.md).
 Las mediciones de capacidad anteriores se conservan en [ejecución cloud](validacion-nube-ejecucion.md).

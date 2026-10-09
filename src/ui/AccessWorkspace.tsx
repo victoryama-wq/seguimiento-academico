@@ -43,6 +43,9 @@ const jobsSchema = z.object({
   cursor: z.string().nullable().optional(),
 });
 const previewSchema = z.object({
+  inclusion: z
+    .object({ included: z.number().nullable(), excluded: z.number() })
+    .optional(),
   review: reviewSummarySchema.nullable().optional(),
   observations: z.array(observationSchema),
   observationsCount: z.number(),
@@ -880,12 +883,25 @@ function Imports({ overview }: { overview: Overview }) {
               </p>
             </section>
           )}
-          <div className="table-scroll">
+          <div
+            className="table-scroll report-results"
+            role="region"
+            aria-label="Resultados del alcance autorizado"
+            tabIndex={0}
+          >
             <table>
+              <colgroup>
+                <col style={{ width: 210 }} />
+                <col style={{ width: 180 }} />
+                <col style={{ width: 280 }} />
+                <col style={{ width: 450 }} />
+                <col style={{ width: 280 }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Matrícula</th>
                   <th>Carrera</th>
+                  <th>Principal de seguimiento</th>
                   <th>Calificaciones originales</th>
                   <th>Incidencias</th>
                 </tr>
@@ -896,6 +912,12 @@ function Imports({ overview }: { overview: Overview }) {
                     <td>{r.identity}</td>
                     <td>{r.careerId}</td>
                     <td>
+                      {r.relationship?.trackingGroup ??
+                        "Consultar afiliación del corte"}{" "}
+                      · {r.relationship?.trackingModality ?? ""}. Impartición no
+                      determinada.
+                    </td>
+                    <td>
                       {r.values
                         .map(
                           (v) =>
@@ -904,7 +926,12 @@ function Imports({ overview }: { overview: Overview }) {
                         .join("; ")}
                     </td>
                     <td>
-                      {r.issues.join(", ")}
+                      {r.issues.length > 0 && (
+                        <details>
+                          <summary>Diagnóstico de las incidencias</summary>
+                          {r.issues.join(", ")}
+                        </details>
+                      )}
                       {r.review
                         ?.filter((v) => v.kind === "changed")
                         .map((v) => (
@@ -923,6 +950,14 @@ function Imports({ overview }: { overview: Overview }) {
               </tbody>
             </table>
           </div>
+          {preview.inclusion && (
+            <p>
+              Incluidos:{" "}
+              {preview.inclusion.included ?? "Consulta las filas de tu carrera"}
+              . Excluidos de este alcance: {preview.inclusion.excluded}. Los
+              excluidos no aportan al denominador.
+            </p>
+          )}
           <Observations
             key={preview.job.id}
             rows={preview.observations}

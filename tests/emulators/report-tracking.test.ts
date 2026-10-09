@@ -242,17 +242,26 @@ it("curso compartido: afiliación principal, C.A., unidades por modalidad, acumu
   expect(exported.csv).toContain("Grupo principal de seguimiento");
   expect(exported.csv).toContain("no determinada");
 }, 60000);
-it("no confunde matrículas desconocidas con nombres; conserva bloqueos de curso/ciclo", async () => {
+it("excluye matrículas ausentes sin unir por nombre; conserva bloqueos de curso/ciclo", async () => {
   const unknown = await send(
     "Nombre,Dirección Email,Tarea:Unidad 1\nPersona sintética,000DESCONOCIDA@example.invalid,0\n",
     "semana5",
   );
   expect(
     (await stores().db.doc(`jobs/${unknown}`).get()).data()?.blocking,
-  ).toBe(true);
-  await expect(
-    api("publish", { jobId: unknown, replace: true }, sessions.a),
-  ).rejects.toThrow("FAILED_PRECONDITION");
+  ).toBe(false);
+  await api("publish", { jobId: unknown, replace: true }, sessions.a);
+  expect(
+    JSON.stringify(
+      (
+        (await api(
+          "preview",
+          { jobId: unknown, careerId: "laf-plan-1" },
+          sessions.a,
+        )) as { excluded: unknown[] }
+      ).excluded,
+    ),
+  ).not.toContain("000DESCONOCIDA");
   for (const name of [
     "777._Otro_Curso_27-1.csv",
     "777._Curso_Multimodal_26-3.csv",

@@ -7,6 +7,10 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
 import {
+  groupPossibleWithdrawals,
+  type WithdrawalEvidence,
+} from "../../src/domain/possible-withdrawals";
+import {
   unitsForProgress,
   unitsForPrincipal,
 } from "../../src/domain/report-policy";
@@ -26,7 +30,13 @@ import {
   metricCourse,
 } from "../../src/domain/metrics-contract";
 import { rowViewSchema, type Member } from "../../src/domain/import-contract";
-import { academicSnapshot, type Cut, type Course, type Job } from "./jobs";
+import {
+  academicSnapshot,
+  type Artifact,
+  type Cut,
+  type Course,
+  type Job,
+} from "./jobs";
 import {
   db,
   admin,
@@ -158,7 +168,11 @@ export async function captureMetrics(
       scope,
       cut,
       entries: frozen.snapshot.entries
-        .filter((e) => e.course.careers.some((c) => allowed(member, c)))
+        .filter(
+          (e) =>
+            member.role === "admin" ||
+            e.course.careers.some((c) => allowed(member, c)),
+        )
         .map((e) => ({
           ...e,
           course: {
@@ -186,7 +200,8 @@ export async function captureMetrics(
     .filter(
       (course) =>
         (!cut.frozenCourseIds || cut.frozenCourseIds.includes(course.id)) &&
-        course.careers.some((c) => allowed(member, c)),
+        (member.role === "admin" ||
+          course.careers.some((c) => allowed(member, c))),
     );
   // Reutilizar la consulta de trabajos dentro de la misma transacción; no volver
   // a leer cada trabajo ni recorrer todos los trabajos por cada asignatura.
@@ -349,6 +364,7 @@ export async function dashboard(
   }
   const details: z.infer<typeof metricDetail>[] = [];
   const exclusions: z.infer<typeof metricExclusion>[] = [];
+  const withdrawalEvidence: WithdrawalEvidence[] = [];
   const courses: z.infer<typeof metricCourse>[] = [];
   let received = 0,
     validated = 0;
@@ -406,7 +422,11 @@ export async function dashboard(
     const selected = entries.filter(
       ({ course }) =>
         (!f.courseId || course.id === f.courseId) &&
-        course.careers.some(careerMatches),
+        (course.careers.some(careerMatches) ||
+          (member.role === "admin" &&
+            !f.careerId &&
+            !f.coordination &&
+            !f.plan)),
     );
     for (let offset = 0; offset < selected.length; offset += 4) {
       const batch = await Promise.all(
@@ -417,12 +437,7 @@ export async function dashboard(
           const artifact = job?.artifact
             ? await jsonFile<{
                 data: { teachers: { person: { original: unknown } }[] };
-                excluded?: {
-                  identity: string;
-                  careerId: string | null;
-                  row: number;
-                  reason: string;
-                }[];
+                excluded?: Artifact["excluded"];
               }>(job.artifact)
             : null;
           const teachers = selection?.teachers ?? [
@@ -598,7 +613,10 @@ export async function dashboard(
       if (
         (excluded.careerId
           ? !careerMatches(excluded.careerId)
-          : member.role !== "admin") ||
+          : member.role !== "admin" ||
+            !!f.careerId ||
+            !!f.coordination ||
+            !!f.plan) ||
         !studentMatch(excluded.identity) ||
         !specialMatch(excluded.identity) ||
         !exclusionDimensionsMatch(excluded.identity, excluded.careerId) ||
@@ -608,8 +626,27 @@ export async function dashboard(
       courseExclusions.push({
         ...excluded,
         courseId: course.id,
-        provenance: `${job!.id}:fila:${excluded.row}`,
+        provenance: `${excluded.sourceVersion ?? job!.id}:fila:${excluded.row}`,
       });
+      if (excluded.withdrawalStatus) {
+        withdrawalEvidence.push({
+          identity: excluded.identity,
+          name: excluded.name ?? "",
+          status: excluded.withdrawalStatus,
+          courseId: course.id,
+          courseName: course.name,
+          provenance: `${excluded.sourceVersion ?? job!.id}:fila:${excluded.row}`,
+        });
+        for (const original of excluded.originalReports ?? [])
+          withdrawalEvidence.push({
+            identity: original.identity,
+            name: original.name,
+            status: excluded.withdrawalStatus,
+            courseId: course.id,
+            courseName: course.name,
+            provenance: `${original.sourceVersion}:fila:${original.row}`,
+          });
+      }
     }
     const rowFilter =
       f.student || f.group || f.modality || f.shift || f.special;
@@ -806,9 +843,14 @@ export async function dashboard(
     }));
   const measured = courses.filter((c) => c.status === "medido").length,
     published = courses.filter((c) => c.versionId).length;
-  const items = { groups: grouped, details, courses, exclusions }[
-    input.section
-  ];
+  const possibleWithdrawals = groupPossibleWithdrawals(withdrawalEvidence);
+  const items = {
+    groups: grouped,
+    details,
+    courses,
+    exclusions,
+    possibleWithdrawals,
+  }[input.section];
   const result: Dashboard = {
     snapshotId: snap.id,
     cutId: cut.id,
@@ -833,6 +875,8 @@ export async function dashboard(
           ? "datos"
           : "sin_datos",
     exclusionsCount: exclusions.length,
+    possibleWithdrawalsCount: possibleWithdrawals.length,
+    possibleWithdrawals: [],
     groups: [],
     details: [],
     courses: [],
@@ -850,6 +894,7 @@ export async function dashboard(
       details,
       courses,
       exclusions,
+      possibleWithdrawals,
       next: null,
     });
   // Revalidar la membresía al entregar/exportar una consulta larga.
@@ -1020,6 +1065,30 @@ export async function dashboard(
       e.courseId,
       e.reason,
       e.provenance,
+    ]),
+    [
+      "Posibles bajas",
+      "Alumnos únicos",
+      possibleWithdrawals.length,
+      "Lista informativa: fuera de indicadores",
+    ],
+    [
+      "Matrícula normalizada",
+      "Matrículas originales",
+      "Nombres originales",
+      "Estado",
+      "Asignaturas",
+      "Procedencia",
+      "Observaciones",
+    ],
+    ...possibleWithdrawals.map((p) => [
+      p.identity,
+      p.originals.join(" | "),
+      p.names.join(" | "),
+      p.status,
+      p.courses.map((c) => `${c.id}: ${c.name}`).join(" | "),
+      p.provenance.join(" | "),
+      p.observations.join(" | "),
     ]),
   ];
   const csv = rows.map((r) => r.map(csvCell).join(",")).join("\r\n");

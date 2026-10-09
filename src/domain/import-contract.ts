@@ -6,6 +6,7 @@ import { metricOperations } from "./metrics-contract";
 import { packageDecisionSchema } from "./decision-package";
 import { progressInputSchema, progressSchema } from "./report-policy";
 import { intakeOperations } from "./intake-contract";
+import { cycleWithdrawalSchema } from "./possible-withdrawals";
 
 export const filenameResolutionSchema = courseFilenameResolutionSchema
   .omit({ approvedBy: true, version: true })
@@ -61,6 +62,10 @@ export const operationSchemas = {
   reviseAcademicDecision: z.strictObject({
     jobId: keySchema,
     decision: packageDecisionSchema,
+  }),
+  reviseCycleWithdrawal: z.strictObject({
+    jobId: keySchema,
+    decision: cycleWithdrawalSchema,
   }),
   refreshCutSources: z.strictObject({
     cutId: keySchema,

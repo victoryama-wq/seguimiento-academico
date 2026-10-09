@@ -48,6 +48,11 @@ export function validateAcademicPackage(input: unknown, cycle: string) {
       throw new Error("Original o procedencia cambió; revisar decisión");
   }
   const seen = new Set<string>();
+  const withdrawalIds = (p.cycleWithdrawals ?? []).map(
+    (w) => identity(w.identity).normalized,
+  );
+  if (new Set(withdrawalIds).size !== withdrawalIds.length)
+    throw new Error("Bajas del ciclo duplicadas");
   const mappingKeys = new Set<string>();
   for (const m of p.catalogMappings ?? []) {
     const key = JSON.stringify([m.program, m.abbreviation]);
@@ -187,17 +192,26 @@ export function resolveAcademicPackage(
           .career ?? c.abbreviation,
     })),
     calendar: { cycle, dates: p.calendar },
-    withdrawals: decisions
-      .filter((d) => d.kind === "baja")
-      .map((d) => ({
+    withdrawals: [
+      ...(p.cycleWithdrawals ?? []).map((w) => ({
+        ...w,
         version,
         approvedBy: actor,
-        reason: d.reason,
-        identity: p.enrollments.find((e) => e.key === d.enrollmentId)!.original
-          .identity,
         effectiveDate: null,
         confirmedCutId: cutId,
       })),
+      ...decisions
+        .filter((d) => d.kind === "baja")
+        .map((d) => ({
+          version,
+          approvedBy: actor,
+          reason: d.reason,
+          identity: p.enrollments.find((e) => e.key === d.enrollmentId)!
+            .original.identity,
+          effectiveDate: null,
+          confirmedCutId: cutId,
+        })),
+    ],
     exceptions: [],
     baseResolutions: [],
   });
@@ -205,6 +219,24 @@ export function resolveAcademicPackage(
     result.persons.map((person) => [person.identity, person]),
   );
   const observations: Observation[] = [...preparation];
+  for (const [i, withdrawal] of (p.cycleWithdrawals ?? []).entries()) {
+    observations.push({
+      id: `baja-ciclo-${i}`,
+      identity: withdrawal.identity,
+      careerId: null,
+      group: "",
+      file: "Decisión institucional individual",
+      sheet: "Bajas del ciclo",
+      row: 0,
+      original: withdrawal,
+      effective: { state: "baja confirmada", actor, version, cycle },
+      reason: withdrawal.reason,
+      rule: "baja_individual_ciclo",
+      state: "excluido",
+      action: "Conservar originales; solo aplica a esta matrícula y ciclo.",
+      sourceVersion: version,
+    });
+  }
   for (const e of result.enrollments) {
     const raw = p.enrollments.find((r) => r.key === e.id)!;
     const source = p.sources.find((s) => s.id === raw.sourceId)!;

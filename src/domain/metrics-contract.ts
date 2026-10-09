@@ -1,6 +1,7 @@
 import { progressSchema } from "./report-policy";
 import { z } from "zod";
 import { countsSchema } from "./metrics";
+import { possibleWithdrawalSchema } from "./possible-withdrawals";
 
 const key = z
   .string()
@@ -43,7 +44,7 @@ const request = z.strictObject({
   snapshotId: key.optional(),
   offset: z.number().int().min(0).max(100000).default(0),
   section: z
-    .enum(["groups", "details", "exclusions", "courses"])
+    .enum(["groups", "details", "exclusions", "courses", "possibleWithdrawals"])
     .default("groups"),
 });
 export const metricOperations = {
@@ -123,6 +124,7 @@ export const metricCourse = z.object({
   status: z.string(),
 });
 export const metricExclusion = z.object({
+  withdrawalStatus: z.enum(["posible baja", "baja confirmada"]).optional(),
   identity: z.string(),
   careerId: z.string().nullable(),
   courseId: z.string().nullable(),
@@ -148,6 +150,8 @@ export const dashboardSchema = z.object({
   pending: z.number(),
   state: z.string(),
   exclusionsCount: z.number(),
+  possibleWithdrawalsCount: z.number().default(0),
+  possibleWithdrawals: z.array(possibleWithdrawalSchema).default([]),
   groups: z.array(metricGroup),
   details: z.array(metricDetail),
   exclusions: z.array(metricExclusion),

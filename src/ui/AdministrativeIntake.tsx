@@ -14,6 +14,7 @@ import {
   type Overview,
 } from "../domain/import-contract";
 import { courseFilename } from "../domain/academic";
+import { observationSchema } from "../domain/decision-package";
 import {
   callAcademic,
   fileBase64,
@@ -45,6 +46,11 @@ const previewSchema = z.object({
   issues: z.array(z.object({ code: z.string(), refs: z.array(z.string()) })),
   excluded: z.array(z.object({ identity: z.string(), reason: z.string() })),
   review: reviewSummarySchema.nullable().optional(),
+  inclusion: z
+    .object({ included: z.number().nullable(), excluded: z.number() })
+    .optional(),
+  observations: z.array(observationSchema).default([]),
+  observationNext: z.number().nullable().default(null),
 });
 const cutSourcesSchema = z.object({
   name: z.string(),
@@ -541,13 +547,21 @@ export default function AdministrativeIntake({
       `Reporte de ${result.course} recibido para validar. Revisa el resultado antes de confirmar; puedes cerrar y volver a abrir.`,
     );
   }
-  async function viewReport(id: string, cursor?: string) {
+  async function viewReport(
+    id: string,
+    cursor?: string,
+    observationOffset?: number,
+  ) {
     setReportConfirm(null);
     setReportPreview(null);
     const request = ++revision.current;
     const value = await callAcademic(
       "preview",
-      { jobId: id, ...(cursor ? { cursor } : {}) },
+      {
+        jobId: id,
+        ...(cursor ? { cursor } : {}),
+        ...(observationOffset !== undefined ? { observationOffset } : {}),
+      },
       previewSchema,
     );
     if (request === revision.current) setReportPreview(value);
@@ -1710,19 +1724,73 @@ export default function AdministrativeIntake({
                 sustituirán por vacío o guion.
               </p>
             )}
-            {reportPreview.issues.map((issue, i) => (
-              <div role="alert" key={i}>
-                {issue.code === "calificacion_invalida"
-                  ? "Hay calificaciones no interpretables: se conservarán con su original y estado."
-                  : "Hay una incidencia que requiere revisar identidad, afiliación o encabezados antes de publicar."}{" "}
+            {reportPreview.inclusion && (
+              <p>
+                Alumnos incluidos:{" "}
+                {reportPreview.inclusion.included ?? "Consultar por carrera"}.
+                Registros excluidos: {reportPreview.inclusion.excluded}. Los
+                excluidos no aportan calificaciones ni denominadores. Las
+                posibles bajas sin atribución corresponden solo a
+                Administración.
+              </p>
+            )}
+            {reportPreview.observations.map((o) => (
+              <article className="review-issue" key={o.id}>
+                <strong>
+                  {o.identity || "Identidad vacía o inválida"} · fila original{" "}
+                  {o.row}
+                </strong>
+                <p>{o.reason}</p>
+                <p>Acción: {o.action}</p>
                 <details>
-                  <summary>Diagnóstico de la incidencia</summary>
-                  {issue.code}: {issue.refs.join(", ")}
+                  <summary>Diagnóstico y procedencia</summary>
+                  {o.file} · hoja {o.sheet} · {o.rule} · {o.sourceVersion}
                 </details>
-              </div>
+              </article>
             ))}
-            <div className="table-scroll">
+            {reportPreview.observationNext !== null && (
+              <button
+                onClick={() =>
+                  void run(() =>
+                    viewReport(
+                      reportPreview.job.id,
+                      undefined,
+                      reportPreview.observationNext!,
+                    ),
+                  )
+                }
+              >
+                Más observaciones del reporte
+              </button>
+            )}
+            {reportPreview.issues.length > 0 && (
+              <details>
+                <summary>Diagnóstico de validación</summary>
+                {reportPreview.issues.map((issue, i) => (
+                  <div role="alert" key={i}>
+                    {issue.code === "calificacion_invalida"
+                      ? "Hay calificaciones no interpretables: se conservarán con su original y estado."
+                      : "Hay una incidencia que requiere revisar identidad, afiliación o encabezados antes de publicar."}{" "}
+                    <details>
+                      <summary>Diagnóstico de la incidencia</summary>
+                      {issue.code}: {issue.refs.join(", ")}
+                    </details>
+                  </div>
+                ))}
+              </details>
+            )}
+            <div
+              className="table-scroll report-results"
+              role="region"
+              aria-label="Resultados del reporte"
+              tabIndex={0}
+            >
               <table>
+                <colgroup>
+                  <col style={{ width: 210 }} />
+                  <col style={{ width: 280 }} />
+                  <col />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Matrícula</th>

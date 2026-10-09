@@ -691,6 +691,20 @@ footer {
 .guided-intake .original-table table {
   table-layout: fixed;
 }
+.report-results table {
+  table-layout: fixed;
+  min-width: 1000px !important;
+}
+.report-results th,
+.report-results td {
+  vertical-align: top;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.report-results:focus-visible {
+  outline: 3px solid #14766b;
+  outline-offset: 2px;
+}
 .guided-intake .original-table th,
 .guided-intake .original-table td {
   vertical-align: top;

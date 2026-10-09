@@ -285,10 +285,8 @@ it("detecta propuestas de fuentes simultáneas sin modificar fuentes fijadas en 
     sessions.admin,
   )) as { jobId: string };
   const job = await waitJob(sent.jobId);
-  expect(job.blocking).toBe(true);
-  await expect(
-    api("publish", { jobId: sent.jobId, replace: false }, sessions.admin),
-  ).rejects.toThrow();
+  expect(job.blocking).toBe(false);
+  await api("publish", { jobId: sent.jobId, replace: true }, sessions.admin);
 });
 
 it("Moodle ancho: 999 filas físicas no crean incidencias vacías; muestra padrón fijado y explica cruces vacíos", async () => {
@@ -328,14 +326,82 @@ it("Moodle ancho: 999 filas físicas no crean incidencias vacías; muestra padr�
       ["NO-ESTA@example.invalid", 0],
     ]),
   );
-  await expect(
-    api(
-      "prepareOperationalReport",
-      { cutId, file: selected(missing) },
-      sessions.admin,
-    ),
-  ).rejects.toThrow(/padrón fijado.*4 personas.*nuevo corte/);
+  const absent = (await api(
+    "prepareOperationalReport",
+    { cutId, file: selected(missing) },
+    sessions.admin,
+  )) as { jobId: string };
+  expect((await waitJob(absent.jobId)).blocking).toBe(false);
+  const absentPreview = (await api(
+    "preview",
+    { jobId: absent.jobId },
+    sessions.admin,
+  )) as { rows: unknown[]; excluded: { reason: string }[] };
+  expect(absentPreview.rows).toEqual([]);
+  expect(absentPreview.excluded[0]?.reason).toBe(
+    "No pertenece al padrón activo del ciclo",
+  );
   expect(
     (await stores().db.doc(`cuts/${cutId}`).get()).data()!.sources,
   ).toEqual(before);
+});
+it("la revisión de fuentes conserva una baja sin inventar inscripciones excluidas", async () => {
+  const context = (await api(
+    "administrationContext",
+    { cycle: "27-1" },
+    sessions.admin,
+  )) as { expected: string };
+  const revised = (await api(
+    "reviseCycleWithdrawal",
+    {
+      jobId: context.expected,
+      decision: {
+        identity: "000AUSENTE-SINTETICA",
+        reason: "Baja sintética autorizada",
+        sourceReference: "Revisión sintética",
+      },
+    },
+    sessions.admin,
+  )) as { id: string };
+  await waitJob(revised.id);
+  await api(
+    "publishSource",
+    { jobId: revised.id, replace: true },
+    sessions.admin,
+  );
+  // Conservar la corrección de nombre confirmada por la prueba anterior.
+  const currentRoster = await inspect(
+    "roster",
+    "alumnos-revisados.csv",
+    csv([
+      rosterHeaders,
+      ...rosterRows.map((r, i) =>
+        i ? r : r.map((v, j) => (j === 1 ? "Nombre sintético corregido" : v)),
+      ),
+    ]),
+  );
+  const review = administrativeReviewSchema.parse(
+    await api(
+      "prepareAdministration",
+      {
+        roster: selected(currentRoster),
+        catalog: selected(catalog),
+        cycle: "27-1",
+        expected: revised.id,
+      },
+      sessions.admin,
+    ),
+  );
+  expect(review.blocking, JSON.stringify(review.issues)).toBe(false);
+  expect(review.count).toBe(4);
+  expect(review.principals).toBe(3);
+  expect(review.excluded).toBe(1);
+  expect(review.excludedEnrollments).toBe(1);
+  expect(review.rows).toContainEqual(
+    expect.objectContaining({
+      identity: "000AUSENTE-SINTETICA",
+      state: "excluido",
+      row: 0,
+    }),
+  );
 });

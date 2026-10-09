@@ -202,6 +202,7 @@ export const contextSchema = z.strictObject({
       identity: text,
       effectiveDate: civilDateSchema.nullable(),
       confirmedCutId: text,
+      sourceReference: text.optional(),
     }),
   ),
   exceptions: z.array(

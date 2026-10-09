@@ -192,7 +192,14 @@ describe.sequential(
       );
       expect(
         (await stores().db.doc(`jobs/${pendingReport}`).get()).data()?.blocking,
-      ).toBe(true);
+      ).toBe(false);
+      expect(
+        (
+          (await api("preview", { jobId: pendingReport }, sessions.admin)) as {
+            excluded: { reason: string }[];
+          }
+        ).excluded[0]?.reason,
+      ).toBe("No pertenece al padrón activo del ciclo");
       const revised = structuredClone(p);
       const added = enrollment("000NUEVA", "27-1 LAF 11 01A", "17/09/2026", 6);
       revised.enrollments.push(added);
@@ -290,7 +297,7 @@ describe.sequential(
       expect(result.rows[0]?.values[0]?.raw).toBe("5");
       expect(
         (await stores().db.doc(`jobs/${pendingReport}`).get()).data()?.blocking,
-      ).toBe(true);
+      ).toBe(false);
       const oldBytes = (
         await stores()
           .bucket.file(`originals/${pendingReport}/source`)

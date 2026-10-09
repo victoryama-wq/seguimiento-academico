@@ -83,7 +83,7 @@ test("administrador: originales → revisión → avance → Moodle → publicac
       name: reportName,
       mimeType:
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      buffer: book(wideMoodleRows()),
+      buffer: book([...wideMoodleRows(), ["000POSIBLE@example.invalid", 10]]),
     },
     {
       name: "reporte-invalido.xlsx",
@@ -112,7 +112,7 @@ test("administrador: originales → revisión → avance → Moodle → publicac
     name: `Filas originales de ${reportName}`,
     exact: true,
   });
-  await expect(original.getByRole("row")).toHaveCount(5);
+  await expect(original.getByRole("row")).toHaveCount(6);
   await expect(flow).toContainText("995 filas totalmente vacías");
   const sizes = await original.evaluate((el) => ({
     overflow: el.scrollWidth > el.clientWidth,
@@ -152,6 +152,19 @@ test("administrador: originales → revisión → avance → Moodle → publicac
   await expect(
     flow.getByRole("region", { name: "Revisión de reporte" }),
   ).toContainText("Impartición no determinada");
+  const results = flow.getByRole("region", { name: "Resultados del reporte" });
+  const resultSizes = await results.evaluate((el) =>
+    Array.from(el.querySelectorAll("th"))
+      .slice(0, 2)
+      .map((c) => c.getBoundingClientRect().width),
+  );
+  expect(Math.min(...resultSizes)).toBeGreaterThanOrEqual(200);
+  await expect(
+    flow.getByRole("region", { name: "Revisión de reporte" }),
+  ).toContainText("Alumnos incluidos: 3. Registros excluidos: 2");
+  await expect(
+    flow.getByRole("region", { name: "Revisión de reporte" }),
+  ).toContainText("No pertenece al padrón activo del ciclo");
   await flow
     .getByLabel("Revisé este reporte, sus observaciones y sustituciones")
     .check();
@@ -170,6 +183,17 @@ test("administrador: originales → revisión → avance → Moodle → publicac
     path: info.outputPath("carga-guiada-sintetica.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Panel", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Ciclo y corte", exact: true })
+    .selectOption(String(jobs.docs[0]!.data().cutId));
+  await page
+    .getByRole("button", { name: "Posibles bajas", exact: true })
+    .click();
+  await expect(page.getByRole("table")).toContainText(
+    "000POSIBLE@example.invalid",
+  );
+  await expect(page.getByRole("table")).toContainText("posible baja");
   await page.reload();
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
   await flow

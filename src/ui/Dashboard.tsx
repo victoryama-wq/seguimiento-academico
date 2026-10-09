@@ -313,6 +313,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                 ["details", "Detalle de estudiantes"],
                 ["courses", "Cursos y actividades"],
                 ["exclusions", "Exclusiones e incidencias"],
+                ["possibleWithdrawals", "Posibles bajas"],
               ] as const
             ).map(([s, label]) => (
               <button
@@ -519,6 +520,43 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                           <td>
                             {r.attribution}; {r.enrollmentIds.join("; ")};{" "}
                             {r.issues.join("; ")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {section === "possibleWithdrawals" && (
+                  <table>
+                    <caption>
+                      Posibles bajas: {data.possibleWithdrawalsCount} alumnos
+                      únicos. Lista informativa fuera de indicadores; solo casos
+                      del alcance autorizado.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th>Matrícula original</th>
+                        <th>Nombre original</th>
+                        <th>Asignaturas</th>
+                        <th>Estado</th>
+                        <th>Observaciones y procedencia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.possibleWithdrawals.map((p) => (
+                        <tr key={p.identity}>
+                          <td>{p.originals.join(" / ")}</td>
+                          <td>
+                            {p.names.join(" / ") || "Sin nombre en el reporte"}
+                          </td>
+                          <td>{p.courses.map((c) => c.name).join("; ")}</td>
+                          <td>{p.status}</td>
+                          <td>
+                            {p.observations.join("; ")}
+                            <details>
+                              <summary>Procedencia</summary>
+                              {p.provenance.join("; ")}
+                            </details>
                           </td>
                         </tr>
                       ))}
