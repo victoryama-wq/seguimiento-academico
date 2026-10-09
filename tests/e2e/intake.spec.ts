@@ -74,26 +74,49 @@ test("administrador: originales → revisión → avance → Moodle → publicac
     .click();
   await expect(flow.getByLabel("Corte de trabajo")).not.toHaveValue("");
   const reportName = "911._Curso_Compartido_27-1 Calificaciones.ods";
-  await flow.getByLabel("Seleccionar reportes originales").setInputFiles({
-    name: reportName,
-    mimeType: "application/vnd.oasis.opendocument.spreadsheet",
-    buffer: book(
-      [
+  await flow.getByLabel("Seleccionar reportes originales").setInputFiles([
+    {
+      name: reportName,
+      mimeType: "application/vnd.oasis.opendocument.spreadsheet",
+      buffer: book(
         [
-          "Dirección Email",
-          "Tarea: Unidad 1",
-          "Tarea: Unidad 3",
-          "Tarea: Unidad 4",
-          "Total del curso",
+          [
+            "Dirección Email",
+            "Tarea: Unidad 1",
+            "Tarea: Unidad 3",
+            "Tarea: Unidad 4",
+            "Total del curso",
+          ],
+          ["000ESC@example.invalid", 0, 7, 9, 999],
+          ["000EJE@example.invalid", "-", 8, 9, 999],
+          ["000VIR@example.invalid", 7, 8, 9, 999],
+          ["000BAJA@example.invalid", 10, 10, 10, 999],
         ],
-        ["000ESC@example.invalid", 0, 7, 9, 999],
-        ["000EJE@example.invalid", "-", 8, 9, 999],
-        ["000VIR@example.invalid", 7, 8, 9, 999],
-        ["000BAJA@example.invalid", 10, 10, 10, 999],
-      ],
-      "ods",
-    ),
-  });
+        "ods",
+      ),
+    },
+    {
+      name: "reporte-invalido.xlsx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: Buffer.from("Fixture inválida intencional"),
+    },
+  ]);
+  await expect(
+    flow.getByRole("alert").filter({ hasText: "reporte-invalido.xlsx" }),
+  ).toContainText("Vuelve a exportarlo");
+  await expect(
+    flow.getByText("ZIP incompleto [400]", { exact: true }),
+  ).toBeHidden();
+  await flow
+    .getByText("Diagnóstico del archivo reporte-invalido.xlsx", { exact: true })
+    .click();
+  await expect(
+    flow.getByText("ZIP incompleto [400]", { exact: true }),
+  ).toBeVisible();
+  await flow
+    .getByText("Diagnóstico del archivo reporte-invalido.xlsx", { exact: true })
+    .click();
   await expect(flow).toContainText("Curso detectado: 911");
   await flow
     .getByRole("button", { name: `Validar reporte ${reportName}` })

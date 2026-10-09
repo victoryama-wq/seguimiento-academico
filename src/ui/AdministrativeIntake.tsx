@@ -46,10 +46,20 @@ const previewSchema = z.object({
   excluded: z.array(z.object({ identity: z.string(), reason: z.string() })),
   review: reviewSummarySchema.nullable().optional(),
 });
-const friendly = (error: unknown) =>
+const diagnostic = (error: unknown) =>
   error instanceof Error
     ? error.message.replace(/^Firebase:\s*/i, "")
     : "No se pudo completar el paso. Conserva los archivos y vuelve a intentarlo.";
+const friendly = (error: unknown) => {
+  const detail = diagnostic(error);
+  if (/ZIP|archivo corrupto|unsupported|invalid xml/i.test(detail))
+    return "No se pudo leer el archivo. Vuelve a exportarlo como CSV, XLSX u ODS y selecciónalo de nuevo. Los demás archivos se conservan.";
+  if (/^\s*\[|invalid_type|unrecognized_keys/.test(detail))
+    return "Hay datos incompletos o un formato no reconocido. Revisa las columnas y selecciones antes de volver a validar.";
+  if (/internal|fetch|network|deadline-exceeded/i.test(detail))
+    return "No se pudo completar la operación. Comprueba la conexión y recupera los trabajos guardados antes de reintentar.";
+  return detail.replace(/\s*\[\d{3}\]$/, "");
+};
 type Choices = z.infer<
   typeof intakeOperations.prepareAdministration
 >["catalogChoices"];
@@ -253,7 +263,10 @@ export default function AdministrativeIntake({
   >([]);
   const [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
-  const [reportErrors, setReportErrors] = useState<string[]>([]);
+  const [errorDetail, setErrorDetail] = useState("");
+  const [reportErrors, setReportErrors] = useState<
+    { name: string; message: string; detail: string }[]
+  >([]);
   const [cutId, setCutId] = useState(""),
     [progress, setProgress] = useState({
       schoolCut: 1,
@@ -342,10 +355,12 @@ export default function AdministrativeIntake({
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setMessage("");
+    setErrorDetail("");
     try {
       await fn();
     } catch (e) {
       setMessage(friendly(e));
+      setErrorDetail(diagnostic(e));
     } finally {
       setBusy(false);
     }
@@ -1310,14 +1325,22 @@ export default function AdministrativeIntake({
                       } catch (e) {
                         setReportErrors((prev) => [
                           ...prev,
-                          `${file.name}: ${friendly(e)}`,
+                          {
+                            name: file.name,
+                            message: friendly(e),
+                            detail: diagnostic(e),
+                          },
                         ]);
                       }
                     }
                   } catch (e) {
                     setReportErrors((prev) => [
                       ...prev,
-                      `${file.name}: ${friendly(e)}`,
+                      {
+                        name: file.name,
+                        message: friendly(e),
+                        detail: diagnostic(e),
+                      },
                     ]);
                   }
                 }
@@ -1329,9 +1352,15 @@ export default function AdministrativeIntake({
           />
         </label>
         {reportErrors.map((error, i) => (
-          <p role="alert" key={i}>
-            {error}
-          </p>
+          <div key={i}>
+            <p role="alert">
+              {error.name}: {error.message}
+            </p>
+            <details>
+              <summary>Diagnóstico del archivo {error.name}</summary>
+              <p>{error.detail}</p>
+            </details>
+          </div>
         ))}
         {reports.map((file) => {
           let identified: ReturnType<typeof courseFilename> | null = null;
@@ -1440,7 +1469,14 @@ export default function AdministrativeIntake({
                         Unidad de {header}
                         <select
                           value={
-                            Object.hasOwn(activityChoices[file.id]?.[column] ?? {}, "unit") ? activityChoices[file.id]?.[column]?.unit ?? "" : file.activities.find(c => c.column === column)?.unit ?? ""
+                            Object.hasOwn(
+                              activityChoices[file.id]?.[column] ?? {},
+                              "unit",
+                            )
+                              ? (activityChoices[file.id]?.[column]?.unit ?? "")
+                              : (file.activities.find(
+                                  (c) => c.column === column,
+                                )?.unit ?? "")
                           }
                           onChange={(e) =>
                             setActivityChoices((prev) => ({
@@ -1705,6 +1741,12 @@ export default function AdministrativeIntake({
       </fieldset>
       {busy && <p role="status">Procesando el paso seleccionado…</p>}
       {message && <p role="status">{message}</p>}
+      {errorDetail && (
+        <details>
+          <summary>Diagnóstico del paso</summary>
+          <p>{errorDetail}</p>
+        </details>
+      )}
     </section>
   );
 }

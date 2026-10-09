@@ -263,7 +263,10 @@ try {
       flow
         .getByRole("alert")
         .filter({ hasText: "cloud-intake-synthetic-invalido.xlsx" }),
-    ).toBeVisible({ timeout: 60000 });
+    ).toContainText("Vuelve a exportarlo", { timeout: 60000 });
+    await expect(
+      flow.getByText("ZIP incompleto [400]", { exact: true }),
+    ).toBeHidden();
     record(
       `${device}: lote parcial conserva el reporte válido ante un archivo inválido`,
     );
