@@ -3,7 +3,11 @@
 Estado: **pendiente de evaluación institucional**. Entorno exclusivo de pruebas:
 <https://indicadores-academia.web.app>, proyecto `indicadores-academia`, región
 `us-central1`. SHA desplegado y resultados en [ejecución cloud](validacion-nube-ejecucion.md).
-No usar archivos reales.
+La validación técnica automatizada usa únicamente sintéticos. Para la aceptación
+solicitada por el propietario, seguir el [recorrido permanente de carga desde
+originales](carga-institucional.md): el propietario selecciona, revisa y confirma
+personalmente sus archivos. No subirlos mediante los scripts de piloto ni compartir
+su contenido en evidencias públicas.
 
 En este equipo, las cuentas sintéticas y contraseñas únicas están en
 `private/staging-test-accounts.json` (ignorado por Git). El propietario puede

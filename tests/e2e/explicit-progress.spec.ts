@@ -1,3 +1,4 @@
+import { openLegacySources } from "./legacy-sources";
 import { test, expect, type Page } from "@playwright/test";
 import {
   api,
@@ -110,6 +111,7 @@ test("selección explícita sin fecha y revisión de pérdida numérica en curso
   );
   await login(page, people.a);
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
   await page.getByLabel("Corte de seguimiento").selectOption("explicit-ui");
   await page.getByLabel("Reportes Moodle").setInputFiles({
     name: filename,

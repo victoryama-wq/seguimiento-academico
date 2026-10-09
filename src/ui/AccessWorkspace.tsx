@@ -10,6 +10,7 @@ import {
 } from "react";
 const History = lazy(() => import("./History"));
 const Dashboard = lazy(() => import("./Dashboard"));
+const AdministrativeIntake = lazy(() => import("./AdministrativeIntake"));
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -318,7 +319,24 @@ export function AccessWorkspace({ section }: { section: string }) {
               <History overview={overview} changed={refresh} />
             </Suspense>
           )}
-          {section === "Fuentes" && <Imports overview={overview} />}
+          {section === "Fuentes" &&
+            (overview.member.role === "admin" ? (
+              <>
+                <Suspense
+                  fallback={
+                    <p role="status">Cargando recorrido de archivos…</p>
+                  }
+                >
+                  <AdministrativeIntake overview={overview} changed={refresh} />
+                </Suspense>
+                <details className="admin-form">
+                  <summary>Herramientas avanzadas y diagnóstico</summary>
+                  <Imports overview={overview} />
+                </details>
+              </>
+            ) : (
+              <Imports overview={overview} />
+            ))}
           {section === "Panel" && (
             <Suspense fallback={<p role="status">Cargando panel…</p>}>
               <Dashboard overview={overview} />

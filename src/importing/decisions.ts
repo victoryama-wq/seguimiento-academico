@@ -48,6 +48,15 @@ export function validateAcademicPackage(input: unknown, cycle: string) {
       throw new Error("Original o procedencia cambió; revisar decisión");
   }
   const seen = new Set<string>();
+  const mappingKeys = new Set<string>();
+  for (const m of p.catalogMappings ?? []) {
+    const key = JSON.stringify([m.program, m.abbreviation]);
+    if (mappingKeys.has(key) || !p.catalog.some((c) => c.id === m.careerId))
+      throw new Error(
+        "Correspondencia de catálogo ambigua o sin destino vigente",
+      );
+    mappingKeys.add(key);
+  }
   for (const d of p.decisions) {
     if (!keys.has(d.enrollmentId) || seen.has(d.enrollmentId))
       throw new Error("Resolución huérfana o contradictoria");
@@ -98,10 +107,15 @@ export function resolveAcademicPackage(
   const preparation: Observation[] = [];
   const enrollments: AcademicEnrollment[] = p.enrollments.flatMap((e) => {
     const parsed = group(e.original.group, false, true);
-    const candidates = p.catalog.filter(
-      (c) =>
-        group(`${cycle} ${c.abbreviation} 11 01A`, c.architecture, true)
-          .career === parsed.career,
+    const mapping = p.catalogMappings?.find(
+      (m) =>
+        m.program === e.original.career && m.abbreviation === parsed.career,
+    );
+    const candidates = p.catalog.filter((c) =>
+      mapping
+        ? c.id === mapping.careerId
+        : group(`${cycle} ${c.abbreviation} 11 01A`, c.architecture, true)
+            .career === parsed.career,
     );
     const catalog = candidates.length === 1 ? candidates[0] : undefined;
     const source = p.sources.find((s) => s.id === e.sourceId)!;

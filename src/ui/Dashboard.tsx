@@ -201,7 +201,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
             >
               {overview.cuts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.cycleId} / {c.id} · {c.date}
+                  {c.label ?? `${c.cycleId} / ${c.id} · ${c.date}`}
                 </option>
               ))}
             </select>

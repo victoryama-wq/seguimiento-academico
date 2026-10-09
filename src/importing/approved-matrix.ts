@@ -6,6 +6,14 @@ import {
 import { enrollmentKey, resolveAcademicPackage } from "./decisions";
 
 type Cell = string | number | boolean | null;
+export const decisionSheets = [
+  "Inscripciones actuales",
+  "Afiliaciones actuales",
+  "Excepciones actuales",
+  "Coordinaciones",
+  "Fuentes",
+  "Decisiones aprobadas",
+] as const;
 type Matrix = Cell[][];
 type Input = {
   sheets: Record<string, Matrix>;

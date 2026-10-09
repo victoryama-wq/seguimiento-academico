@@ -486,41 +486,212 @@ footer {
     font-size: 9px;
   }
 }
-:root { color-scheme: light; }
-.access-card { background: white; border: 1px solid #dce4e3; border-radius: 16px; padding: 24px; }
-.access-card form { display: grid; gap: 16px; max-width: 720px; }
-.access-card label { display: grid; gap: 6px; margin: 12px 0; font-size: .9rem; }
-.access-card input, .access-card select, .access-card textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid #a5b7b4; border-radius: 6px; font: inherit; background: white; color: #1d3532; }
-.access-card input[type=checkbox] { width: auto; justify-self: start; }
-.access-card textarea { min-height: 100px; resize: vertical; }
-.access-card button { padding: 10px 16px; border: 1px solid #236959; border-radius: 6px; color: #174c3f; background: #f2f8f5; cursor: pointer; }
-.access-card button:disabled { opacity: .55; cursor: default; }
-.admin-form, .upload-item, .preview { margin-top: 20px; padding: 16px; border: 1px solid #dce4e3; border-radius: 8px; }
-.preview { min-width: 0; overflow-wrap: anywhere; }
-.preview .table-scroll table { min-width: 680px; }
-.admin-form summary { cursor: pointer; font-weight: 600; }
-.job-list { list-style: none; padding: 0; }
-.job-list li { padding: 16px 0; border-bottom: 1px solid #dce4e3; overflow-wrap: anywhere; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.table-scroll { max-width: 100%; overflow-x: auto; }
-.table-scroll table { border-collapse: collapse; width: 100%; }
-.table-scroll th, .table-scroll td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
-.filename-audit { min-width: 0; overflow-wrap: anywhere; }
-.filename-audit pre { max-width: 100%; white-space: pre-wrap; }
-.metrics { min-width: 0; }
-.metric-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
-.metric-cards div, .metric-course { padding: 14px; border: 1px solid #dce4e3; border-radius: 8px; background: #f8fbfa; margin: 8px 0; }
-.metric-cards dt { font-size: .85rem; }
-.metric-cards dd { margin: 6px 0 0; font-size: 1.5rem; font-weight: bold; }
-.metric-context, .metrics small, .metrics td { overflow-wrap: anywhere; }
-.metrics small { display: block; max-width: 180px; }
-.metric-filters { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-.metrics fieldset { min-width: 0; }
-.history-workspace { min-width: 0; overflow-wrap: anywhere; }
-.academic-progress { min-width: 0; overflow-wrap: anywhere; }
-.history-workspace section { margin-top: 24px; padding: 16px; border: 1px solid #dce4e3; border-radius: 8px; }
-.history-workspace li { margin: 12px 0; }
-.history-workspace button { margin: 4px; }
-.history-table { max-width: 100%; overflow-x: auto; }
-.history-table table { width: 100%; min-width: 520px; border-collapse: collapse; }
-.history-table th, .history-table td { padding: 10px; border-bottom: 1px solid #dce4e3; text-align: left; }
+:root {
+  color-scheme: light;
+}
+.access-card {
+  background: white;
+  border: 1px solid #dce4e3;
+  border-radius: 16px;
+  padding: 24px;
+}
+.access-card form {
+  display: grid;
+  gap: 16px;
+  max-width: 720px;
+}
+.access-card label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 0.9rem;
+}
+.access-card input,
+.access-card select,
+.access-card textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #a5b7b4;
+  border-radius: 6px;
+  font: inherit;
+  background: white;
+  color: #1d3532;
+}
+.access-card input[type="checkbox"] {
+  width: auto;
+  justify-self: start;
+}
+.access-card textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.access-card button {
+  padding: 10px 16px;
+  border: 1px solid #236959;
+  border-radius: 6px;
+  color: #174c3f;
+  background: #f2f8f5;
+  cursor: pointer;
+}
+.access-card button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.admin-form,
+.upload-item,
+.preview {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #dce4e3;
+  border-radius: 8px;
+}
+.preview {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.preview .table-scroll table {
+  min-width: 680px;
+}
+.admin-form summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.job-list {
+  list-style: none;
+  padding: 0;
+}
+.job-list li {
+  padding: 16px 0;
+  border-bottom: 1px solid #dce4e3;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.table-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.table-scroll th,
+.table-scroll td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+.filename-audit {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.filename-audit pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+}
+.metrics {
+  min-width: 0;
+}
+.metric-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+.metric-cards div,
+.metric-course {
+  padding: 14px;
+  border: 1px solid #dce4e3;
+  border-radius: 8px;
+  background: #f8fbfa;
+  margin: 8px 0;
+}
+.metric-cards dt {
+  font-size: 0.85rem;
+}
+.metric-cards dd {
+  margin: 6px 0 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.metric-context,
+.metrics small,
+.metrics td {
+  overflow-wrap: anywhere;
+}
+.metrics small {
+  display: block;
+  max-width: 180px;
+}
+.metric-filters {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.metrics fieldset {
+  min-width: 0;
+}
+.history-workspace {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.academic-progress {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.history-workspace section {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid #dce4e3;
+  border-radius: 8px;
+}
+.history-workspace li {
+  margin: 12px 0;
+}
+.history-workspace button {
+  margin: 4px;
+}
+.history-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.history-table table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+.history-table th,
+.history-table td {
+  padding: 10px;
+  border-bottom: 1px solid #dce4e3;
+  text-align: left;
+}
+.guided-intake,
+.guided-intake fieldset {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.guided-intake fieldset {
+  margin: 20px 0;
+  border: 1px solid #dce4e3;
+  border-radius: 10px;
+  padding: 18px;
+}
+.guided-intake legend {
+  font-weight: 700;
+}
+.guided-intake .table-scroll {
+  margin: 16px 0;
+}
+.guided-intake .table-scroll table {
+  min-width: 650px;
+}
+.guided-intake button {
+  margin: 8px 8px 8px 0;
+}
+.guided-intake .review-issue {
+  border-left: 3px solid #a66512;
+  padding: 0 12px;
+}

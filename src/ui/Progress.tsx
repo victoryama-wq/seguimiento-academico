@@ -35,11 +35,13 @@ export function Progress({
   progress,
   editable,
   done,
+  displayLabel,
 }: {
   cutId: string;
   progress: AcademicProgress;
   editable: boolean;
   done: () => Promise<void>;
+  displayLabel?: string;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -81,15 +83,18 @@ export function Progress({
           Unidades posteriores conservadas para después.
         </p>
       ))}
-      <small>
-        Versión {progress.id} · registrada{" "}
-        {new Date(progress.recordedAt).toLocaleString("es-MX", {
-          timeZone: "America/Cancun",
-        })}
-      </small>
+      <details>
+        <summary>Trazabilidad del avance</summary>
+        <small>
+          Versión {progress.id} · registrada{" "}
+          {new Date(progress.recordedAt).toLocaleString("es-MX", {
+            timeZone: "America/Cancun",
+          })}
+        </small>
+      </details>
       {editable && (
         <details>
-          <summary>Configurar avance de {cutId}</summary>
+          <summary>Configurar avance de {displayLabel ?? cutId}</summary>
           <form key={progress.id} onSubmit={(e) => void submit(e)}>
             <ProgressFields progress={progress} />
             <label>

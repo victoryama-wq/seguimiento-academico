@@ -1,3 +1,4 @@
+import { openLegacySources } from "./legacy-sources";
 import { test, expect, type Page } from "@playwright/test";
 import {
   approvedPackage,
@@ -24,6 +25,7 @@ async function login(page: Page, uid: string) {
     page.getByRole("button", { name: "Cerrar sesión" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
 }
 test("paquete privado sintético: observación, corrección administrativa, revalidación y dos coordinadores", async ({
   browser,
@@ -105,13 +107,11 @@ test("paquete privado sintético: observación, corrección administrativa, reva
     .getByTestId(`job-${initialId}`)
     .getByRole("button", { name: "Revisar academicPackage" })
     .click();
-  const oldObservation = page
-    .locator("details")
-    .filter({
-      has: page.getByText("000SINT01 · 27-1 LAF 11 01A · pendiente", {
-        exact: true,
-      }),
-    });
+  const oldObservation = page.locator("details:not(.admin-form)").filter({
+    has: page.getByText("000SINT01 · 27-1 LAF 11 01A · pendiente", {
+      exact: true,
+    }),
+  });
   if ((await oldObservation.getAttribute("open")) === null)
     await oldObservation.locator("summary").click();
   await page
@@ -173,6 +173,7 @@ test("paquete privado sintético: observación, corrección administrativa, reva
   pa = await a.newPage();
   await pa.goto("/");
   await pa.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(pa);
   await pa
     .getByTestId(`job-${reportId}`)
     .getByRole("button", { name: "Revisar compartido" })

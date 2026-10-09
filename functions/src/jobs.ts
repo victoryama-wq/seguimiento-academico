@@ -14,6 +14,7 @@ import {
   supplementSchema,
 } from "../../src/domain/academic";
 import { readTable } from "../../src/importing/files";
+import { readOptionsSchema } from "../../src/domain/intake-contract";
 import {
   institutionalMapping,
   reportProfile,
@@ -67,6 +68,7 @@ export type Cycle = {
   sources: SourceRefs;
 };
 export type Cut = {
+  label?: string;
   id: string;
   cycleId: string;
   date: string;
@@ -88,8 +90,20 @@ export type Course = {
   externalId: string;
   name: string;
   careers: string[];
+  columnPolicy?: {
+    version: string;
+    fields: Record<
+      string,
+      {
+        kind: "activity" | "total" | "category" | "metadata";
+        unit?: number;
+        additional?: boolean;
+      }
+    >;
+  };
 };
 export type Job = {
+  columnPolicyVersion?: string | null;
   progressId?: string | null;
   sources?: SourceRefs;
   cumulative?: boolean;
@@ -364,8 +378,12 @@ async function report(
     fileCourse.externalId !== course.externalId
   )
     throw new InvalidSource("curso_o_ciclo_incompatible");
-  let table = readTable(bytes, job.file.name);
-  const { resolutions, ...mapping } = job.file.mapping;
+  const { resolutions, readOptions, ...mapping } = job.file.mapping;
+  let table = readTable(
+    bytes,
+    job.file.name,
+    readOptionsSchema.parse(readOptions ?? {}),
+  );
   const audits: unknown[] = [];
   if (resolutions)
     for (const decision of z

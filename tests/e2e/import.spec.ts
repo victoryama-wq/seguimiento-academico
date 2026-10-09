@@ -1,3 +1,4 @@
+import { openLegacySources } from "./legacy-sources";
 import { expect, test, type Page } from "@playwright/test";
 import {
   api,
@@ -36,6 +37,7 @@ test("administrador publica una nueva fuente conservando el corte existente", as
     page.getByRole("heading", { name: "Administración institucional" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
   await page.getByLabel("Corte de seguimiento").selectOption("");
   await page.getByLabel("Archivo de fuente").setInputFiles({
     name: "padron-revisado.csv",
@@ -132,6 +134,7 @@ for (const kind of ["report", "roster"] as const) {
     }
     await login(page, people.admin);
     await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+    await openLegacySources(page);
     if (kind === "roster")
       await page.getByLabel("Corte de seguimiento").selectOption("");
     const review = (id: string) =>
@@ -207,6 +210,7 @@ test("administración corrige el nombre original rechazado y publica la nueva pr
   await waitJob(rejected!.id, "invalid");
   await login(page, people.admin);
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
   await page
     .getByTestId(`job-${rejected!.id}`)
     .getByRole("button", { name: /^Revisar/ })
@@ -215,13 +219,11 @@ test("administración corrige el nombre original rechazado y publica la nueva pr
     .getByText("Procedencia y resolución del nombre", { exact: true })
     .click();
   await expect(page.locator(".preview")).toContainText(name);
-  await page
-    .getByLabel("Reportes Moodle")
-    .setInputFiles({
-      name,
-      mimeType: "text/csv",
-      buffer: Buffer.from(reportCsv),
-    });
+  await page.getByLabel("Reportes Moodle").setInputFiles({
+    name,
+    mimeType: "text/csv",
+    buffer: Buffer.from(reportCsv),
+  });
   await page.getByLabel(`Instancia para ${name}`).selectOption("compartido");
   await page
     .getByLabel(`Mapeo aprobado para ${name}`)
@@ -266,6 +268,7 @@ test("dos coordinadores: lote parcial, cierre del navegador y curso compartido a
   let page = await a.newPage();
   await login(page, people.a);
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
   await page.getByLabel("Reportes Moodle").setInputFiles([
     {
       name: "1 Curso compartido 27-1.csv",
@@ -297,6 +300,7 @@ test("dos coordinadores: lote parcial, cierre del navegador y curso compartido a
   page = await resumed.newPage();
   await login(page, people.a);
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
   const valid = page.locator(".job-list li").filter({ hasText: "compartido" });
   const invalid = page.locator(".job-list li").filter({ hasText: "solo-a" });
   await expect(valid).toContainText("Validado para revisión", {
@@ -329,6 +333,7 @@ test("dos coordinadores: lote parcial, cierre del navegador y curso compartido a
   const pageB = await b.newPage();
   await login(pageB, people.b);
   await pageB.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(pageB);
   await expect(pageB.locator(".job-list")).not.toContainText("solo-a");
   await pageB.getByRole("button", { name: "Revisar compartido" }).click();
   await expect(pageB.locator(".preview")).toContainText("000SINT02");

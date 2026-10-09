@@ -5,6 +5,7 @@ import { historyOperations } from "./history-contract";
 import { metricOperations } from "./metrics-contract";
 import { packageDecisionSchema } from "./decision-package";
 import { progressInputSchema, progressSchema } from "./report-policy";
+import { intakeOperations } from "./intake-contract";
 
 export const filenameResolutionSchema = courseFilenameResolutionSchema
   .omit({ approvedBy: true, version: true })
@@ -47,6 +48,7 @@ export const calendarInput = z.record(
   z.enum(["base", "especial", "practica", "excluida"]),
 );
 export const operationSchemas = {
+  ...intakeOperations,
   ...metricOperations,
   ...historyOperations,
   overview: z.strictObject({}),
@@ -236,6 +238,7 @@ export const overviewSchema = z.object({
   cycles: z.array(z.object({ id: z.string() })),
   cuts: z.array(
     z.object({
+      label: z.string().optional(),
       id: z.string(),
       cycleId: z.string(),
       status: z.string(),

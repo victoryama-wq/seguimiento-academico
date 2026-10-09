@@ -61,6 +61,18 @@ export const academicPackageSchema = z.strictObject({
     .min(1)
     .max(20),
   catalog: catalogSchema.max(500),
+  catalogMappings: z
+    .array(
+      z.strictObject({
+        program: z.string(),
+        abbreviation: text,
+        careerId: text,
+        reason: text,
+        sourceReference: text,
+      }),
+    )
+    .max(1000)
+    .optional(),
   enrollments: z
     .array(
       z.strictObject({

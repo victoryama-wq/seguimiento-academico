@@ -1,4 +1,6 @@
 import { progressSchema } from "../../src/domain/report-policy";
+import { intakeOperations } from "../../src/domain/intake-contract";
+import { intakeOperation } from "./intake";
 import { FieldPath } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
@@ -50,6 +52,13 @@ export async function academicOperation(
 ): Promise<unknown> {
   const member = await membership(uid);
   const actor = uid!;
+  if (op in intakeOperations)
+    return intakeOperation(
+      op as keyof typeof intakeOperations,
+      raw,
+      actor,
+      academicOperation,
+    );
   if (op in historyOperations)
     return historyOperation(op as keyof typeof historyOperations, raw, actor);
   switch (op) {
@@ -81,6 +90,7 @@ export async function academicOperation(
             date: v.date,
             status: v.status,
             sources: v.sources,
+            ...(v.label ? { label: v.label } : {}),
             ...(v.progress ? { progress: v.progress } : {}),
           };
         }),
@@ -589,6 +599,14 @@ export async function academicOperation(
         ).data() as Course;
         courseAccess(freshMember, course);
         if (job.status === "published") return;
+        if (
+          job.columnPolicyVersion !== undefined &&
+          job.columnPolicyVersion !== (course.columnPolicy?.version ?? null)
+        )
+          throw new HttpsError(
+            "aborted",
+            "Cambió la revisión de columnas del curso. Vuelve a validar y revisar el original.",
+          );
         const cut = (await tx.get(db.doc(`cuts/${job.cutId}`))).data() as Cut;
         if (cut.status !== "open") throw closed();
         if ((job.progressId ?? null) !== (cut.progress?.id ?? null))
@@ -664,6 +682,36 @@ export async function academicOperation(
           publishedAt: Date.now(),
         });
         tx.set(pointer, { versionId: job.id, revision });
+        if (job.columnPolicyVersion !== undefined) {
+          const fields = { ...course.columnPolicy?.fields };
+          const columns = job.file.mapping.columns as {
+            selector: { header: string };
+            kind: "activity" | "total" | "category" | "metadata";
+            unit?: number;
+            additional?: boolean;
+          }[];
+          for (const c of columns) {
+            if (
+              columns.filter(
+                (other) => other.selector.header === c.selector.header,
+              ).length !== 1
+            )
+              continue;
+            fields[c.selector.header] = {
+              kind: c.kind,
+              ...(c.unit !== undefined ? { unit: c.unit } : {}),
+              ...(c.additional !== undefined
+                ? { additional: c.additional }
+                : {}),
+            };
+          }
+          if (
+            canonical(fields) !== canonical(course.columnPolicy?.fields ?? {})
+          )
+            tx.update(db.doc(`courses/${course.id}`), {
+              columnPolicy: { version: job.id, fields },
+            });
+        }
         tx.update(db.doc(`jobs/${job.id}`), { status: "published" });
       });
       return { ok: true };

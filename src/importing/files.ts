@@ -259,9 +259,9 @@ export function readTable(
   bytes: Uint8Array,
   originalName: string,
   options: {
-    sheet?: string;
-    delimiter?: "," | ";" | "\t";
-    headerRow?: number;
+    sheet?: string | undefined;
+    delimiter?: "," | ";" | "\t" | undefined;
+    headerRow?: number | undefined;
   } = {},
 ): Table {
   if (!bytes.length || bytes.length > LIMITS.bytes)
@@ -358,5 +358,64 @@ export function readTable(
     rows: matrix
       .slice(headerRow)
       .map((cells, i) => ({ row: headerRow + i + 1, cells })),
+  };
+}
+
+/** Inventario acotado para la selección visual y matrices institucionales.
+ * No evalúa fórmulas ni cambia la época. No acepta macros ni adjuntos. */
+export function workbookData(
+  bytes: Uint8Array,
+  name: string,
+  strict: boolean | readonly string[] = false,
+) {
+  const extension = /\.(xlsx|ods)$/i.exec(name)?.[1]?.toLowerCase();
+  if (!extension || !bytes.length || bytes.length > LIMITS.bytes)
+    throw new Error("Selecciona un libro XLSX u ODS de hasta 8 MiB.");
+  inspectZip(Buffer.from(bytes), extension as "xlsx" | "ods");
+  const book = XLSX.read(bytes, {
+    type: "buffer",
+    raw: true,
+    cellDates: false,
+    cellFormula: true,
+  });
+  let cells = 0;
+  const sheets: Record<string, (string | number | boolean | null)[][]> = {};
+  for (const name of book.SheetNames) {
+    const sheet = book.Sheets[name]!;
+    if (!sheet["!ref"]) {
+      sheets[name] = [];
+      continue;
+    }
+    const range = XLSX.utils.decode_range(sheet["!ref"]);
+    cells += (range.e.r + 1) * (range.e.c + 1);
+    if (
+      range.e.r >= LIMITS.rows ||
+      range.e.c >= LIMITS.columns ||
+      cells > LIMITS.cells
+    )
+      throw new Error(
+        "El libro excede los límites de filas o celdas. Divide la fuente.",
+      );
+    sheets[name] = Array.from({ length: range.e.r + 1 }, (_, r) =>
+      Array.from({ length: range.e.c + 1 }, (_, c) => {
+        const value = sheet[XLSX.utils.encode_cell({ r, c })] as
+          XLSX.CellObject | undefined;
+        if (
+          (strict === true ||
+            (Array.isArray(strict) && strict.includes(name))) &&
+          (value?.f || value?.t === "e")
+        )
+          throw new Error(
+            "Hay fórmulas o errores en una hoja de decisiones; selecciona valores aprobados literales.",
+          );
+        return (value?.v ?? null) as string | number | boolean | null;
+      }),
+    );
+  }
+  return {
+    sheets,
+    epoch: book.Workbook?.WBProps?.date1904
+      ? ("1904" as const)
+      : ("1900" as const),
   };
 }

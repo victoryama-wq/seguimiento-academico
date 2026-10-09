@@ -1,3 +1,4 @@
+import { openLegacySources } from "./legacy-sources";
 import { test, expect } from "@playwright/test";
 import {
   api,
@@ -45,6 +46,7 @@ test("curso multimodal: reconoce reporte y publica sin elegir inscripción; mues
   await page.getByLabel("Contraseña", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+  await openLegacySources(page);
   await page.getByLabel("Corte de seguimiento").selectOption("semana3");
   await page.getByLabel("Reportes Moodle").setInputFiles({
     name: "777._Curso_Multimodal_27-1 Calificaciones.csv",

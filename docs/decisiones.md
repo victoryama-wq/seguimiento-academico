@@ -530,3 +530,31 @@ solo con árbol limpio y diferencias de documentación, pruebas o verificadores
 cloud enumerados; rechaza cambios de build, aplicación, configuración y
 dependencias. La comprobación del backend permanece exacta. No se redespliega
 la aplicación solo para atribuir al informe un SHA nuevo.
+
+### Recorrido permanente de originales (continuación técnica, 2026-10-09)
+
+La administración selecciona padrón, catálogo y reportes originales con revisión
+visual de columnas; no necesita JSON ni identificadores internos en el recorrido
+habitual. Se reutilizan el adaptador de matriz aprobada, los parsers, el motor de
+afiliación y los trabajos persistentes. La matriz se incorpora expresamente una vez,
+verificando sus fuentes; no se suben decisiones privadas por código ni se incluyen
+en el build. DEC-01–36 no cambian.
+
+Una propuesta administrativa fija la versión previa y los hashes/mapeos de los
+originales, conserva el paquete anterior y se publica con comparación transaccional
+de versión. Una matriz antigua requiere resolver conflictos con decisiones vigentes.
+Se distinguen correspondencias generales de programa/plan y excepciones individuales;
+los cambios de original requieren continuidad explícita y motivo. Se conservan las
+fuentes y revisiones anteriores incluso cuando una decisión deja de ser aplicable.
+
+La identificación inequívoca por número/nombre/ciclo registra la instancia en servidor;
+los ámbitos se obtienen del padrón conciliado, sin conceder acceso por el responsable
+del catálogo. Cargas parciales nunca reducen los ámbitos previos del curso compartido.
+La revisión de columnas publicada se conserva por curso/ciclo y encabezado exacto,
+con protección contra revisiones simultáneas. Los cortes mantienen sus fuentes y
+avance explícito; no se infiere avance a partir del archivo. Todos los endpoints de
+preparación institucional comprueban administración en servidor y guardan originales
+fuera de Hosting. Las operaciones anteriores siguen disponibles como diagnóstico.
+
+Guía: [carga institucional](carga-institucional.md). La aceptación del propietario
+y la publicación productiva siguen pendientes; la validación técnica usa sintéticos.

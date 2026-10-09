@@ -162,6 +162,32 @@ export async function correctionOperation(
     ).data() as Course;
     courseAccess(current, course);
     if (cut.status !== "open") throw conflict();
+    if (
+      old.columnPolicyVersion !== undefined &&
+      old.columnPolicyVersion !== (course.columnPolicy?.version ?? null)
+    ) {
+      const columns = old.file.mapping.columns as {
+        selector: { header: string };
+        kind: string;
+        unit?: number;
+        additional?: boolean;
+      }[];
+      if (
+        columns.some((c) => {
+          const approved = course.columnPolicy?.fields[c.selector.header];
+          return (
+            !approved ||
+            approved.kind !== c.kind ||
+            approved.unit !== c.unit ||
+            !!approved.additional !== !!c.additional
+          );
+        })
+      )
+        throw new HttpsError(
+          "failed-precondition",
+          "Cambió la clasificación de columnas. Vuelve a seleccionar el original y revisar las columnas vigentes.",
+        );
+    }
     const expected = (await tx.get(pointerRef(cut.id, course.id))).data()
       ?.versionId as string | undefined;
     const freshJob = (await tx.get(db.doc(`jobs/${old.id}`))).data() as Job;
@@ -171,6 +197,9 @@ export async function correctionOperation(
       canonical({
         progressId: cut.progress?.id ?? null,
         revalidationOf: old.id,
+        ...(old.columnPolicyVersion !== undefined
+          ? { columnPolicyVersion: course.columnPolicy?.version ?? null }
+          : {}),
         sources: cut.sources,
         expected: expected ?? null,
       }),
@@ -194,6 +223,9 @@ export async function correctionOperation(
       progressId: cut.progress?.id ?? null,
       carryVersion: expected ?? carry ?? null,
       revalidationOf: old.id,
+      ...(old.columnPolicyVersion !== undefined
+        ? { columnPolicyVersion: course.columnPolicy?.version ?? null }
+        : {}),
       revalidatedBy: actor,
       status: "queued",
       attempt: 0,
