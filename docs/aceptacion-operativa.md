@@ -1,8 +1,14 @@
 # Guía breve de aceptación operativa
 
-Estado: **pendiente de evaluación institucional**. URL de pruebas, proyecto y SHA
-desplegado: pendientes de identificar y verificar el destino Firebase. No usar
-archivos reales. Preparación y registro técnico en [fase 2](validacion-nube-fase-2.md).
+Estado: **pendiente de evaluación institucional**. Entorno exclusivo de pruebas:
+<https://indicadores-academia.web.app>, proyecto `indicadores-academia`, región
+`us-central1`. SHA desplegado y resultados en [ejecución cloud](validacion-nube-ejecucion.md).
+No usar archivos reales.
+
+En este equipo, las cuentas sintéticas y contraseñas únicas están en
+`private/staging-test-accounts.json` (ignorado por Git). El propietario puede
+consultarlo localmente o recibir acceso por su canal institucional privado.
+No pegar su contenido en chats/PR ni capturas. No se envían correos de acceso.
 
 El operador entrega por canal privado cuentas de prueba admin, coordinación A y B
 y contraseñas únicas. No se publican credenciales en PR/capturas; no reutilizar la
@@ -56,8 +62,7 @@ por paso: aprobado / incidencia / no ejecutado, resultado observado y referencia
 de evidencia sintética. La valoración final es «aceptado», «aceptado con pendientes»
 o «requiere cambios», emitida por el usuario, no por el agente.
 
-Incidencias/pedientes actuales: destino Firebase no identificado; pruebas de
-nube, URL y acceso aún no disponibles; once paquetes con avisos documentados
-(dos moderate en árbol de producción, sin ruta afectada demostrada); restauración,
-piloto de capacidad cloud y aceptación institucional pendientes. No se ha realizado
-ningún despliegue ni se han utilizado datos académicos privados en esta fase.
+Pendientes: consultar la matriz técnica actualizada antes de evaluar. Persisten
+once paquetes con avisos documentados (dos moderate en producción, sin ruta
+afectada demostrada), restauración completa, presupuesto/retención, piloto privado
+y aceptación institucional. Solo se utilizan cuentas/datos sintéticos en pruebas.

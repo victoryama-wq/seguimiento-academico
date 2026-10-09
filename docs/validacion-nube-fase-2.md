@@ -1,5 +1,8 @@
 # Fase 2: preparación y validación en Firebase de pruebas
 
+**Estado actualizado:** [ejecución real, identidad, pruebas y pendientes](validacion-nube-ejecucion.md).
+Los apartados de preparación siguientes conservan el registro histórico previo al despliegue.
+
 Fecha de inspección: 2026-10-08. Base revisada: `3fff0c4a40696c79d49c6cbd06af4326146660df`,
 PR #5, rama `etapa-06-piloto-y-publicacion`. La consulta remota y el árbol local
 confirmaron esa referencia, sin avances posteriores que reemplazar.

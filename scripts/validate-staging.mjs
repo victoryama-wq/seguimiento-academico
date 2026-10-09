@@ -106,7 +106,18 @@ async function ready(id, role = "admin", expected = "ready") {
   const start = performance.now(),
     end = Date.now() + 180000;
   while (Date.now() < end) {
-    const p = await api("preview", { jobId: id }, role);
+    const p = await api(
+      "preview",
+      {
+        jobId: id,
+        ...(role === "a"
+          ? { careerId: "laf-plan-1" }
+          : role === "b"
+            ? { careerId: "arq-plan-1" }
+            : {}),
+      },
+      role,
+    );
     if (
       p.job.status === expected ||
       (expected === "ready" && p.job.status === "published")
@@ -384,6 +395,8 @@ async function smoke() {
       /ABORTED/,
     );
   });
+  await api("closeCut", { cutId: together });
+  await api("closeCut", { cutId: separate });
   const pair = { beforeCut: together, afterCut: separate };
   const pairs = joint.details[0].values.map((v) => ({
     courseId: "cloud-mix",
@@ -680,6 +693,7 @@ try {
 } catch (error) {
   evidence.status = "failure";
   evidence.error = error.message;
+  if (error.cause?.code) evidence.transportCode = error.cause.code;
   process.exitCode = 1;
 } finally {
   evidence.completedAt = new Date().toISOString();

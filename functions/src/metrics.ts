@@ -400,27 +400,73 @@ export async function dashboard(
       ),
     );
   };
+  // Latencia cloud: hasta cuatro cursos en vuelo, sin cache global ni ampliar
+  // el alcance. Consumir cada lote en orden conserva paginación y exportación.
+  async function* preparedEntries() {
+    const selected = entries.filter(
+      ({ course }) =>
+        (!f.courseId || course.id === f.courseId) &&
+        course.careers.some(careerMatches),
+    );
+    for (let offset = 0; offset < selected.length; offset += 4) {
+      const batch = await Promise.all(
+        selected.slice(offset, offset + 4).map(async (entry) => {
+          const { course, job } = entry;
+          const selection =
+            entry.selection?.versionId === job?.id ? entry.selection : null;
+          const artifact = job?.artifact
+            ? await jsonFile<{
+                data: { teachers: { person: { original: unknown } }[] };
+                excluded?: {
+                  identity: string;
+                  careerId: string | null;
+                  row: number;
+                  reason: string;
+                }[];
+              }>(job.artifact)
+            : null;
+          const teachers = selection?.teachers ?? [
+            ...new Set(
+              (artifact?.data.teachers ?? []).map((t) =>
+                String(t.person.original),
+              ),
+            ),
+          ];
+          const rowsByCareer = new Map<
+            string,
+            z.infer<typeof rowViewSchema>[]
+          >();
+          if (
+            job?.token &&
+            (!f.teacher ||
+              (f.teacher === "sin_docente"
+                ? teachers.length === 0
+                : teachers.includes(f.teacher)))
+          ) {
+            // Mantener consultas restringidas por carrera incluso con Admin SDK.
+            for (const careerId of course.careers.filter(careerMatches)) {
+              const rows: z.infer<typeof rowViewSchema>[] = [];
+              for await (const doc of pages(
+                db
+                  .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
+                  .where("careerId", "==", careerId),
+              )) {
+                rows.push(rowViewSchema.parse(doc.data()));
+              }
+              rowsByCareer.set(careerId, rows);
+            }
+          }
+          return { entry, artifact, rowsByCareer };
+        }),
+      );
+      yield* batch;
+    }
+  }
   const sourceCareers = new Set<string>();
-  for (const entry of entries) {
+  for await (const { entry, artifact, rowsByCareer } of preparedEntries()) {
     const { course, job } = entry;
-    if (
-      (f.courseId && course.id !== f.courseId) ||
-      !course.careers.some(careerMatches)
-    )
-      continue;
     const selection =
       entry.selection?.versionId === job?.id ? entry.selection : null;
-    const artifact = job?.artifact
-      ? await jsonFile<{
-          data: { teachers: { person: { original: unknown } }[] };
-          excluded?: {
-            identity: string;
-            careerId: string | null;
-            row: number;
-            reason: string;
-          }[];
-        }>(job.artifact)
-      : null;
     const teachers = selection?.teachers ?? [
       ...new Set(
         (artifact?.data.teachers ?? []).map((t) => String(t.person.original)),
@@ -441,12 +487,7 @@ export async function dashboard(
     if (job?.token) {
       // Consultas de filas restringidas por carrera incluso usando SDK Admin.
       for (const careerId of course.careers.filter(careerMatches)) {
-        for await (const doc of pages(
-          db
-            .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
-            .where("careerId", "==", careerId),
-        )) {
-          const row = rowViewSchema.parse(doc.data());
+        for (const row of rowsByCareer.get(careerId) ?? []) {
           const normalized = identity(row.identity).normalized;
           const person = normalized ? persons.get(normalized) : undefined;
           const base = person?.baseEnrollmentId

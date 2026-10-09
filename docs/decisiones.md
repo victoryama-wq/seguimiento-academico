@@ -507,3 +507,19 @@ manifest generado por `npm run prepare:cloud-fixtures`. No usa seed/reset demo,
 SDK administrativo ni claves. Cada ejecución crea cortes nuevos identificables,
 conserva los anteriores y registra resultados/tiempos privados. Los tiempos y
 lecturas del cliente no sustituyen métricas facturadas ni aceptación del usuario.
+
+### Ejecución de nube y latencia observada (2026-10-08)
+
+El propietario autorizó a la cuenta dedicada `roles/eventarc.eventReceiver` solo
+en `indicadores-academia` y `roles/run.invoker` solo en `importworker` de
+`us-central1`. Identidad y destino verificados y registrados; permisos anteriores
+preservados, sin claves ni acceso público al trabajador.
+
+La medición de 45 cursos mostró panel institucional p50 3.516 ms (29 respuestas)
+con lecturas secuenciales. Se preparan hasta cuatro cursos en paralelo por petición,
+consumiendo resultados en orden, sin cache global ni lecturas de carreras ajenas.
+Se mantiene la revalidación final de membresía y todos los límites/fórmulas.
+La repetición medida, permisos y recuperación se documentan en
+[ejecución cloud](validacion-nube-ejecucion.md), separados de aceptación del usuario.
+La recuperación inyecta un lease vencido con auditoría solo en un trabajo sintético
+nuevo no publicado; no demuestra caída de contenedor ni restauración de respaldo.
