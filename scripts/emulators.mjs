@@ -36,7 +36,7 @@ for (const name of names) {
   ports.add(endpoint.port);
 }
 const mode = process.argv[2];
-if (!["start", "integration", "e2e", "check"].includes(mode))
+if (!["start", "integration", "e2e", "pilot", "check"].includes(mode))
   throw new Error("Modo desconocido");
 if (mode !== "check") {
   // Impedir la reutilización accidental de un proceso con datos de otra sesión.
@@ -58,6 +58,7 @@ if (mode !== "check") {
   if (mode === "integration")
     args.push("vitest run --config vitest.emulators.config.ts");
   if (mode === "e2e") args.push("playwright test");
+  if (mode === "pilot") args.push("vitest run --config vitest.pilot.config.ts");
   // Perfil efímero: no heredar login de Firebase CLI ni credenciales ADC del equipo.
   // La ruta ADC inexistente fuerza un fallo de credenciales en servicios no emulados.
   const isolatedConfig = mkdtempSync(join(tmpdir(), "seguimiento-emulators-"));
@@ -77,6 +78,7 @@ if (mode !== "check") {
       GOOGLE_CLOUD_PROJECT: project,
       VITE_FIREBASE_MODE: "emulator",
       VITE_FIREBASE_PROJECT_ID: project,
+      PILOT_METRICS: mode === "pilot" ? "1" : "0",
     },
   });
   child.once("error", (error) => {

@@ -7,6 +7,14 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
 import {
+  groupPossibleWithdrawals,
+  type WithdrawalEvidence,
+} from "../../src/domain/possible-withdrawals";
+import {
+  unitsForProgress,
+  unitsForPrincipal,
+} from "../../src/domain/report-policy";
+import {
   emptyCounts,
   addValue,
   percentages,
@@ -22,7 +30,13 @@ import {
   metricCourse,
 } from "../../src/domain/metrics-contract";
 import { rowViewSchema, type Member } from "../../src/domain/import-contract";
-import { academicSnapshot, type Cut, type Course, type Job } from "./jobs";
+import {
+  academicSnapshot,
+  type Artifact,
+  type Cut,
+  type Course,
+  type Job,
+} from "./jobs";
 import {
   db,
   admin,
@@ -60,6 +74,7 @@ const missing = () => new HttpsError("not-found", "Datos no disponibles.");
 const conflict = () =>
   new HttpsError("aborted", "La versión cambió. Actualiza y revisa de nuevo.");
 const available = (job: Job) =>
+  job.activityIds ??
   z
     .array(z.object({ kind: z.string(), activityId: z.string().optional() }))
     .parse(job.file.mapping.columns)
@@ -153,7 +168,11 @@ export async function captureMetrics(
       scope,
       cut,
       entries: frozen.snapshot.entries
-        .filter((e) => e.course.careers.some((c) => allowed(member, c)))
+        .filter(
+          (e) =>
+            member.role === "admin" ||
+            e.course.careers.some((c) => allowed(member, c)),
+        )
         .map((e) => ({
           ...e,
           course: {
@@ -176,20 +195,41 @@ export async function captureMetrics(
       "El corte excede el límite de consulta medido; no se muestran totales parciales.",
     );
   const entries: Entry[] = [];
-  for (const doc of courses.docs) {
-    const course = doc.data() as Course;
-    if (cut.frozenCourseIds && !cut.frozenCourseIds.includes(course.id))
-      continue;
-    if (!course.careers.some((c) => allowed(member, c))) continue;
-    const ptr = (
-      await tx.get(db.doc(`cuts/${cut.id}/courses/${course.id}`))
-    ).data();
-    const selected = (await tx.get(selectionRef(cut.id, course.id))).data() as
-      Selection | undefined;
-    const job = ptr
-      ? ((await tx.get(db.doc(`jobs/${ptr.versionId}`))).data() as
-          Job | undefined)
-      : undefined;
+  const authorized = courses.docs
+    .map((doc) => doc.data() as Course)
+    .filter(
+      (course) =>
+        (!cut.frozenCourseIds || cut.frozenCourseIds.includes(course.id)) &&
+        (member.role === "admin" ||
+          course.careers.some((c) => allowed(member, c))),
+    );
+  // Reutilizar la consulta de trabajos dentro de la misma transacción; no volver
+  // a leer cada trabajo ni recorrer todos los trabajos por cada asignatura.
+  const byId = new Map(jobs.docs.map((doc) => [doc.id, doc.data() as Job]));
+  const byCourse = new Map<string, Job[]>();
+  for (const job of byId.values()) {
+    if (!job.courseId) continue;
+    const group = byCourse.get(job.courseId) ?? [];
+    group.push(job);
+    byCourse.set(job.courseId, group);
+  }
+  const refs = authorized.flatMap((course) => [
+    db.doc(`cuts/${cut.id}/courses/${course.id}`),
+    selectionRef(cut.id, course.id),
+  ]);
+  const metadata = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+  // Lecturas agrupadas, acotadas y aún transaccionales: no cache global ni
+  // manifiestos mezclados cuando publicación/selección compiten con el cierre.
+  for (let i = 0; i < refs.length; i += 400) {
+    for (const doc of await tx.getAll(...refs.slice(i, i + 400)))
+      metadata.set(doc.ref.path, doc);
+  }
+  for (const course of authorized) {
+    const ptr = metadata.get(`cuts/${cut.id}/courses/${course.id}`)!.data();
+    const selected = metadata
+      .get(selectionRef(cut.id, course.id).path)!
+      .data() as Selection | undefined;
+    const job = ptr ? byId.get(ptr.versionId as string) : undefined;
     if (
       ptr &&
       (!job ||
@@ -198,7 +238,7 @@ export async function captureMetrics(
         job.cutId !== cut.id)
     )
       throw missing();
-    const courseJobs = jobs.docs.filter((j) => j.data().courseId === course.id);
+    const courseJobs = byCourse.get(course.id) ?? [];
     entries.push({
       course: {
         ...course,
@@ -206,11 +246,9 @@ export async function captureMetrics(
       },
       job: job ?? null,
       selection: selected ?? null,
-      received: courseJobs.some((j) => j.data().status !== "awaiting_upload"),
+      received: courseJobs.some((j) => j.status !== "awaiting_upload"),
       validated: courseJobs.some(
-        (j) =>
-          ["ready", "published"].includes(j.data().status) &&
-          !j.data().blocking,
+        (j) => ["ready", "published"].includes(j.status) && !j.blocking,
       ),
     });
   }
@@ -285,6 +323,11 @@ export async function dashboard(
   if (f.careerId && !allowed(member, f.careerId)) denied();
   if (f.courseId && !entries.some((e) => e.course.id === f.courseId)) denied();
   const academic = await academicSnapshot(cut);
+  if (
+    member.role !== "admin" &&
+    !academic.enrollments.some((e) => member.careers.includes(e.careerId))
+  )
+    denied();
   const enrollments = new Map(academic.enrollments.map((e) => [e.id, e]));
   const persons = new Map(academic.persons.map((p) => [p.identity, p]));
   const catalog = academic.context.catalog.filter((c) => allowed(member, c.id));
@@ -313,9 +356,12 @@ export async function dashboard(
     facets.plan.push(c.plan);
     if (c.coordination) facets.coordination.push(c.coordination);
   }
+  const principalIds = new Set(academic.persons.map((p) => p.baseEnrollmentId));
   for (const e of academic.enrollments.filter(
     (e) =>
-      allowed(member, e.careerId) && e.kind === "base" && !e.problems.length,
+      allowed(member, e.careerId) &&
+      (e.kind === "base" || principalIds.has(e.id)) &&
+      !e.problems.length,
   )) {
     facets.group.push(e.parsed.normalized);
     if (e.parsed.modality) facets.modality.push(e.parsed.modality);
@@ -323,6 +369,7 @@ export async function dashboard(
   }
   const details: z.infer<typeof metricDetail>[] = [];
   const exclusions: z.infer<typeof metricExclusion>[] = [];
+  const withdrawalEvidence: WithdrawalEvidence[] = [];
   const courses: z.infer<typeof metricCourse>[] = [];
   let received = 0,
     validated = 0;
@@ -374,27 +421,72 @@ export async function dashboard(
       ),
     );
   };
+  // Latencia cloud: hasta cuatro cursos en vuelo, sin cache global ni ampliar
+  // el alcance. Consumir cada lote en orden conserva paginación y exportación.
+  async function* preparedEntries() {
+    const selected = entries.filter(
+      ({ course }) =>
+        (!f.courseId || course.id === f.courseId) &&
+        (course.careers.some(careerMatches) ||
+          (member.role === "admin" &&
+            !f.careerId &&
+            !f.coordination &&
+            !f.plan)),
+    );
+    for (let offset = 0; offset < selected.length; offset += 4) {
+      const batch = await Promise.all(
+        selected.slice(offset, offset + 4).map(async (entry) => {
+          const { course, job } = entry;
+          const selection =
+            entry.selection?.versionId === job?.id ? entry.selection : null;
+          const artifact = job?.artifact
+            ? await jsonFile<{
+                data: { teachers: { person: { original: unknown } }[] };
+                excluded?: Artifact["excluded"];
+              }>(job.artifact)
+            : null;
+          const teachers = selection?.teachers ?? [
+            ...new Set(
+              (artifact?.data.teachers ?? []).map((t) =>
+                String(t.person.original),
+              ),
+            ),
+          ];
+          const rowsByCareer = new Map<
+            string,
+            z.infer<typeof rowViewSchema>[]
+          >();
+          if (
+            job?.token &&
+            (!f.teacher ||
+              (f.teacher === "sin_docente"
+                ? teachers.length === 0
+                : teachers.includes(f.teacher)))
+          ) {
+            // Mantener consultas restringidas por carrera incluso con Admin SDK.
+            for (const careerId of course.careers.filter(careerMatches)) {
+              const rows: z.infer<typeof rowViewSchema>[] = [];
+              for await (const doc of pages(
+                db
+                  .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
+                  .where("careerId", "==", careerId),
+              )) {
+                rows.push(rowViewSchema.parse(doc.data()));
+              }
+              rowsByCareer.set(careerId, rows);
+            }
+          }
+          return { entry, artifact, rowsByCareer };
+        }),
+      );
+      yield* batch;
+    }
+  }
   const sourceCareers = new Set<string>();
-  for (const entry of entries) {
+  for await (const { entry, artifact, rowsByCareer } of preparedEntries()) {
     const { course, job } = entry;
-    if (
-      (f.courseId && course.id !== f.courseId) ||
-      !course.careers.some(careerMatches)
-    )
-      continue;
     const selection =
       entry.selection?.versionId === job?.id ? entry.selection : null;
-    const artifact = job?.artifact
-      ? await jsonFile<{
-          data: { teachers: { person: { original: unknown } }[] };
-          excluded?: {
-            identity: string;
-            careerId: string | null;
-            row: number;
-            reason: string;
-          }[];
-        }>(job.artifact)
-      : null;
     const teachers = selection?.teachers ?? [
       ...new Set(
         (artifact?.data.teachers ?? []).map((t) => String(t.person.original)),
@@ -415,12 +507,7 @@ export async function dashboard(
     if (job?.token) {
       // Consultas de filas restringidas por carrera incluso usando SDK Admin.
       for (const careerId of course.careers.filter(careerMatches)) {
-        for await (const doc of pages(
-          db
-            .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
-            .where("careerId", "==", careerId),
-        )) {
-          const row = rowViewSchema.parse(doc.data());
+        for (const row of rowsByCareer.get(careerId) ?? []) {
           const normalized = identity(row.identity).normalized;
           const person = normalized ? persons.get(normalized) : undefined;
           const base = person?.baseEnrollmentId
@@ -439,19 +526,36 @@ export async function dashboard(
             continue;
           const { owned, special } = scopedPerson(row.identity)!;
           if (!specialMatch(row.identity)) continue;
+          const schedule = academic.context.trackingSchedule;
+          const expectedUnits = cut.progress
+            ? unitsForProgress(cut.progress, base.parsed.modality ?? "")
+            : schedule?.tracking
+              ? unitsForPrincipal(
+                  schedule,
+                  base.parsed.modality ?? "",
+                  cut.date,
+                  cut.schoolCut,
+                )
+              : undefined;
           let values = row.values.filter((v) =>
             activities.includes(v.activityId),
           );
           // El worker ya resuelve duplicados; fallar ante un derivado incoherente.
           if (
-            new Set(values.map((v) => v.activityId)).size !==
-              activities.length ||
-            values.length !== activities.length
+            new Set(values.map((v) => v.activityId)).size !== values.length ||
+            (!job.cumulative && values.length !== activities.length)
           )
             throw new HttpsError(
               "failed-precondition",
               "Observaciones incompletas o duplicadas: revisar versión publicada.",
             );
+          values = values.filter((v) =>
+            v.additional
+              ? v.state === "numerica"
+              : !expectedUnits ||
+                v.unit === undefined ||
+                expectedUnits.includes(v.unit),
+          );
           if (f.activity || activityByCourse)
             values = values.filter(
               (v) =>
@@ -473,7 +577,31 @@ export async function dashboard(
             coordination: base.catalog?.coordination ?? "sin_coordinacion",
             plan: base.catalog?.plan ?? "sin_plan",
             special,
-            attribution: "grupo_base_confirmado",
+            attribution:
+              base.kind === "especial"
+                ? "principal_especial_confirmada"
+                : "grupo_base_confirmado",
+            ...(row.relationship
+              ? { relationshipId: row.relationship.id }
+              : {}),
+            teachingAssignment: "no_determinada",
+            ...(expectedUnits
+              ? {
+                  expectedUnits,
+                  deferredUnits: [
+                    ...new Set(
+                      row.values
+                        .filter(
+                          (v) =>
+                            !v.additional &&
+                            v.unit !== undefined &&
+                            !expectedUnits.includes(v.unit),
+                        )
+                        .map((v) => v.unit!),
+                    ),
+                  ].sort((a, b) => a - b),
+                }
+              : {}),
             enrollmentIds: owned.map((e) => e.id),
             sourceVersions: cut.sources,
             issues: [
@@ -490,7 +618,10 @@ export async function dashboard(
       if (
         (excluded.careerId
           ? !careerMatches(excluded.careerId)
-          : member.role !== "admin") ||
+          : member.role !== "admin" ||
+            !!f.careerId ||
+            !!f.coordination ||
+            !!f.plan) ||
         !studentMatch(excluded.identity) ||
         !specialMatch(excluded.identity) ||
         !exclusionDimensionsMatch(excluded.identity, excluded.careerId) ||
@@ -500,8 +631,27 @@ export async function dashboard(
       courseExclusions.push({
         ...excluded,
         courseId: course.id,
-        provenance: `${job!.id}:fila:${excluded.row}`,
+        provenance: `${excluded.sourceVersion ?? job!.id}:fila:${excluded.row}`,
       });
+      if (excluded.withdrawalStatus) {
+        withdrawalEvidence.push({
+          identity: excluded.identity,
+          name: excluded.name ?? "",
+          status: excluded.withdrawalStatus,
+          courseId: course.id,
+          courseName: course.name,
+          provenance: `${excluded.sourceVersion ?? job!.id}:fila:${excluded.row}`,
+        });
+        for (const original of excluded.originalReports ?? [])
+          withdrawalEvidence.push({
+            identity: original.identity,
+            name: original.name,
+            status: excluded.withdrawalStatus,
+            courseId: course.id,
+            courseName: course.name,
+            provenance: `${original.sourceVersion}:fila:${original.row}`,
+          });
+      }
     }
     const rowFilter =
       f.student || f.group || f.modality || f.shift || f.special;
@@ -525,6 +675,7 @@ export async function dashboard(
       versionId: job?.id ?? null,
       selectionId: entry.selection?.id ?? null,
       available: job ? available(job) : [],
+      activityLabels: job?.activityLabels ?? {},
       activities: activityByCourse
         ? activities.filter((a) => a === activityByCourse.get(course.id))
         : activities,
@@ -566,7 +717,7 @@ export async function dashboard(
       careerId: e.careerId,
       courseId: null,
       reason: [
-        e.kind,
+        e.exclusionReason ?? e.kind,
         ...e.problems,
         ...(!base && e.kind === "especial"
           ? ["sin_grupo_base_confirmado; sin atribucion provisional"]
@@ -697,14 +848,20 @@ export async function dashboard(
     }));
   const measured = courses.filter((c) => c.status === "medido").length,
     published = courses.filter((c) => c.versionId).length;
-  const items = { groups: grouped, details, courses, exclusions }[
-    input.section
-  ];
+  const possibleWithdrawals = groupPossibleWithdrawals(withdrawalEvidence);
+  const items = {
+    groups: grouped,
+    details,
+    courses,
+    exclusions,
+    possibleWithdrawals,
+  }[input.section];
   const result: Dashboard = {
     snapshotId: snap.id,
     cutId: cut.id,
     cycleId: cut.cycleId,
     date: cut.date,
+    ...(cut.progress ? { progress: cut.progress } : {}),
     closed: cut.status === "closed",
     counts,
     ...percentages(counts),
@@ -723,6 +880,8 @@ export async function dashboard(
           ? "datos"
           : "sin_datos",
     exclusionsCount: exclusions.length,
+    possibleWithdrawalsCount: possibleWithdrawals.length,
+    possibleWithdrawals: [],
     groups: [],
     details: [],
     courses: [],
@@ -740,6 +899,7 @@ export async function dashboard(
       details,
       courses,
       exclusions,
+      possibleWithdrawals,
       next: null,
     });
   // Revalidar la membresía al entregar/exportar una consulta larga.
@@ -761,6 +921,12 @@ export async function dashboard(
       snap.id,
     ],
     ["Filtros", canonical(f), "Vista", input.view],
+    [
+      "Avance explicito",
+      cut.progress ? canonical(cut.progress) : "Politica historica",
+      "Fecha de referencia academica",
+      cut.academicDate ?? cut.date,
+    ],
     [
       "N",
       "G",
@@ -845,7 +1011,7 @@ export async function dashboard(
       "Version",
       "Matricula",
       "Carrera",
-      "Grupo base",
+      "Grupo principal de seguimiento",
       "Modalidad",
       "Turno",
       "Especial",
@@ -855,6 +1021,13 @@ export async function dashboard(
       "Inscripciones",
       "Fuentes",
       "Incidencias",
+      "Version de celda",
+      "Encabezado original de actividad",
+      "Relacion matricula curso ciclo",
+      "Grupo de imparticion",
+      "Correspondencia inscripcion",
+      "Unidades previstas",
+      "Unidades conservadas para despues",
     ],
     ...details.flatMap((r) =>
       r.values.map((v) => [
@@ -873,6 +1046,13 @@ export async function dashboard(
         r.enrollmentIds.join(" | "),
         canonical(r.sourceVersions),
         r.issues.join(" | "),
+        v.sourceVersion ?? r.versionId,
+        v.label ?? v.activityId,
+        r.relationshipId ?? "",
+        "no determinado",
+        "no determinada",
+        r.expectedUnits?.join(" | ") ?? "",
+        r.deferredUnits?.join(" | ") ?? "",
       ]),
     ),
     [
@@ -890,6 +1070,30 @@ export async function dashboard(
       e.courseId,
       e.reason,
       e.provenance,
+    ]),
+    [
+      "Posibles bajas",
+      "Alumnos únicos",
+      possibleWithdrawals.length,
+      "Lista informativa: fuera de indicadores",
+    ],
+    [
+      "Matrícula normalizada",
+      "Matrículas originales",
+      "Nombres originales",
+      "Estado",
+      "Asignaturas",
+      "Procedencia",
+      "Observaciones",
+    ],
+    ...possibleWithdrawals.map((p) => [
+      p.identity,
+      p.originals.join(" | "),
+      p.names.join(" | "),
+      p.status,
+      p.courses.map((c) => `${c.id}: ${c.name}`).join(" | "),
+      p.provenance.join(" | "),
+      p.observations.join(" | "),
     ]),
   ];
   const csv = rows.map((r) => r.map(csvCell).join(",")).join("\r\n");

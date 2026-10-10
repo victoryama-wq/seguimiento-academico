@@ -312,3 +312,320 @@ No se envían recordatorios, mensajes ni comunicaciones a responsables.
   (propiedad omitida) son estados distintos. Páginas/CSV conservan el nulo o ID
   observado hasta actualización explícita. No se alteran versiones cerradas,
   fórmulas, reglas académicas ni pendientes de validación privada y nube.
+
+## Etapa 06 — decisiones técnicas y aceptaciones pendientes
+
+- Se conserva la arquitectura y los contratos existentes. El piloto usa las APIs
+  callable y el worker real de emuladores, con cinco membresías de coordinador,
+  50 personas sintéticas y dos cortes. Veinte archivos por lote como máximo;
+  no se elevan límites de carga, filas, celdas, exportación ni recursos Functions.
+- Cuello de botella observado: panel institucional de 230 cursos con 17,7–19,6 s
+  y cierres de 17,4–17,7 s en la base. `captureMetrics` releía trabajos ya consultados
+  y esperaba tres lecturas por curso. Ahora reutiliza esa consulta transaccional,
+  indexa trabajos por curso y agrupa punteros/selecciones en bloques de 400 refs.
+  Conserva la misma transacción, el control de membresía vigente y el CAS del cierre;
+  no añade caché global ni cambia denominadores. La repetición y las regresiones
+  de concurrencia son condición de validación; no se promete latencia de nube.
+- CSV/XLSX/ODS se generan determinísticamente; un docente no entra a denominadores.
+  Las cinco actividades son cero, número, guion, vacío e inválido. No se calcula
+  rendimiento con el número de cursos sin declarar densidad y bytes.
+- Telemetría optativa `PILOT_METRICS=1` funciona solo en demo completo; registra
+  operación, tiempo y memoria antes/después, nunca argumentos, respuestas,
+  identidades, tokens ni nombres de archivo. RSS muestreada no es pico continuo.
+  Emuladores no miden operaciones facturadas de nube ni su capacidad productiva.
+- La prueba de interrupción inyecta estado abandonado y fila parcial mediante SDK
+  privilegiado del fixture demo. Después ejecuta reintento y publicación reales.
+  Se distingue de matar procesos del SO o ensayar una caída de servicio en nube.
+- Conciliación privada: solo lectura con parsers aprobados, comparación de hashes
+  antes/después y reporte local ignorado. Coincidencia de identidad no significa
+  afiliación base resuelta; se conservan las inscripciones múltiples. Las columnas
+  candidatas no se convierten en actividades seleccionadas de un corte.
+- Se prepara configuración separada de staging, sin proyecto por defecto ni
+  credenciales. El usuario confirma que aún se creará Firebase. Activación explícita
+  de runtime/bucket/región, IAM, bootstrap y validación real quedan pendientes del
+  destino; no se debilitan guardias demo para simular una publicación.
+- Retención y presupuestos son propuestas documentadas; no TTL, purga, lifecycle,
+  minInstances reservado ni backup remoto activado. Restauración de nube y RPO/RTO
+  todavía no están probados. Las decisiones académicas no se sustituyen por estas
+  decisiones técnicas.
+
+## Integración de decisiones aprobadas — 7 de octubre de 2026
+
+La nueva solicitud autoriza implementar las decisiones vigentes y el flujo de
+correcciones dentro del PR #5. Sustituye el alcance anterior de solo preparar
+matrices; los datos identificables y las resoluciones individuales siguen privados.
+
+- Regla académica aprobada: perfil `approved-2026-10`, catálogo oficial y plan
+  conservado, normalización de grupos y prioridad individual explícita. El calendario
+  se configura por ciclo. Las resoluciones posteriores delimitan o sustituyen las
+  anteriores; DEC-30 no se convierte en una prioridad global de fecha sobre CA.
+- Decisión técnica: paquete administrativo completo, JSON validado, con originales,
+  huellas por contenido+ocurrencia, catálogo, configuración, aprobaciones y revisiones.
+  El adaptador local evita recapturar las resoluciones. Las membresías siguen siendo
+  asignaciones explícitas en servidor; los responsables del catálogo no son cuentas.
+- Decisión técnica: correcciones como propuestas inmutables con referencia al original,
+  actor real, motivo, fecha y auditoría. Los cortes abiertos sin resultados pueden
+  adoptar fuentes nuevas mediante comparación de la versión esperada. Los demás
+  requieren una revisión atribuible. La revalidación conserva bytes y autoría de
+  resoluciones anteriores y publica únicamente contra las fuentes revisadas.
+- Regla académica aprobada: cargas acumulativas y flexibles; conservar filas/columnas
+  ausentes, separar todos los estados, adicionales computables solo con calificación
+  numérica. La selección de actividades sigue siendo explícita por publicación.
+  Un corte puede arrastrar una fotografía cerrada del mismo ciclo (`carryCutId`).
+- Regla académica pendiente: calendario específico de Virtual; horario sabatino
+  matutino confirmado, sin convertir otra modalidad por su código de grupo.
+- Conciliación anterior a DEC-35/36 (sustituida por la actualización inferior):
+  2.873 inscripciones, 2.665 personas, 2.661 principales,
+  cuatro personas excluidas, 73 revisiones resueltas y cero diferencias de afiliación.
+  Se detectaron dos observaciones adicionales de fecha, fuera de esas 73 revisiones.
+  El usuario indicó conservarlas pendientes: bloquean la publicación del paquete
+  real. No modificar sus originales ni repetir la solicitud de decisiones ya aprobadas.
+- Se mantienen los pendientes de piloto institucional, selección de actividades reales,
+  correspondencia curso/inscripción, nube, dependencias y bundle. No se modifican
+  protecciones, permisos de infraestructura ni guardias de emuladores.
+
+Contrato, procedimiento, cálculos y agregados en
+[integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
+
+## Actualización institucional DEC-35/36 y revisiones antiguas (2026-10-07)
+
+- Regla académica aprobada: la matriz actualizada sustituye la instrucción de dejar
+  pendientes dos fechas. Se importan ambos registros de cada par base/especial y
+  la elección de principal, conservando fechas y grupos originales. La aceptación
+  explícita de la fecha pertenece a la inscripción identificada por su huella y
+  al ciclo del paquete; no es una nueva fecha de calendario ni una excepción global.
+  Fechas inválidas, nuevas inscripciones y otros ciclos conservan sus validaciones.
+- Decisión técnica: `originalDateApproved` exige una clasificación base/especial y
+  no puede combinarse con una fecha efectiva distinta. El adaptador solo la importa
+  cuando la matriz confirma la clasificación individual y la aceptación del original.
+- Decisión técnica: revisar una versión publicada sustituida o un borrador cuya base
+  ya cambió falla antes de crear la propuesta. La transacción comprueba la fuente
+  vigente, conserva la versión esperada para publicar y admite reintentos idénticos.
+  No fusionar automáticamente dos revisiones concurrentes: cargar la ganadora y
+  revisar explícitamente la siguiente decisión, preservando las anteriores.
+- Conciliación privada actual: 75 revisiones resueltas, 2.661 principales, cuatro
+  personas excluidas y cero pendientes/diferencias contra la matriz. El cambio de
+  principal solicitado y la conservación de las 2.873 inscripciones originales se
+  comprueban privadamente. Siguen pendientes actividades, asignatura/inscripción,
+  calendario Virtual, piloto institucional y nube; no se publicaron datos reales.
+
+## Integración de reportes por afiliación principal (2026-10-07)
+
+Esta autorización sustituye los pendientes anteriores de correspondencia
+curso/inscripción, calendario Virtual y reconocimiento de actividades. Conserva
+íntegras DEC-01 a DEC-36 y las decisiones individuales. No modifica fotografías
+de cortes anteriores ni concede permisos a responsables del catálogo.
+
+- Regla aprobada: la matrícula enlaza cada fila con la principal conciliada,
+  incluso principal C.A. El grupo principal es de seguimiento; el grupo de
+  impartición y la inscripción específica permanecen no determinados, sin bloqueo.
+  Matrícula desconocida, principal pendiente, ciclo incompatible y curso ambiguo
+  conservan sus validaciones. No se enlazan personas por nombre.
+- Regla aprobada: Escolarizado acumula bloques 1–2, 3–5 y 6–7; Ejecutivo y Virtual
+  acumulan una unidad por semana vencida, hasta siete, como modalidades distintas.
+  La configuración se versiona con el paquete del ciclo y las fuentes del corte.
+  Cargas flexibles conservan datos aún fuera de las unidades previstas.
+- Aclaración institucional: sesiones numeradas corresponden a sus unidades;
+  cierre/final corresponde a unidad 7. Actividades sin unidad reconocible son
+  adicionales, computables con nota numérica, incluido cero. Totales y subtotales
+  no son actividades; guion, vacío, inválido y columna ausente se distinguen.
+- Decisión técnica: `principal-modality-v1` incluye `firstWeekEnd` civil explícito.
+  Los ejemplos usan 2026-09-06; la fecha debe revisarse al configurar cada ciclo.
+  No se deduce de las fechas individuales de inscripción ni se altera el calendario
+  de clasificación de DEC-35/36. Escolarizado usa `schoolCut` explícito (1–3) en
+  la fotografía del corte; su bloque no se deduce de semanas ni cambia al editar
+  la fecha. Un lote de calendario escolarizado asigna los ordinales en orden; un
+  lote semanal requiere indicar el bloque escolarizado que lo acompaña.
+- Decisión técnica: publicar bajo esta política conserva una selección versionada
+  de los IDs conocidos, actor y selección anterior en la misma transacción.
+  El panel intersecta esa selección con la modalidad y fecha del alumno. La selección
+  administrativa explícita sigue disponible y requiere revisión para cada versión.
+- Decisión técnica: identidad operativa estable por matrícula normalizada, instancia
+  interna y ciclo. El número externo del archivo no se presume ID interno Moodle.
+  Prefijos de muestra etiquetados se separan; dos números sin etiqueta se rechazan
+  para revisión. Nombre original, hash y decisiones administrativas se conservan.
+- Decisión técnica: IDs de actividad derivados del encabezado exacto, estables ante
+  reordenación. Renombrar no crea equivalencia automática; cambiar un mapeo previo
+  exige conservar explícitamente sus IDs. Datos ausentes se arrastran con procedencia;
+  una celda vacía presente sí actualiza el estado. Reintentos no duplican relaciones.
+
+Pruebas, cálculos y limitaciones: [integración de reportes](integracion-reportes.md).
+
+## Continuación aprobada 2026-10-08: avance explícito del corte
+
+Para los nuevos cortes, la selección explícita sustituye la dependencia de semanas
+vencidas y fechas operativas descrita en la decisión anterior. Escolarizado elige
+1/2/3 (U1–2/U1–5/U1–7); Ejecutivo y Virtual eligen independientemente U1–7.
+Cada estudiante utiliza su modalidad principal conciliada. Los archivos y sus
+reintentos no cambian el avance. Unidades posteriores se guardan fuera del cálculo;
+adicionales numéricas, incluido cero, conservan su regla aprobada.
+
+Decisión técnica: configuración `explicit-progress-v1` por corte, validada en API,
+historial inmutable con actor, hora del servidor, motivo y predecesor; CAS al editar
+y comprobación de versión al publicar. Fecha operativa editable separada de la
+referencia académica inicial. Los cortes anteriores conservan su política y sus
+cálculos; ninguna migración automática. Cierre, paginación y exportación congelan
+también la configuración de avance. La revisión acumulativa muestra antes/después
+y advierte numéricos reemplazados por vacío/guion, limitada a carreras autorizadas.
+No cambia DEC-01–36, sus originales ni la conciliación aprobada.
+
+Contrato, ejemplos manuales y evidencia: [avance explícito](avance-explicito.md).
+
+## Fase 2: preparación de nube (2026-10-08)
+
+Decisión técnica: staging necesita un destino compartido explícito, proyecto de
+ejecución coincidente, bucket/Hosting/región revisados y SHA idéntico entre web y
+Functions. `null` bloquea nube; modo demo no hace fallback. Los emuladores y sus
+credenciales aisladas siguen siendo el entorno de CI. No se asume ningún proyecto
+listado como destino, ni se crean recursos facturables. La aceptación del usuario
+y las mediciones cloud se registran separadas de pruebas locales.
+
+Decisión técnica: cliente utiliza únicamente Auth y Functions; Firestore y Storage
+se acceden por backend autorizado. Se difiere el espacio de trabajo y se conserva
+un estado de recuperación ante fallo de descarga. Corrección gRPC dirigida con
+override y lockfile, sin actualizar dependencias masivamente. No cambia ninguna
+regla académica, DEC-01–36, afiliación principal, exclusión ni corte histórico.
+
+Evidencia, riesgos restantes y procedimiento: [fase 2](validacion-nube-fase-2.md).
+
+### Destino de pruebas confirmado
+
+El propietario aprobó `indicadores-academia`, Blaze y región `us-central1`.
+Hosting fija el sitio del mismo ID; Firestore `(default)`, Auth, bucket
+`indicadores-academia.firebasestorage.app` y Functions permanecen en ese proyecto.
+Cuenta `seguimiento-runtime` sin claves: `roles/datastore.user` y
+`roles/firebaseauth.viewer` en el proyecto; `roles/storage.objectCreator` y
+`roles/storage.objectViewer` solo en el bucket. Alcance expresamente autorizado;
+sin Owner/Editor ni permiso para borrar objetos. Firestore tiene protección contra
+eliminación; el bucket impide acceso público por IAM. Las Rules siguen vigentes.
+No se eliminan fuentes ni se activa una política de retención destructiva.
+
+Validación cloud separada: `CONFIRM_STAGING_PROJECT=indicadores-academia` y
+`node scripts/validate-staging.mjs smoke` (después `45` y `230`). Requiere árbol
+limpio, backend del mismo SHA, app y cuentas de prueba en `private/`, más el
+manifest generado por `npm run prepare:cloud-fixtures`. No usa seed/reset demo,
+SDK administrativo ni claves. Cada ejecución crea cortes nuevos identificables,
+conserva los anteriores y registra resultados/tiempos privados. Los tiempos y
+lecturas del cliente no sustituyen métricas facturadas ni aceptación del usuario.
+
+### Ejecución de nube y latencia observada (2026-10-08)
+
+El propietario autorizó a la cuenta dedicada `roles/eventarc.eventReceiver` solo
+en `indicadores-academia` y `roles/run.invoker` solo en `importworker` de
+`us-central1`. Identidad y destino verificados y registrados; permisos anteriores
+preservados, sin claves ni acceso público al trabajador.
+
+La medición de 45 cursos mostró panel institucional p50 3.516 ms (29 respuestas)
+con lecturas secuenciales. Se preparan hasta cuatro cursos en paralelo por petición,
+consumiendo resultados en orden, sin cache global ni lecturas de carreras ajenas.
+Se mantiene la revalidación final de membresía y todos los límites/fórmulas.
+La repetición medida, permisos y recuperación se documentan en
+[ejecución cloud](validacion-nube-ejecucion.md), separados de aceptación del usuario.
+La recuperación inyecta un lease vencido con auditoría solo en un trabajo sintético
+nuevo no publicado; no demuestra caída de contenedor ni restauración de respaldo.
+
+La evidencia añadida después del despliegue identifica por separado SHA de la
+aplicación y revisión del verificador. `STAGING_RELEASE_SHA` admite un ancestro
+solo con árbol limpio y diferencias de documentación, pruebas o verificadores
+cloud enumerados; rechaza cambios de build, aplicación, configuración y
+dependencias. La comprobación del backend permanece exacta. No se redespliega
+la aplicación solo para atribuir al informe un SHA nuevo.
+
+### Recorrido permanente de originales (continuación técnica, 2026-10-09)
+
+La administración selecciona padrón, catálogo y reportes originales con revisión
+visual de columnas; no necesita JSON ni identificadores internos en el recorrido
+habitual. Se reutilizan el adaptador de matriz aprobada, los parsers, el motor de
+afiliación y los trabajos persistentes. La matriz se incorpora expresamente una vez,
+verificando sus fuentes; no se suben decisiones privadas por código ni se incluyen
+en el build. DEC-01–36 no cambian.
+
+Una propuesta administrativa fija la versión previa y los hashes/mapeos de los
+originales, conserva el paquete anterior y se publica con comparación transaccional
+de versión. Una matriz antigua requiere resolver conflictos con decisiones vigentes.
+Se distinguen correspondencias generales de programa/plan y excepciones individuales;
+los cambios de original requieren continuidad explícita y motivo. Se conservan las
+fuentes y revisiones anteriores incluso cuando una decisión deja de ser aplicable.
+
+La identificación inequívoca por número/nombre/ciclo registra la instancia en servidor;
+los ámbitos se obtienen del padrón conciliado, sin conceder acceso por el responsable
+del catálogo. Cargas parciales nunca reducen los ámbitos previos del curso compartido.
+La revisión de columnas publicada se conserva por curso/ciclo y encabezado exacto,
+con protección contra revisiones simultáneas. Los cortes mantienen sus fuentes y
+avance explícito; no se infiere avance a partir del archivo. Todos los endpoints de
+preparación institucional comprueban administración en servidor y guardan originales
+fuera de Hosting. Las operaciones anteriores siguen disponibles como diagnóstico.
+
+Guía: [carga institucional](carga-institucional.md). La aceptación del propietario
+y la publicación productiva siguen pendientes; la validación técnica usa sintéticos.
+
+### Reportes anchos y padrón del corte (corrección técnica, 2026-10-09)
+
+La previsualización mantiene ancho legible por columna y desplazamiento horizontal
+local al contenedor. Los límites de bytes, filas físicas, columnas y celdas se
+comprueban antes de omitir filas totalmente vacías del reporte Moodle. Fórmulas,
+errores, cero y valores booleanos no se consideran filas vacías; una nota sin
+matrícula mantiene su incidencia. Se conservan el original privado y los números
+de fila, sin convertir ausencia de contenido en una inscripción.
+
+Administración puede inspeccionar el nombre y conteos del padrón fijado en un corte;
+el servidor deniega esta consulta institucional a coordinadores. Si las fuentes
+vigentes cambiaron, se informa sin recalcular el corte. Un cruce vacío explica qué
+comprobar y cómo preparar otro corte después de confirmar las fuentes. No se
+modifican decisiones académicas, cortes existentes ni datos del piloto.
+
+### Padrón activo y posibles bajas (decisión institucional, 2026-10-09)
+
+El padrón confirmado y fijado define los activos del ciclo. Una matrícula válida
+ausente queda fuera de indicadores, sin bloquear los registros válidos, con motivo
+«No pertenece al padrón activo del ciclo». Identidades inválidas y afiliaciones
+pendientes mantienen revisión. Una fuente faltante, fallida o sin confirmar no
+autoriza exclusiones masivas. Esta decisión sustituye el bloqueo por matrícula
+desconocida para nuevas validaciones contra fuentes confirmadas; no reclasifica
+derivados históricos ni modifica cortes cerrados.
+
+La lista informativa **Posibles bajas** agrupa por matrícula, ciclo y corte,
+conserva nombres y cursos y distingue baja confirmada. Una decisión individual de
+baja puede existir sin inscripción; se versiona y audita por separado de las
+correspondencias generales y se conserva al actualizar las fuentes. No cambia
+DEC-01–36. Los datos de la decisión individual del propietario permanecen privados.
+
+Decisión técnica: filtrar atribuciones verificadas antes de contar/agrupar/exportar.
+Ni el cargador ni compartir una asignatura autorizan conocer a personas sin
+atribución. Administración conserva esos casos; los coordinadores solo ven los
+atribuibles a sus carreras vigentes. Originales, fuentes fijadas, CAS y fotografías
+cerradas se conservan. Ver [regla, cálculos y recuperación](padron-activo-y-posibles-bajas.md).
+
+### Recorrido definitivo de coordinaciones (decisión institucional y técnica, 2026-10-10)
+
+El coordinador selecciona un corte disponible, carga originales, revisa y confirma
+sus propuestas y consulta resultados. Administración conserva fuentes, decisiones,
+preparación de cortes y avance. Se sustituye la restricción técnica que reservaba
+la preparación de todo reporte y el alta inequívoca de cursos a Administración;
+no se delegan sus decisiones institucionales ni la asignación de permisos.
+
+El servidor fija las carreras de cada trabajo con la membresía vigente. Filtra los
+originales mostrados y procesa solo registros atribuibles; los no atribuibles y
+los de otros ámbitos quedan conservados en el original para Administración. Una
+identidad inválida mantiene revisión bloqueante. La baja o ausencia del padrón
+confirmado conserva la regla aprobada; no se transforma un padrón ausente en bajas.
+
+Cada versión compuesta conserva intactas las filas y exclusiones previamente
+publicadas por otros ámbitos. El coordinador no puede añadir ni sustituir sus
+calificaciones. El cambio del puntero sigue siendo atómico y rechaza propuestas
+obsoletas: dos ámbitos concurrentes deben revalidar después de otra publicación.
+Reintentos publicados no vuelven a aplicar valores antiguos. Las versiones
+históricas sin ámbito no se alteran; un coordinador debe generar una revalidación
+con su ámbito antes de publicar. La revisión incluye una huella de versión y
+membresía, y la interfaz limpia la confirmación cuando cambia la propuesta.
+
+La elección de columna de identidad confirmada se reutiliza por curso, ciclo y
+ámbito; solo se reutiliza un encabezado exacto único o la misma estructura completa
+si está repetido. Las clasificaciones institucionales de actividades confirmadas
+por Administración siguen separadas. Las ambigüedades de nombre/actividad quedan
+en una cola privada administrativa, sin conceder acceso por cargar el archivo.
+
+La selección del corte se conserva en la sesión y enlaza la publicación al panel.
+No se crean cuentas ni permisos para personas reales en las pruebas automáticas.
+Guía: [flujo de coordinadores](flujo-coordinadores.md). DEC-01–36, principal C.A.,
+modalidades, avance explícito, cortes cerrados y conciliación permanecen vigentes.

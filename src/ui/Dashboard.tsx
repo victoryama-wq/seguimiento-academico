@@ -1,3 +1,5 @@
+import { cutLabel, rememberCut, selectedCut } from "./cut-selection";
+import { Progress } from "./Progress";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import {
@@ -17,7 +19,7 @@ const labels = {
   institucion: "Institución / alcance autorizado",
   coordinacion: "Coordinación",
   carrera: "Carrera y plan",
-  grupo: "Grupo base",
+  grupo: "Grupo principal de seguimiento",
   modalidad: "Modalidad",
   turno: "Turno",
   asignatura: "Asignatura",
@@ -29,7 +31,7 @@ const dimensions = {
   coordination: "Coordinación",
   careerId: "Carrera",
   plan: "Plan",
-  group: "Grupo base",
+  group: "Grupo principal de seguimiento",
   modality: "Modalidad",
   shift: "Turno",
   teacher: "Docente conocido",
@@ -40,7 +42,7 @@ const percent = (v: number | null) =>
     : `${v.toLocaleString("es-MX", { maximumFractionDigits: 2 })} %`;
 
 export default function Dashboard({ overview }: { overview: Overview }) {
-  const [cutId, setCutId] = useState(overview.cuts[0]?.id ?? "");
+  const [cutId, setCutId] = useState(() => selectedCut(overview));
   const [filters, setFilters] = useState<MetricRequest["filters"]>({});
   const [view, setView] = useState<MetricRequest["view"]>("institucion");
   const [section, setSection] = useState<MetricRequest["section"]>("groups");
@@ -192,6 +194,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
               value={cutId}
               onChange={(e) => {
                 setCutId(e.target.value);
+                rememberCut(e.target.value);
                 setFilters({});
                 setSnapshotId(undefined);
                 setData(null);
@@ -200,7 +203,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
             >
               {overview.cuts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.cycleId} / {c.id} · {c.date}
+                  {cutLabel(c)}
                 </option>
               ))}
             </select>
@@ -312,6 +315,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                 ["details", "Detalle de estudiantes"],
                 ["courses", "Cursos y actividades"],
                 ["exclusions", "Exclusiones e incidencias"],
+                ["possibleWithdrawals", "Posibles bajas"],
               ] as const
             ).map(([s, label]) => (
               <button
@@ -350,6 +354,16 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                 Fuente: versiones publicadas. Las páginas y exportación
                 conservan la fotografía consultada hasta actualizar versiones.
               </p>
+              {data.progress && (
+                <Progress
+                  cutId={data.cutId}
+                  progress={data.progress}
+                  editable={false}
+                  done={async () => {
+                    reload();
+                  }}
+                />
+              )}
               <p className="metric-context">
                 Filtros aplicados: {JSON.stringify(filters)} · Fotografía{" "}
                 {data.snapshotId}
@@ -478,18 +492,73 @@ export default function Dashboard({ overview }: { overview: Overview }) {
                           <td>
                             {r.group} · {r.modality} · {r.shift}{" "}
                             {r.special && "· Con especial separado"}
+                            <small>
+                              Grupo principal de seguimiento. Grupo de
+                              impartición: no determinado.
+                            </small>
+                            {r.deferredUnits && r.deferredUnits.length > 0 && (
+                              <small>
+                                Unidades conservadas para después:{" "}
+                                {r.deferredUnits.join(", ")}. Fuera del cálculo
+                                actual.
+                              </small>
+                            )}
+                            {r.expectedUnits && (
+                              <small>
+                                Unidades previstas:{" "}
+                                {r.expectedUnits.join(", ") ||
+                                  "ninguna por semana vencida"}
+                              </small>
+                            )}
                           </td>
                           <td>
                             {r.values
                               .map(
                                 (v) =>
-                                  `${v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
+                                  `${v.label ?? v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
                               )
                               .join("; ")}
                           </td>
                           <td>
                             {r.attribution}; {r.enrollmentIds.join("; ")};{" "}
                             {r.issues.join("; ")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {section === "possibleWithdrawals" && (
+                  <table>
+                    <caption>
+                      Posibles bajas: {data.possibleWithdrawalsCount} alumnos
+                      únicos. Lista informativa fuera de indicadores; solo casos
+                      del alcance autorizado.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th>Matrícula original</th>
+                        <th>Nombre original</th>
+                        <th>Asignaturas</th>
+                        <th>Estado</th>
+                        <th>Observaciones y procedencia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.possibleWithdrawals.map((p) => (
+                        <tr key={p.identity}>
+                          <td>{p.originals.join(" / ")}</td>
+                          <td>
+                            {p.names.join(" / ") || "Sin nombre en el reporte"}
+                          </td>
+                          <td>{p.courses.map((c) => c.name).join("; ")}</td>
+                          <td>{p.status}</td>
+                          <td>
+                            {p.observations.join("; ")}
+                            <details>
+                              <summary>Procedencia</summary>
+                              {p.provenance.join("; ")}
+                            </details>
                           </td>
                         </tr>
                       ))}
@@ -642,7 +711,7 @@ function Selection({
               value={a}
               defaultChecked={course.activities.includes(a)}
             />
-            {a}
+            {course.activityLabels?.[a] ?? a}
           </label>
         ))}
       </fieldset>

@@ -15,7 +15,7 @@ Usar npm con un lockfile raíz; si se usa monorepo, npm workspaces. Node 22 y Ja
 | `test:emulators` | Inicia emuladores Auth, Firestore, Storage y Functions con `firebase emulators:exec --project demo-seguimiento-ci`; ejecuta reglas y pruebas de integración de servidor; termina emuladores al acabar. |
 | `test:e2e` | Inicia un entorno de emuladores limpio con el mismo proyecto demo y ejecuta Playwright Chromium; su configuración inicia el servidor web local y espera readiness, sin sleeps fijos. |
 
-Usar puertos declarados en `firebase.json` y conectar explícitamente todos los SDK a sus emuladores. Los dos scripts que los inician corren secuencialmente en CI. Sembrar identidades y fixtures sintéticos de manera determinista; limpiar entre pruebas. Nunca hacer fallback a recursos reales cuando falta un emulador. Si el proyecto no empieza con `demo-` o la configuración de emuladores está incompleta, fallar antes de escribir.
+Usar puertos declarados en `firebase.json` y conectar explícitamente todos los SDK a sus emuladores. Los scripts que los inician corren secuencialmente en CI. Sembrar identidades y fixtures sintéticos de manera determinista; limpiar entre pruebas. Nunca hacer fallback a recursos reales cuando falta un emulador. Si el proyecto no empieza con `demo-` o la configuración de emuladores está incompleta, fallar antes de escribir.
 
 En etapa 01 son suficientes pruebas reales del esquema inicial, denegación de acceso no autenticado y renderizado de la pantalla inicial. Las suites se amplían con cada etapa. No crear comandos `echo`, pruebas tautológicas, `--passWithNoTests`, suites omitidas ni `continue-on-error` para aparentar éxito.
 
@@ -60,3 +60,18 @@ No fusionar automáticamente. La ausencia de hallazgos no prueba que todo el sis
 | Interfaz | Carga parcial, incidencias, filtros, navegación con teclado, estados vacíos/errores y exportación que coincide con la pantalla. |
 
 Los permisos requieren tanto casos permitidos como denegados; una aplicación que deniega todo tampoco cumple. Generar identidades y expedientes ficticios para CI. Los expedientes reales no se adjuntan a screenshots o logs del PR.
+
+## Piloto de etapa 06
+
+Además de las seis verificaciones, `npm run test:pilot` ejecuta 45 y 230 cursos,
+dos cortes por escenario, cinco coordinaciones y formatos CSV/XLSX/ODS en
+emuladores nuevos. `PILOT_COURSES=45` o `230` permite repetir un caso local;
+CI ejecuta ambos sin esa variable. La suite tiene un presupuesto de 20 minutos
+por caso de capacidad; no altera los timeouts ni las suites existentes. El job
+de integración conserva su límite global de 25 minutos y `ci` exige ambos jobs.
+Las mediciones no son umbrales de tiempo para aprobar exactitud ni garantías de nube.
+
+`npm run verify:hosting` revisa inventario público después del build. No despliega.
+No ejecutar la conciliación privada en CI: su manifest e informe se guardan
+solamente en `private/`, ignorado por Git. El PR incluye evidencia sintética y
+resúmenes agregados revisados, nunca fuentes ni registros privados.

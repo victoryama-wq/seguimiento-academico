@@ -3,6 +3,10 @@ import { civilDateSchema } from "./schemas";
 import { courseFilenameResolutionSchema } from "./academic";
 import { historyOperations } from "./history-contract";
 import { metricOperations } from "./metrics-contract";
+import { packageDecisionSchema } from "./decision-package";
+import { progressInputSchema, progressSchema } from "./report-policy";
+import { intakeOperations } from "./intake-contract";
+import { cycleWithdrawalSchema } from "./possible-withdrawals";
 
 export const filenameResolutionSchema = courseFilenameResolutionSchema
   .omit({ approvedBy: true, version: true })
@@ -29,6 +33,7 @@ export const sourceKind = z.enum([
   "supplement",
   "withdrawals",
   "exceptions",
+  "academicPackage",
 ]);
 export const descriptorSchema = z.strictObject({
   name: z.string().min(1).max(180),
@@ -44,9 +49,30 @@ export const calendarInput = z.record(
   z.enum(["base", "especial", "practica", "excluida"]),
 );
 export const operationSchemas = {
+  ...intakeOperations,
   ...metricOperations,
   ...historyOperations,
   overview: z.strictObject({}),
+  configureProgress: z.strictObject({
+    cutId: keySchema,
+    expected: keySchema,
+    progress: progressInputSchema,
+    reason: label,
+  }),
+  reviseAcademicDecision: z.strictObject({
+    jobId: keySchema,
+    decision: packageDecisionSchema,
+  }),
+  reviseCycleWithdrawal: z.strictObject({
+    jobId: keySchema,
+    decision: cycleWithdrawalSchema,
+  }),
+  refreshCutSources: z.strictObject({
+    cutId: keySchema,
+    expectedSources: z.record(z.string(), z.string()),
+    reason: label,
+  }),
+  revalidate: z.strictObject({ jobId: keySchema }),
   assignMember: z.strictObject({ uid: keySchema, member: memberSchema }),
   createCycle: z.strictObject({ id: keySchema, dates: calendarInput }),
   createCourse: z.strictObject({
@@ -56,13 +82,21 @@ export const operationSchemas = {
     name: label,
     careers: z.array(keySchema).min(1).max(100),
   }),
-  createCut: z.strictObject({
-    cycleId: keySchema,
-    id: keySchema,
-    date: civilDateSchema,
-    parentId: keySchema.optional(),
-    reason: label.optional(),
-  }),
+  createCut: z
+    .strictObject({
+      cycleId: keySchema,
+      id: keySchema,
+      date: civilDateSchema.optional(),
+      progress: progressInputSchema.optional(),
+      schoolCut: z.number().int().min(1).max(3).optional(),
+      parentId: keySchema.optional(),
+      carryCutId: keySchema.optional(),
+      reason: label.optional(),
+    })
+    .refine(
+      (v) => !!v.progress || !!v.date,
+      "Indica el avance explícito o una fecha para la política histórica",
+    ),
   closeCut: z.strictObject({ cutId: keySchema }),
   createSource: z.strictObject({
     cycleId: keySchema,
@@ -105,8 +139,16 @@ export const operationSchemas = {
     jobId: keySchema,
     careerId: keySchema.optional(),
     cursor: keySchema.optional(),
+    observationOffset: z.number().int().min(0).max(20000).default(0),
   }),
-  publish: z.strictObject({ jobId: keySchema, replace: z.boolean() }),
+  publish: z.strictObject({
+    jobId: keySchema,
+    replace: z.boolean(),
+    reviewToken: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+  }),
   retry: z.strictObject({ jobId: keySchema }),
   original: z.strictObject({ jobId: keySchema }),
   results: z.strictObject({
@@ -135,6 +177,7 @@ export const jobStatus = z.enum([
   "published",
 ]);
 export const jobViewSchema = z.object({
+  name: z.string().optional(),
   id: keySchema,
   status: jobStatus,
   kind: z.string(),
@@ -145,13 +188,60 @@ export const jobViewSchema = z.object({
   replaces: z.string().nullable(),
 });
 export type JobView = z.infer<typeof jobViewSchema>;
+const reviewValue = z.object({
+  state: z.string(),
+  raw: z.unknown(),
+  sourceVersion: z.string().optional(),
+});
+export const reviewSummarySchema = z.object({
+  newActivities: z.array(z.string()),
+  added: z.number(),
+  changed: z.number(),
+  unchanged: z.number(),
+  preserved: z.number(),
+  numericCleared: z.number(),
+});
+export type ReviewSummary = z.infer<typeof reviewSummarySchema>;
 export const rowViewSchema = z.object({
   id: z.string(),
   identity: z.string(),
   careerId: z.string(),
   row: z.number(),
+  review: z
+    .array(
+      z.object({
+        activityId: z.string(),
+        label: z.string(),
+        before: reviewValue.nullable(),
+        after: reviewValue,
+        kind: z.enum(["added", "changed", "unchanged"]),
+        numericCleared: z.boolean(),
+      }),
+    )
+    .optional(),
+  relationship: z
+    .object({
+      id: z.string(),
+      cycleId: z.string(),
+      courseId: z.string(),
+      trackingEnrollmentId: z.string(),
+      trackingGroup: z.string(),
+      trackingModality: z.string(),
+      teachingEnrollmentId: z.null(),
+      teachingGroup: z.null(),
+      teachingAssignment: z.literal("no_determinada"),
+    })
+    .optional(),
   values: z.array(
-    z.object({ activityId: z.string(), state: z.string(), raw: z.unknown() }),
+    z.object({
+      activityId: z.string(),
+      label: z.string().optional(),
+      state: z.string(),
+      raw: z.unknown(),
+      additional: z.boolean().optional(),
+      unit: z.number().optional(),
+      sourceVersion: z.string().optional(),
+    }),
   ),
   issues: z.array(z.string()),
 });
@@ -161,10 +251,13 @@ export const overviewSchema = z.object({
   cycles: z.array(z.object({ id: z.string() })),
   cuts: z.array(
     z.object({
+      label: z.string().optional(),
       id: z.string(),
       cycleId: z.string(),
       status: z.string(),
       date: z.string(),
+      progress: progressSchema.optional(),
+      sources: z.record(z.string(), z.string()).optional(),
     }),
   ),
   courses: z.array(

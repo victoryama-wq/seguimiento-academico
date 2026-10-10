@@ -1,3 +1,5 @@
+import { cutLabel } from "./cut-selection";
+import { Progress } from "./Progress";
 import {
   lazy,
   Suspense,
@@ -7,8 +9,10 @@ import {
   useState,
   type FormEvent,
 } from "react";
+const CoordinatorIntake = lazy(() => import("./CoordinatorIntake"));
 const History = lazy(() => import("./History"));
 const Dashboard = lazy(() => import("./Dashboard"));
+const AdministrativeIntake = lazy(() => import("./AdministrativeIntake"));
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -16,6 +20,9 @@ import {
   type User,
 } from "firebase/auth";
 import { z } from "zod";
+import { courseFilename } from "../domain/academic";
+import { observationSchema } from "../domain/decision-package";
+import { Observations } from "./Observations";
 import { firebaseServices } from "../infrastructure/firebase";
 import {
   callAcademic,
@@ -28,6 +35,7 @@ import {
   jobViewSchema,
   overviewSchema,
   rowViewSchema,
+  reviewSummarySchema,
   type JobView,
   type Overview,
 } from "../domain/import-contract";
@@ -37,6 +45,13 @@ const jobsSchema = z.object({
   cursor: z.string().nullable().optional(),
 });
 const previewSchema = z.object({
+  inclusion: z
+    .object({ included: z.number().nullable(), excluded: z.number() })
+    .optional(),
+  review: reviewSummarySchema.nullable().optional(),
+  observations: z.array(observationSchema),
+  observationsCount: z.number(),
+  observationNext: z.number().nullable(),
   excluded: z.array(
     z.object({ identity: z.string(), row: z.number(), reason: z.string() }),
   ),
@@ -66,7 +81,13 @@ const states: Record<JobView["status"], string> = {
 const errorText = (e: unknown) =>
   e instanceof Error ? e.message : "No se pudo completar la operación.";
 
-export function AccessWorkspace({ section }: { section: string }) {
+export function AccessWorkspace({
+  section,
+  onResults,
+}: {
+  section: string;
+  onResults: () => void;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [error, setError] = useState("");
@@ -193,7 +214,7 @@ export function AccessWorkspace({ section }: { section: string }) {
               <ul>
                 {overview.cuts.map((c) => (
                   <li key={c.id}>
-                    {c.id} · {c.date} ·{" "}
+                    {cutLabel(c)} ·{" "}
                     {c.status === "closed" ? "Cerrado" : "Abierto"}
                   </li>
                 ))}
@@ -246,8 +267,24 @@ export function AccessWorkspace({ section }: { section: string }) {
                       { name: "cycleId", label: "Ciclo del corte" },
                       { name: "id", label: "Identificador del corte" },
                       {
+                        name: "schoolCut",
+                        label: "Corte Escolarizado (1: U1–2; 2: U1–5; 3: U1–7)",
+                        options: ["1", "2", "3"],
+                      },
+                      {
+                        name: "executiveUnit",
+                        label: "Unidad de avance Ejecutivo",
+                        options: ["1", "2", "3", "4", "5", "6", "7"],
+                      },
+                      {
+                        name: "virtualUnit",
+                        label: "Unidad de avance Virtual",
+                        options: ["1", "2", "3", "4", "5", "6", "7"],
+                      },
+                      {
                         name: "date",
-                        label: "Fecha civil del corte",
+                        label: "Fecha operativa opcional (no determina avance)",
+                        optional: true,
                         type: "date",
                       },
                       {
@@ -261,9 +298,21 @@ export function AccessWorkspace({ section }: { section: string }) {
                         optional: true,
                       },
                     ]}
-                    transform={(v) =>
-                      Object.fromEntries(Object.entries(v).filter(([, x]) => x))
-                    }
+                    transform={({
+                      schoolCut,
+                      executiveUnit,
+                      virtualUnit,
+                      ...v
+                    }) => ({
+                      ...Object.fromEntries(
+                        Object.entries(v).filter(([, x]) => x),
+                      ),
+                      progress: {
+                        schoolCut: Number(schoolCut),
+                        executiveUnit: Number(executiveUnit),
+                        virtualUnit: Number(virtualUnit),
+                      },
+                    })}
                     done={refresh}
                   />
                   <AdminForm
@@ -278,10 +327,34 @@ export function AccessWorkspace({ section }: { section: string }) {
           )}
           {section === "Historial y seguimiento" && (
             <Suspense fallback={<p role="status">Cargando historial…</p>}>
-              <History overview={overview} />
+              <History overview={overview} changed={refresh} />
             </Suspense>
           )}
-          {section === "Fuentes" && <Imports overview={overview} />}
+          {section === "Fuentes" &&
+            (overview.member.role === "admin" ? (
+              <>
+                <Suspense
+                  fallback={
+                    <p role="status">Cargando recorrido de archivos…</p>
+                  }
+                >
+                  <AdministrativeIntake overview={overview} changed={refresh} />
+                </Suspense>
+                <details className="admin-form">
+                  <summary>Herramientas avanzadas y diagnóstico</summary>
+                  <Imports overview={overview} />
+                </details>
+              </>
+            ) : (
+              <Suspense fallback={<p role="status">Cargando reportes…</p>}>
+                <CoordinatorIntake
+                  key={`${user.uid}:${JSON.stringify(overview.member)}`}
+                  overview={overview}
+                  changed={refresh}
+                  onResults={onResults}
+                />
+              </Suspense>
+            ))}
           {section === "Panel" && (
             <Suspense fallback={<p role="status">Cargando panel…</p>}>
               <Dashboard overview={overview} />
@@ -300,6 +373,7 @@ type Field = {
   area?: boolean;
   type?: string;
   optional?: boolean;
+  options?: string[];
 };
 function AdminForm({
   title,
@@ -340,7 +414,14 @@ function AdminForm({
         {fields.map((f) => (
           <label key={f.name}>
             {f.label}
-            {f.area ? (
+            {f.options ? (
+              <select name={f.name} required={!f.optional} defaultValue="">
+                <option value="">Selecciona</option>
+                {f.options.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            ) : f.area ? (
               <textarea
                 name={f.name}
                 defaultValue={f.value}
@@ -491,13 +572,14 @@ function Imports({ overview }: { overview: Overview }) {
       }
     }
   }
-  async function view(job: JobView, cursor?: string) {
+  async function view(job: JobView, cursor?: string, observationOffset = 0) {
     clearPreview();
     const request = previewRequest.current;
     const response = await callAcademic(
       "preview",
       {
         jobId: job.id,
+        observationOffset,
         ...(careerId ? { careerId } : {}),
         ...(cursor ? { cursor } : {}),
       },
@@ -523,6 +605,12 @@ function Imports({ overview }: { overview: Overview }) {
   return (
     <>
       <h3>Fuentes e importaciones</h3>
+      <p>
+        El reporte vincula matrícula, curso y ciclo. Carrera, grupo y modalidad
+        corresponden al principal de seguimiento; el grupo de impartición y la
+        inscripción específica de la materia no están determinados. No se
+        requiere elegirlos para cargar.
+      </p>
       <p>
         Hasta 20 archivos por lote, 8 MiB por archivo y 40 MiB en total. Tras
         confirmar el envío, el servidor continúa aunque cierres esta página.
@@ -562,10 +650,49 @@ function Imports({ overview }: { overview: Overview }) {
           }
         />
       </label>
+      {overview.cuts
+        .filter((c) => c.id === cutId && c.progress)
+        .map((c) => (
+          <Progress
+            key={c.id}
+            cutId={c.id}
+            progress={c.progress!}
+            editable={false}
+            done={refresh}
+          />
+        ))}
       {!cutId && overview.member.role === "admin" ? (
         <SourceUpload cycles={overview.cycles} done={refresh} />
       ) : (
         <>
+          {overview.member.role === "admin" && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const current = await callAcademic(
+                    "overview",
+                    {},
+                    overviewSchema,
+                  );
+                  const cut = current.cuts.find((c) => c.id === cutId);
+                  await callAcademic(
+                    "refreshCutSources",
+                    {
+                      cutId,
+                      expectedSources: cut?.sources ?? {},
+                      reason:
+                        "Aplicar fuente administrativa revisada antes de publicar reportes",
+                    },
+                    okSchema,
+                  );
+                  clearPreview();
+                })
+              }
+            >
+              Actualizar fuentes del corte abierto sin resultados
+            </button>
+          )}
           <label>
             Reportes Moodle
             <input
@@ -576,9 +703,20 @@ function Imports({ overview }: { overview: Overview }) {
                 setFiles(
                   Array.from(e.target.files ?? []).map((file) => ({
                     file,
-                    courseId: "",
-                    mapping:
-                      '{"identity":{"header":"Correo"},"columns":[{"selector":{"header":"Nota"},"kind":"activity","activityId":"actividad-1"}]}',
+                    courseId: (() => {
+                      try {
+                        const named = courseFilename(file.name);
+                        const matches = overview.courses.filter(
+                          (c) =>
+                            c.cycleId === named.cycle &&
+                            c.externalId === named.externalId,
+                        );
+                        return matches.length === 1 ? matches[0]!.id : "";
+                      } catch {
+                        return "";
+                      }
+                    })(),
+                    mapping: '{"profile":"moodle-institutional-v1"}',
                     progress: "Pendiente de envío",
                     filenameResolution: "",
                   })),
@@ -736,12 +874,49 @@ function Imports({ overview }: { overview: Overview }) {
               </li>
             ))}
           </ul>
-          <div className="table-scroll">
+          {preview.review && (
+            <section aria-label="Cambios de esta propuesta">
+              <p>
+                Actividades nuevas: {preview.review.newActivities.length}.
+                Valores nuevos: {preview.review.added}; modificados:{" "}
+                {preview.review.changed}; sin cambios:{" "}
+                {preview.review.unchanged}; ausentes conservados:{" "}
+                {preview.review.preserved}.
+              </p>
+              {preview.review.numericCleared > 0 && (
+                <p role="alert">
+                  Atención: {preview.review.numericCleared} calificaciones
+                  numéricas serán sustituidas por vacío o guion. Revisa el valor
+                  anterior y su procedencia antes de confirmar.
+                </p>
+              )}
+              <p>
+                El resumen corresponde al alcance autorizado completo; el
+                detalle se pagina. Una columna ausente conserva su información.
+                Las unidades posteriores se guardan para después y no cambian el
+                avance.
+              </p>
+            </section>
+          )}
+          <div
+            className="table-scroll report-results"
+            role="region"
+            aria-label="Resultados del alcance autorizado"
+            tabIndex={0}
+          >
             <table>
+              <colgroup>
+                <col style={{ width: 210 }} />
+                <col style={{ width: 180 }} />
+                <col style={{ width: 280 }} />
+                <col style={{ width: 450 }} />
+                <col style={{ width: 280 }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Matrícula</th>
                   <th>Carrera</th>
+                  <th>Principal de seguimiento</th>
                   <th>Calificaciones originales</th>
                   <th>Incidencias</th>
                 </tr>
@@ -752,19 +927,89 @@ function Imports({ overview }: { overview: Overview }) {
                     <td>{r.identity}</td>
                     <td>{r.careerId}</td>
                     <td>
+                      {r.relationship?.trackingGroup ??
+                        "Consultar afiliación del corte"}{" "}
+                      · {r.relationship?.trackingModality ?? ""}. Impartición no
+                      determinada.
+                    </td>
+                    <td>
                       {r.values
                         .map(
                           (v) =>
-                            `${v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
+                            `${v.label ?? v.activityId}: ${String(v.raw ?? "")} (${v.state})`,
                         )
                         .join("; ")}
                     </td>
-                    <td>{r.issues.join(", ")}</td>
+                    <td>
+                      {r.issues.length > 0 && (
+                        <details>
+                          <summary>Diagnóstico de las incidencias</summary>
+                          {r.issues.join(", ")}
+                        </details>
+                      )}
+                      {r.review
+                        ?.filter((v) => v.kind === "changed")
+                        .map((v) => (
+                          <p key={v.activityId}>
+                            {v.numericCleared ? "Atención: " : "Cambio: "}
+                            {v.label}: {String(v.before?.raw ?? "")} (
+                            {v.before?.state}, versión{" "}
+                            {v.before?.sourceVersion ?? "anterior"}) →{" "}
+                            {String(v.after.raw ?? "")} ({v.after.state},
+                            versión {v.after.sourceVersion}).
+                          </p>
+                        ))}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {preview.inclusion && (
+            <p>
+              Incluidos:{" "}
+              {preview.inclusion.included ?? "Consulta las filas de tu carrera"}
+              . Excluidos de este alcance: {preview.inclusion.excluded}. Los
+              excluidos no aportan al denominador.
+            </p>
+          )}
+          <Observations
+            key={preview.job.id}
+            rows={preview.observations}
+            admin={overview.member.role === "admin"}
+            done={async () => {
+              await refresh();
+            }}
+          />
+          <p>{preview.observationsCount} observaciones autorizadas.</p>
+          {preview.observationNext !== null && (
+            <button
+              onClick={() =>
+                void run(() =>
+                  view(preview.job, undefined, preview.observationNext!),
+                )
+              }
+            >
+              Siguientes observaciones
+            </button>
+          )}
+          {preview.job.kind === "report" && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const job = await callAcademic(
+                    "revalidate",
+                    { jobId: preview.job.id },
+                    jobViewSchema,
+                  );
+                  await view(job);
+                })
+              }
+            >
+              Volver a validar el original
+            </button>
+          )}
           {preview.excluded.length > 0 && (
             <details>
               <summary>Exclusiones de este alcance (hasta 100)</summary>
@@ -930,6 +1175,9 @@ function SourceUpload({
           <option value="supplement">Suplemento</option>
           <option value="withdrawals">Bajas (JSON)</option>
           <option value="exceptions">Excepciones (JSON)</option>
+          <option value="academicPackage">
+            Catálogo, calendario y decisiones aprobadas (JSON)
+          </option>
         </select>
       </label>
       <label>

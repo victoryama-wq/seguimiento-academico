@@ -1,0 +1,79 @@
+{
+  "project": "indicadores-academia",
+  "sha": "0670d3dbbc00ff5f047fb5edfa9e32bd286029ec",
+  "scenario": "45",
+  "startedAt": "2026-10-08T23:44:13.660Z",
+  "completedAt": "2026-10-08T23:47:43.774Z",
+  "status": "failure",
+  "error": "fetch failed",
+  "assertions": [
+    "anónimo rechazado",
+    "sin membresía rechazado",
+    "capacidad: a aislamiento",
+    "capacidad: b aislamiento",
+    "45: totales, personas únicas, reintentos, paginación, CSV, aislamiento y cierre cloud-45-1791503053659-antes",
+    "capacidad: a aislamiento",
+    "capacidad: b aislamiento"
+  ],
+  "latenciesMs": {
+    "upload:admin": {
+      "n": 92,
+      "p50": 378,
+      "p95": 485,
+      "max": 581
+    },
+    "processing:wait:worker": {
+      "n": 92,
+      "p50": 1353,
+      "p95": 1474,
+      "max": 2560
+    },
+    "publish:admin": {
+      "n": 90,
+      "p50": 188,
+      "p95": 334,
+      "max": 359
+    },
+    "dashboard:admin": {
+      "n": 29,
+      "p50": 3516,
+      "p95": 4649,
+      "max": 4932
+    },
+    "dashboard:a": {
+      "n": 2,
+      "p50": 1246,
+      "p95": 1246,
+      "max": 1246
+    },
+    "dashboard:b": {
+      "n": 2,
+      "p50": 1372,
+      "p95": 1372,
+      "max": 1372
+    },
+    "exportDashboard:a": {
+      "n": 2,
+      "p50": 1097,
+      "p95": 1097,
+      "max": 1097
+    },
+    "exportDashboard:b": {
+      "n": 2,
+      "p50": 1541,
+      "p95": 1541,
+      "max": 1541
+    },
+    "closeCut:admin": {
+      "n": 1,
+      "p50": 702,
+      "p95": 702,
+      "max": 702
+    }
+  },
+  "notes": [
+    "Datos exclusivamente sintéticos",
+    "Ejecución incompleta; primer corte completo, segundo interrumpido al paginar por transporte",
+    "Espera de worker incluye cola y sondeo"
+  ]
+}

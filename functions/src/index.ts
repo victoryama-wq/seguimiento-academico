@@ -1,24 +1,41 @@
 import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { isEmulatorEnvironment } from "./environment";
+import { runtimeEnvironment } from "./environment";
+import target from "../../config/staging-target.json";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { z } from "zod";
 import { academicOperation, requestSchema } from "./api";
 import { processJob } from "./jobs";
-import { localOnly } from "./store";
+import { requireRuntime } from "./store";
+import { pilotMeasure } from "./pilot-telemetry";
+
+const region =
+  process.env.FUNCTIONS_EMULATOR === "true"
+    ? "us-central1"
+    : (target.region ?? "us-central1");
+// Identidad dedicada del destino revisado; nunca se utiliza en los emuladores.
+const executionIdentity =
+  process.env.FUNCTIONS_EMULATOR !== "true" && target.projectId
+    ? {
+        serviceAccount: `seguimiento-runtime@${target.projectId}.iam.gserviceaccount.com`,
+      }
+    : {};
 
 export const academicApi = onCall(
   {
-    region: "us-central1",
+    region,
+    ...executionIdentity,
     timeoutSeconds: 120,
     memory: "512MiB",
     concurrency: 4,
     maxInstances: 3,
   },
   async (request) => {
-    localOnly();
+    requireRuntime();
     try {
       const data = requestSchema.parse(request.data);
-      return await academicOperation(data.op, data.input, request.auth?.uid);
+      return await pilotMeasure(data.op, () =>
+        academicOperation(data.op, data.input, request.auth?.uid),
+      );
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       if (error instanceof z.ZodError)
@@ -34,7 +51,8 @@ export const academicApi = onCall(
 export const importWorker = onDocumentWritten(
   {
     document: "jobs/{jobId}",
-    region: "us-central1",
+    region,
+    ...executionIdentity,
     retry: true,
     timeoutSeconds: 120,
     memory: "1GiB",
@@ -43,20 +61,15 @@ export const importWorker = onDocumentWritten(
   },
   async (event) => {
     if (event.data?.after.data()?.status === "queued")
-      await processJob(event.params.jobId);
+      await pilotMeasure("worker", () => processJob(event.params.jobId));
   },
 );
 
 // Contrato de diagnóstico de etapa 01 conservado; no concede permisos académicos.
 export const environmentStatus = onCall(
-  { region: "us-central1" },
+  { region, ...executionIdentity, maxInstances: 2 },
   (request) => {
-    if (!isEmulatorEnvironment(process.env)) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Solo disponible con emuladores completos.",
-      );
-    }
+    requireRuntime();
     if (
       request.data === null ||
       typeof request.data !== "object" ||
@@ -65,6 +78,14 @@ export const environmentStatus = onCall(
     ) {
       throw new HttpsError("invalid-argument", "Se espera un objeto vacío.");
     }
-    return { mode: "emulator", stage: "01", status: "ready" };
+    const config = runtimeEnvironment(process.env);
+    return config.mode === "emulator"
+      ? { mode: "emulator", stage: "01", status: "ready" }
+      : {
+          mode: "staging",
+          projectId: config.projectId,
+          release: config.release,
+          status: "ready",
+        };
   },
 );

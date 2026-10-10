@@ -190,7 +190,12 @@ export async function source(
 }
 export async function batch(
   authToken: string,
-  files = [
+  files: {
+    name: string;
+    content: string;
+    courseId: string;
+    mapping: unknown;
+  }[] = [
     {
       name: "1 Curso compartido 27-1.csv",
       content: reportCsv,

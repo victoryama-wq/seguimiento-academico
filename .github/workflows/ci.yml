@@ -35,6 +35,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run build
+      - run: npm run verify:hosting
 
   integration:
     name: Permisos e integración
@@ -60,6 +61,8 @@ jobs:
         run: npm run test:emulators
       - name: Flujo de usuario en emuladores
         run: npm run test:e2e
+      - name: Piloto sintético de 45 y 230 cursos
+        run: npm run test:pilot
 
   ci:
     name: ci

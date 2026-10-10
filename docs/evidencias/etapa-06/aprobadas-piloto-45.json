@@ -1,0 +1,708 @@
+{
+  "scenario": 45,
+  "startedAt": "2026-10-07T16:17:38.434Z",
+  "environment": {
+    "node": "v22.22.0",
+    "platform": "win32",
+    "release": "10.0.26300",
+    "cpus": 16,
+    "ramBytes": 16837013504
+  },
+  "status": "passed",
+  "apiConcurrency": 4,
+  "batchLimit": 20,
+  "memoryScope": "Proceso de pruebas: RSS muestreada y maxRSS del SO; Functions: muestras pilot-metric en log, no pico continuo.",
+  "files": [
+    {
+      "course": "piloto-1",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-2",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-3",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-4",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-5",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-6",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-7",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-8",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-9",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-10",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-11",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-12",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-13",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-14",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-15",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-16",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-17",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-18",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-19",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-20",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-21",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-22",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-23",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-24",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-25",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-26",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-27",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-28",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-29",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-30",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-31",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-32",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-33",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-34",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-35",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-36",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-37",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-38",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-39",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-40",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-41",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-42",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-43",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-44",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-45",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    }
+  ],
+  "population": {
+    "uniqueStudents": 50,
+    "studentRowsPerCut": 650,
+    "teacherRowsPerCut": 45,
+    "activitiesPerFile": 5,
+    "cellsPerCut": 4440
+  },
+  "recovery": {
+    "extraJobs": 4,
+    "recoveredAttempt": 2,
+    "conflictingPublications": "one winner, one ABORTED",
+    "invalid": 1,
+    "duplicateBlocked": 1,
+    "originalPreserved": true
+  },
+  "cut0": {
+    "counts": {
+      "N": 1300,
+      "G": 650,
+      "V": 650,
+      "E": 650,
+      "Z": 650,
+      "D": 3250
+    },
+    "students": 50,
+    "coverage": 40,
+    "exportBytesCareer0": 247843
+  },
+  "cut1": {
+    "counts": {
+      "N": 1300,
+      "G": 650,
+      "V": 650,
+      "E": 650,
+      "Z": 650,
+      "D": 3250
+    },
+    "students": 50,
+    "coverage": 40,
+    "exportBytesCareer0": 247845
+  },
+  "storage": {
+    "scope": "Bucket demo completo al terminar; incluye seed y escenarios anteriores; no es incremento aislado.",
+    "prefixes": {
+      "closures": {
+        "objects": 2,
+        "bytes": 300003
+      },
+      "derived": {
+        "objects": 97,
+        "bytes": 1512319
+      },
+      "exports": {
+        "objects": 3,
+        "bytes": 590438
+      },
+      "metricSnapshots": {
+        "objects": 16,
+        "bytes": 585814
+      },
+      "originals": {
+        "objects": 98,
+        "bytes": 489073
+      }
+    }
+  },
+  "firestore": {
+    "jobsForScenario": 96,
+    "baselineReportRows": 1390,
+    "recoveryAdditionalAttempts": "Dos sustituciones, duplicado bloqueante y archivo inválido; una fila parcial conserva intento abandonado.",
+    "readWriteBilling": "No medido. Consultas callable medidas en measurements; inventario no equivale a operaciones facturadas."
+  },
+  "firestoreRowPayload": {
+    "scope": "Filas de todos los intentos del Firestore demo limpio; JSON UTF-8 medido, excluye overhead e índices de Firestore",
+    "documents": 1412,
+    "bytes": 1144781
+  },
+  "elapsedMs": 59708,
+  "clientMemory": {
+    "sampledPeakRssBytes": 149753856,
+    "osMaxRssKiB": 152880
+  },
+  "timings": {
+    "seed": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 5082,
+      "p50Ms": 5082,
+      "p95Ms": 5082,
+      "maxMs": 5082
+    },
+    "createCycle": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 54,
+      "p50Ms": 54,
+      "p95Ms": 54,
+      "maxMs": 54
+    },
+    "assignMember": {
+      "count": 5,
+      "failures": 0,
+      "sumMs": 274,
+      "p50Ms": 55,
+      "p95Ms": 59,
+      "maxMs": 59
+    },
+    "createCourse": {
+      "count": 45,
+      "failures": 0,
+      "sumMs": 8435,
+      "p50Ms": 76,
+      "p95Ms": 1610,
+      "maxMs": 1846
+    },
+    "createCut": {
+      "count": 2,
+      "failures": 0,
+      "sumMs": 109,
+      "p50Ms": 53,
+      "p95Ms": 56,
+      "maxMs": 56
+    },
+    "createBatch": {
+      "count": 12,
+      "failures": 0,
+      "sumMs": 8667,
+      "p50Ms": 916,
+      "p95Ms": 1002,
+      "maxMs": 1002
+    },
+    "upload": {
+      "count": 90,
+      "failures": 0,
+      "sumMs": 12982,
+      "p50Ms": 141,
+      "p95Ms": 178,
+      "maxMs": 287
+    },
+    "processing:waitReady": {
+      "count": 90,
+      "failures": 0,
+      "sumMs": 35501,
+      "p50Ms": 381,
+      "p95Ms": 615,
+      "maxMs": 695
+    },
+    "publish": {
+      "count": 90,
+      "failures": 0,
+      "sumMs": 9183,
+      "p50Ms": 104,
+      "p95Ms": 121,
+      "maxMs": 143
+    },
+    "configureMetrics": {
+      "count": 92,
+      "failures": 2,
+      "sumMs": 9004,
+      "p50Ms": 99,
+      "p95Ms": 122,
+      "maxMs": 134
+    },
+    "batch:0:0": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 6875,
+      "p50Ms": 6875,
+      "p95Ms": 6875,
+      "maxMs": 6875
+    },
+    "batch:0:20": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 6511,
+      "p50Ms": 6511,
+      "p95Ms": 6511,
+      "maxMs": 6511
+    },
+    "batch:0:40": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 2189,
+      "p50Ms": 2189,
+      "p95Ms": 2189,
+      "maxMs": 2189
+    },
+    "recovery:partialConcurrentBatch": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 4882,
+      "p50Ms": 4882,
+      "p95Ms": 4882,
+      "maxMs": 4882
+    },
+    "dashboard": {
+      "count": 26,
+      "failures": 10,
+      "sumMs": 11376,
+      "p50Ms": 359,
+      "p95Ms": 1100,
+      "maxMs": 1233
+    },
+    "exportDashboard": {
+      "count": 2,
+      "failures": 0,
+      "sumMs": 577,
+      "p50Ms": 268,
+      "p95Ms": 309,
+      "maxMs": 309
+    },
+    "closeCut": {
+      "count": 2,
+      "failures": 0,
+      "sumMs": 485,
+      "p50Ms": 231,
+      "p95Ms": 254,
+      "maxMs": 254
+    },
+    "batch:1:0": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 6772,
+      "p50Ms": 6772,
+      "p95Ms": 6772,
+      "maxMs": 6772
+    },
+    "batch:1:20": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 6512,
+      "p50Ms": 6512,
+      "p95Ms": 6512,
+      "maxMs": 6512
+    },
+    "batch:1:40": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 2093,
+      "p50Ms": 2093,
+      "p95Ms": 2093,
+      "maxMs": 2093
+    },
+    "configureComparison": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 853,
+      "p50Ms": 853,
+      "p95Ms": 853,
+      "maxMs": 853
+    },
+    "compareCuts": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 740,
+      "p50Ms": 740,
+      "p95Ms": 740,
+      "maxMs": 740
+    },
+    "exportComparison": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 242,
+      "p50Ms": 242,
+      "p95Ms": 242,
+      "maxMs": 242
+    }
+  },
+  "telemetryScope": {
+    "log": "final-test-pilot.log",
+    "description": "worker y functionsMemory abarcan TODO el log suministrado; si contiene ambos escenarios no son medidas separadas por escenario. timings/clientMemory/inventarios pertenecen al JSON de entrada."
+  },
+  "worker": {
+    "count": 566,
+    "failures": 0,
+    "sumMs": 70802,
+    "p50Ms": 124,
+    "p95Ms": 152,
+    "maxMs": 362
+  },
+  "functionsMemory": {
+    "scope": "Muestras RSS/heap de procesos Functions antes/después; no pico continuo, incluye concurrencia y GC",
+    "samples": 5402,
+    "maxRssBytes": 468217856,
+    "maxHeapUsedBytes": 327863080
+  }
+}

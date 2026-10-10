@@ -1,0 +1,167 @@
+{
+  "project": "indicadores-academia",
+  "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+  "requestedWindow": {
+    "start": "2026-10-09T00:07:00Z",
+    "end": "2026-10-09T01:05:55.745Z"
+  },
+  "metrics": {
+    "firestore.googleapis.com/document/read_count": {
+      "available": true,
+      "groups": {
+        "LOOKUP": {
+          "series": 1,
+          "points": 56,
+          "total": 29084,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:03:00Z"
+        },
+        "NOT_FOUND": {
+          "series": 1,
+          "points": 56,
+          "total": 2840,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:03:00Z"
+        },
+        "QUERY": {
+          "series": 1,
+          "points": 56,
+          "total": 913825,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:03:00Z"
+        }
+      },
+      "truncated": false
+    },
+    "firestore.googleapis.com/document/write_count": {
+      "available": true,
+      "groups": {
+        "{\"module\":\"__unknown__\",\"version\":\"__unknown__\",\"op\":\"CREATE\"}": {
+          "series": 1,
+          "points": 56,
+          "total": 11101,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:03:00Z"
+        },
+        "{\"version\":\"__unknown__\",\"module\":\"__unknown__\",\"op\":\"UPDATE\"}": {
+          "series": 1,
+          "points": 56,
+          "total": 2354,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:03:00Z"
+        },
+        "{\"op\":\"UPDATE_NOOP\",\"version\":\"__unknown__\",\"module\":\"__unknown__\"}": {
+          "series": 1,
+          "points": 56,
+          "total": 44,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:03:00Z"
+        }
+      },
+      "truncated": false
+    },
+    "firestore.googleapis.com/storage/data_and_index_storage_bytes": {
+      "available": false,
+      "groups": {},
+      "truncated": false
+    },
+    "run.googleapis.com/container/memory/utilizations": {
+      "available": true,
+      "groups": {
+        "academicapi": {
+          "series": 2,
+          "points": 59,
+          "total": 0,
+          "maximumSampleMean": 0.4711723327636701,
+          "latestSample": "2026-10-09T01:05:00Z"
+        },
+        "environmentstatus": {
+          "series": 2,
+          "points": 31,
+          "total": 0,
+          "maximumSampleMean": 0.5863037109375036,
+          "latestSample": "2026-10-09T00:37:00Z"
+        },
+        "importworker": {
+          "series": 2,
+          "points": 59,
+          "total": 0,
+          "maximumSampleMean": 0.21741867065429712,
+          "latestSample": "2026-10-09T01:05:00Z"
+        }
+      },
+      "truncated": false
+    },
+    "run.googleapis.com/container/billable_instance_time": {
+      "available": true,
+      "groups": {
+        "academicapi": {
+          "series": 2,
+          "points": 58,
+          "total": 2803.1000000000004,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:04:00Z"
+        },
+        "environmentstatus": {
+          "series": 2,
+          "points": 32,
+          "total": 2.6999999999999997,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T00:38:00Z"
+        },
+        "importworker": {
+          "series": 2,
+          "points": 58,
+          "total": 474.79999999999995,
+          "maximumSampleMean": null,
+          "latestSample": "2026-10-09T01:04:00Z"
+        }
+      },
+      "truncated": false
+    }
+  },
+  "storage": {
+    "total": {
+      "objects": 1531,
+      "bytes": 30067231
+    },
+    "byPrefix": {
+      "closures": {
+        "objects": 19,
+        "bytes": 1716790
+      },
+      "derived": {
+        "objects": 700,
+        "bytes": 10017294
+      },
+      "exports": {
+        "objects": 27,
+        "bytes": 11377350
+      },
+      "metricSnapshots": {
+        "objects": 85,
+        "bytes": 3573873
+      },
+      "originals": {
+        "objects": 700,
+        "bytes": 3381924
+      }
+    }
+  },
+  "artifactRepository": {
+    "name": "projects/indicadores-academia/locations/us-central1/repositories/gcf-artifacts",
+    "sizeBytes": "143658789",
+    "cleanupPolicies": {},
+    "labels": {
+      "firebase-functions-cleanup-opted-out": "true"
+    }
+  },
+  "notes": [
+    "Cloud Monitoring: métricas observadas, no factura ni atribución exacta por escenario",
+    "La última muestra puede preceder al final de consulta por demora de publicación",
+    "Memoria: máximo de medias de muestras, no máximo instantáneo de proceso",
+    "Inventario de objetos actual: incluye fuentes/derivados de todas las ejecuciones, sin borrar previas",
+    "Firestore storage sin series significa no disponible, no cero"
+  ],
+  "errors": []
+}

@@ -1,9 +1,14 @@
+import { progressSchema } from "../../src/domain/report-policy";
+import { intakeOperations } from "../../src/domain/intake-contract";
+import { intakeOperation } from "./intake";
 import { FieldPath } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
+import { correctionOperation } from "./corrections";
 import { closeHistoricalCut, historyOperation } from "./history";
 import { historyOperations } from "../../src/domain/history-contract";
 import { dashboard, configureMetrics } from "./metrics";
+import { academicPackageSchema } from "../../src/domain/decision-package";
 import {
   operationSchemas,
   type Operation,
@@ -18,11 +23,15 @@ import {
   db,
   denied,
   hash,
+  jsonFile,
   membership,
   saveImmutable,
 } from "./store";
 import {
   authorizeJob,
+  assertPublicationScope,
+  reviewToken,
+  cutCareers,
   getJob,
   jobView,
   pointerRef,
@@ -33,6 +42,7 @@ import {
   type Cut,
   type Cycle,
   type Job,
+  type Artifact,
 } from "./jobs";
 
 const missing = () => new HttpsError("not-found", "Recurso no disponible.");
@@ -45,9 +55,21 @@ export async function academicOperation(
 ): Promise<unknown> {
   const member = await membership(uid);
   const actor = uid!;
+  if (op in intakeOperations)
+    return intakeOperation(
+      op as keyof typeof intakeOperations,
+      raw,
+      actor,
+      academicOperation,
+    );
   if (op in historyOperations)
     return historyOperation(op as keyof typeof historyOperations, raw, actor);
   switch (op) {
+    case "reviseAcademicDecision":
+    case "reviseCycleWithdrawal":
+    case "refreshCutSources":
+    case "revalidate":
+      return correctionOperation(op, raw, actor);
     case "dashboard":
       return dashboard(raw, actor, false);
     case "exportDashboard":
@@ -61,16 +83,37 @@ export async function academicOperation(
         db.collection("cuts").limit(100).get(),
         db.collection("courses").limit(500).get(),
       ]);
+      const availableCuts: typeof cuts.docs = [];
+      const sourceCareers = new Map<string, string[]>();
+      for (const doc of cuts.docs) {
+        const cut = doc.data() as Cut;
+        if (member.role !== "admin") {
+          const key = canonical([cut.cycleId, cut.sources]);
+          const careers = sourceCareers.get(key) ?? (await cutCareers(cut));
+          sourceCareers.set(key, careers);
+          if (!careers.some((id) => member.careers.includes(id))) continue;
+        }
+        availableCuts.push(doc);
+      }
       return {
         member,
-        cycles: cycles.docs.map((d) => ({ id: d.id })),
-        cuts: cuts.docs.map((d) => {
+        cycles: cycles.docs
+          .filter(
+            (d) =>
+              member.role === "admin" ||
+              availableCuts.some((c) => c.data().cycleId === d.id),
+          )
+          .map((d) => ({ id: d.id })),
+        cuts: availableCuts.map((d) => {
           const v = d.data() as Cut;
           return {
             id: d.id,
             cycleId: v.cycleId,
             date: v.date,
             status: v.status,
+            sources: v.sources,
+            ...(v.label ? { label: v.label } : {}),
+            ...(v.progress ? { progress: v.progress } : {}),
           };
         }),
         courses: courses.docs
@@ -145,6 +188,41 @@ export async function academicOperation(
       });
       return { ok: true };
     }
+    case "configureProgress": {
+      admin(member);
+      const input = operationSchemas.configureProgress.parse(raw);
+      await db.runTransaction(async (tx) => {
+        admin(await membership(actor, tx));
+        const ref = db.doc(`cuts/${input.cutId}`);
+        const cut = (await tx.get(ref)).data() as Cut | undefined;
+        if (!cut || cut.status !== "open" || !cut.progress)
+          throw new HttpsError(
+            "failed-precondition",
+            "Requiere un corte abierto con política explícita; conserva la política de los cortes históricos.",
+          );
+        if (cut.progress.id !== input.expected)
+          throw new HttpsError(
+            "aborted",
+            "El avance cambió. Actualiza y revisa la configuración.",
+          );
+        const id = hash(canonical(input));
+        const progress = progressSchema.parse({
+          ...input.progress,
+          id,
+          policy: "explicit-progress-v1",
+          actor,
+          recordedAt: Date.now(),
+          previous: input.expected,
+          reason: input.reason,
+        });
+        tx.create(db.doc(`progressHistory/${id}`), {
+          ...progress,
+          cutId: cut.id,
+        });
+        tx.update(ref, { progress });
+      });
+      return { ok: true };
+    }
     case "createCut": {
       admin(member);
       const input = operationSchemas.createCut.parse(raw);
@@ -153,11 +231,45 @@ export async function academicOperation(
         const cycle = (
           await tx.get(db.doc(`cycles/${input.cycleId}`))
         ).data() as Cycle | undefined;
-        if (!cycle?.sources.roster || !cycle.sources.catalog)
+        if (
+          !cycle ||
+          (!cycle.sources.academicPackage &&
+            (!cycle.sources.roster || !cycle.sources.catalog))
+        )
           throw new HttpsError(
             "failed-precondition",
             "Publica padrón y catálogo antes del corte.",
           );
+        if (cycle.sources.academicPackage) {
+          const source = (
+            await tx.get(db.doc(`sources/${cycle.sources.academicPackage}`))
+          ).data()!;
+          const artifact = await jsonFile<Artifact>(String(source.artifact));
+          if (
+            academicPackageSchema.parse(artifact.data).schedule.tracking &&
+            input.schoolCut === undefined &&
+            !input.progress
+          )
+            throw new HttpsError(
+              "failed-precondition",
+              "Indica el número de corte escolarizado (1, 2 o 3) para el seguimiento por modalidad.",
+            );
+        }
+        if (input.carryCutId) {
+          const carry = (
+            await tx.get(db.doc(`cuts/${input.carryCutId}`))
+          ).data() as Cut | undefined;
+          if (
+            !carry ||
+            carry.status !== "closed" ||
+            carry.cycleId !== input.cycleId ||
+            !cycle.sources.academicPackage
+          )
+            throw new HttpsError(
+              "failed-precondition",
+              "La acumulación requiere un corte cerrado del mismo ciclo y el perfil aprobado.",
+            );
+        }
         if (input.parentId) {
           const parent = (
             await tx.get(db.doc(`cuts/${input.parentId}`))
@@ -177,8 +289,36 @@ export async function academicOperation(
             "invalid-argument",
             "El motivo requiere corte de origen.",
           );
+        const date =
+          input.date ??
+          new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Cancun",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date());
+        const progress = input.progress
+          ? progressSchema.parse({
+              ...input.progress,
+              id: hash(
+                canonical({ cutId: input.id, progress: input.progress }),
+              ),
+              policy: "explicit-progress-v1",
+              actor,
+              recordedAt: Date.now(),
+              previous: null,
+              reason: "Selección inicial explícita",
+            })
+          : undefined;
+        if (progress)
+          tx.create(db.doc(`progressHistory/${progress.id}`), {
+            ...progress,
+            cutId: input.id,
+          });
         tx.create(db.doc(`cuts/${input.id}`), {
           ...input,
+          date,
+          ...(progress ? { progress, academicDate: date } : {}),
           sources: cycle.sources,
           dates: cycle.dates,
           status: "open",
@@ -246,7 +386,17 @@ export async function academicOperation(
           Cut | undefined;
         if (!cut) throw missing();
         if (cut.status !== "open") throw closed();
+        if (
+          cut.carryCutId &&
+          (await tx.get(db.doc(`cuts/${cut.carryCutId}`))).data()?.status !==
+            "closed"
+        )
+          throw new HttpsError(
+            "failed-precondition",
+            "Cierra el corte de origen para fijar el acumulado antes de cargar.",
+          );
         const jobs: Job[] = [];
+        const resultIds: string[] = [];
         const found = new Set<string>();
         for (const file of input.files) {
           const course = (
@@ -254,6 +404,16 @@ export async function academicOperation(
           ).data() as Course | undefined;
           if (!course || course.cycleId !== cut.cycleId) throw missing();
           courseAccess(currentMember, course);
+          const scope =
+            currentMember.role === "admin"
+              ? undefined
+              : [
+                  ...new Set(
+                    currentMember.careers.filter((id) =>
+                      course.careers.includes(id),
+                    ),
+                  ),
+                ].sort();
           if (
             file.filenameResolution &&
             (file.filenameResolution.externalId !== course.externalId ||
@@ -270,6 +430,7 @@ export async function academicOperation(
               sources: cut.sources,
               hash: file.sha256,
               mapping: file.mapping,
+              ...(scope ? { scope } : {}),
               ...(file.filenameResolution
                 ? {
                     filename: {
@@ -280,15 +441,27 @@ export async function academicOperation(
                 : {}),
             }),
           );
+          resultIds.push(id);
           if (found.has(id)) continue;
           found.add(id);
           const previous = await tx.get(db.doc(`jobs/${id}`));
           const pointer = await tx.get(pointerRef(cut.id, course.id));
+          const carry = cut.carryCutId
+            ? await tx.get(pointerRef(cut.carryCutId, course.id))
+            : null;
           if (previous.exists) continue;
           const { courseId, filenameResolution, ...descriptor } = file;
           jobs.push({
             id,
             kind: "report",
+            sources: cut.sources,
+            cumulative: !!cut.sources.academicPackage || !!scope,
+            ...(scope ? { scope } : {}),
+            progressId: cut.progress?.id ?? null,
+            carryVersion:
+              (pointer.data()?.versionId as string | undefined) ??
+              (carry?.data()?.versionId as string | undefined) ??
+              null,
             cycleId: cut.cycleId,
             cutId: cut.id,
             courseId,
@@ -307,25 +480,7 @@ export async function academicOperation(
           });
         }
         for (const job of jobs) tx.create(db.doc(`jobs/${job.id}`), job);
-        return input.files.map((file) =>
-          hash(
-            canonical({
-              cut: cut.id,
-              course: file.courseId,
-              sources: cut.sources,
-              hash: file.sha256,
-              mapping: file.mapping,
-              ...(file.filenameResolution
-                ? {
-                    filename: {
-                      original: file.name,
-                      decision: file.filenameResolution,
-                    },
-                  }
-                : {}),
-            }),
-          ),
-        );
+        return resultIds;
       });
       return {
         jobs: await Promise.all(
@@ -361,6 +516,7 @@ export async function academicOperation(
             await tx.get(db.doc(`courses/${job.courseId}`))
           ).data() as Course;
           courseAccess(freshMember, course);
+          assertPublicationScope(freshMember, job);
           if (
             (await tx.get(db.doc(`cuts/${job.cutId}`))).data()?.status !==
             "open"
@@ -403,7 +559,13 @@ export async function academicOperation(
       const input = operationSchemas.preview.parse(raw);
       const job = await getJob(input.jobId);
       await authorizeJob(member, job);
-      return previewJob(job, member, input.careerId, input.cursor);
+      return previewJob(
+        job,
+        member,
+        input.careerId,
+        input.cursor,
+        input.observationOffset,
+      );
     }
     case "publishSource": {
       admin(member);
@@ -455,9 +617,36 @@ export async function academicOperation(
           await tx.get(db.doc(`courses/${job.courseId}`))
         ).data() as Course;
         courseAccess(freshMember, course);
+        assertPublicationScope(freshMember, job);
+        if (
+          (input.reviewToken || (job.guided && freshMember.role !== "admin")) &&
+          input.reviewToken !== reviewToken(job, freshMember)
+        )
+          throw new HttpsError(
+            "aborted",
+            "La revisión o tus permisos cambiaron. Abre de nuevo el resultado antes de confirmar.",
+          );
         if (job.status === "published") return;
+        if (
+          job.columnPolicyVersion !== undefined &&
+          job.columnPolicyVersion !== (course.columnPolicy?.version ?? null)
+        )
+          throw new HttpsError(
+            "aborted",
+            "Cambió la revisión de columnas del curso. Vuelve a validar y revisar el original.",
+          );
         const cut = (await tx.get(db.doc(`cuts/${job.cutId}`))).data() as Cut;
         if (cut.status !== "open") throw closed();
+        if ((job.progressId ?? null) !== (cut.progress?.id ?? null))
+          throw new HttpsError(
+            "aborted",
+            "El avance cambió; vuelve a revisar el original.",
+          );
+        if (job.sources && canonical(job.sources) !== canonical(cut.sources))
+          throw new HttpsError(
+            "failed-precondition",
+            "Las fuentes cambiaron. Vuelve a validar el original.",
+          );
         if (
           job.status !== "ready" ||
           job.blocking ||
@@ -481,6 +670,31 @@ export async function academicOperation(
             "Confirma explícitamente la sustitución.",
           );
         const revision = Number(current?.revision ?? 0) + 1;
+        const selectedRef = db.doc(
+          `cuts/${cut.id}/activitySelections/${course.id}`,
+        );
+        const previousSelection = job.automaticActivities
+          ? (await tx.get(selectedRef)).data()
+          : undefined;
+        if (job.automaticActivities) {
+          const selection = {
+            id: hash(canonical(["principal-modality-v1", job.id])),
+            versionId: job.id,
+            activities: [...(job.activityIds ?? [])].sort(),
+            teachers: previousSelection?.teachers ?? null,
+            reason:
+              "Política institucional versionada: actividades por modalidad principal y semana vencida",
+            actor,
+            previous: previousSelection?.id ?? null,
+          };
+          tx.create(db.doc(`activitySelectionHistory/${selection.id}`), {
+            ...selection,
+            cutId: cut.id,
+            courseId: course.id,
+            createdAt: Date.now(),
+          });
+          tx.set(selectedRef, selection);
+        }
         tx.create(db.doc(`publications/${job.id}`), {
           versionId: job.id,
           cutId: cut.id,
@@ -496,6 +710,48 @@ export async function academicOperation(
           publishedAt: Date.now(),
         });
         tx.set(pointer, { versionId: job.id, revision });
+        if (job.guided && job.scope && job.identityChoice)
+          tx.set(
+            db.doc(
+              `identityChoices/${hash(canonical([job.cycleId, job.courseId, job.scope]))}`,
+            ),
+            {
+              ...job.identityChoice,
+              version: job.id,
+              approvedBy: actor,
+              recordedAt: Date.now(),
+            },
+          );
+        if (job.columnPolicyVersion !== undefined && !job.scope) {
+          const fields = { ...course.columnPolicy?.fields };
+          const columns = job.file.mapping.columns as {
+            selector: { header: string };
+            kind: "activity" | "total" | "category" | "metadata";
+            unit?: number;
+            additional?: boolean;
+          }[];
+          for (const c of columns) {
+            if (
+              columns.filter(
+                (other) => other.selector.header === c.selector.header,
+              ).length !== 1
+            )
+              continue;
+            fields[c.selector.header] = {
+              kind: c.kind,
+              ...(c.unit !== undefined ? { unit: c.unit } : {}),
+              ...(c.additional !== undefined
+                ? { additional: c.additional }
+                : {}),
+            };
+          }
+          if (
+            canonical(fields) !== canonical(course.columnPolicy?.fields ?? {})
+          )
+            tx.update(db.doc(`courses/${course.id}`), {
+              columnPolicy: { version: job.id, fields },
+            });
+        }
         tx.update(db.doc(`jobs/${job.id}`), { status: "published" });
       });
       return { ok: true };
@@ -508,6 +764,7 @@ export async function academicOperation(
         const freshMember = await membership(actor, tx);
         if (job.kind !== "report") admin(freshMember);
         else {
+          assertPublicationScope(freshMember, job);
           courseAccess(
             freshMember,
             (await tx.get(db.doc(`courses/${job.courseId}`))).data() as Course,
@@ -586,10 +843,23 @@ export async function academicOperation(
         return `"${(/^[\s]*[=+@-]/.test(value) ? "'" + value : value).replaceAll('"', '""')}"`;
       };
       const csv = [
-        "matricula,actividad,estado,original,version",
+        "matricula,actividad,estado,original,version,version_celda,relacion_curso_ciclo,grupo_principal_seguimiento,modalidad_principal,grupo_imparticion,correspondencia_inscripcion,encabezado_actividad",
         ...page.rows.flatMap((r) =>
           r.values.map((v) =>
-            [r.identity, v.activityId, v.state, v.raw, id]
+            [
+              r.identity,
+              v.activityId,
+              v.state,
+              v.raw,
+              id,
+              v.sourceVersion ?? id,
+              r.relationship?.id ?? "",
+              r.relationship?.trackingGroup ?? "",
+              r.relationship?.trackingModality ?? "",
+              "no determinado",
+              "no determinada",
+              v.label ?? v.activityId,
+            ]
               .map(escape)
               .join(","),
           ),

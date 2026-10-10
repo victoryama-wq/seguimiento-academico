@@ -1,0 +1,664 @@
+{
+  "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+  "project": "indicadores-academia",
+  "synthetic": true,
+  "acceptance": "Pendiente del usuario",
+  "scenarios": [
+    {
+      "run": "cloud-smoke-1791504463552",
+      "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+      "project": "indicadores-academia",
+      "scenario": "smoke",
+      "status": "success",
+      "startedAt": "2026-10-09T00:07:43.553Z",
+      "completedAt": "2026-10-09T00:08:34.276Z",
+      "seconds": 50.723,
+      "small": {
+        "cut": "cloud-smoke-1791504463552-principal",
+        "together": "cloud-smoke-1791504463552-junto",
+        "separate": "cloud-smoke-1791504463552-separado",
+        "initialCounts": {
+          "N": 7,
+          "G": 0,
+          "V": 0,
+          "E": 0,
+          "Z": 1,
+          "D": 7
+        },
+        "closedCounts": {
+          "N": 4,
+          "G": 2,
+          "V": 1,
+          "E": 0,
+          "Z": 0,
+          "D": 7
+        },
+        "students": 3
+      },
+      "assertions": [
+        "anónimo rechazado",
+        "sin membresía rechazado",
+        "multimodal: D7/N7/Z1, 3 personas y baja excluida",
+        "principal CA, modalidad independiente y U4 diferida",
+        "ámbitos A/B",
+        "dashboard ajeno",
+        "exportación ajena",
+        "original compartido privado",
+        "Rules reales: membresía admin y original denegados por identificador directo",
+        "modificación administrativa denegada",
+        "fecha no altera indicadores",
+        "CSV aislado y avance explícito",
+        "U1/U2/U3 juntas y separadas, ausencias conservadas",
+        "reintento antiguo no revierte ni duplica",
+        "revisión avisa dos pérdidas numéricas sin filtrar otra carrera",
+        "propuesta obsoleta rechazada",
+        "revisión actualizada y publicación con procedencia",
+        "concurrencia de publicación",
+        "comparación explícita sobre universo común",
+        "corte cerrado conserva datos"
+      ],
+      "expectedRejectedCalls": 9,
+      "latenciesMs": {
+        "overview:admin": {
+          "n": 3,
+          "p50": 225,
+          "p95": 262,
+          "max": 262
+        },
+        "assignMember:admin": {
+          "n": 2,
+          "p50": 456,
+          "p95": 456,
+          "max": 456
+        },
+        "createSource:admin": {
+          "n": 1,
+          "p50": 358,
+          "p95": 358,
+          "max": 358
+        },
+        "createCut:admin": {
+          "n": 3,
+          "p50": 294,
+          "p95": 522,
+          "max": 522
+        },
+        "createBatch:a": {
+          "n": 13,
+          "p50": 231,
+          "p95": 287,
+          "max": 287
+        },
+        "upload:a": {
+          "n": 11,
+          "p50": 429,
+          "p95": 537,
+          "max": 537
+        },
+        "preview:a": {
+          "n": 27,
+          "p50": 169,
+          "p95": 256,
+          "max": 257
+        },
+        "processing:wait:worker": {
+          "n": 12,
+          "p50": 1366,
+          "p95": 3733,
+          "max": 3733
+        },
+        "publish:a": {
+          "n": 12,
+          "p50": 220,
+          "p95": 273,
+          "max": 273
+        },
+        "dashboard:admin": {
+          "n": 9,
+          "p50": 667,
+          "p95": 811,
+          "max": 811
+        },
+        "dashboard:a": {
+          "n": 1,
+          "p50": 645,
+          "p95": 645,
+          "max": 645
+        },
+        "dashboard:b": {
+          "n": 1,
+          "p50": 862,
+          "p95": 862,
+          "max": 862
+        },
+        "exportDashboard:admin": {
+          "n": 1,
+          "p50": 497,
+          "p95": 497,
+          "max": 497
+        },
+        "exportDashboard:a": {
+          "n": 1,
+          "p50": 555,
+          "p95": 555,
+          "max": 555
+        },
+        "editCutDate:admin": {
+          "n": 1,
+          "p50": 238,
+          "p95": 238,
+          "max": 238
+        },
+        "retry:a": {
+          "n": 2,
+          "p50": 242,
+          "p95": 242,
+          "max": 242
+        },
+        "revalidate:a": {
+          "n": 1,
+          "p50": 530,
+          "p95": 530,
+          "max": 530
+        },
+        "closeCut:admin": {
+          "n": 3,
+          "p50": 586,
+          "p95": 588,
+          "max": 588
+        },
+        "configureComparison:admin": {
+          "n": 1,
+          "p50": 644,
+          "p95": 644,
+          "max": 644
+        },
+        "compareCuts:admin": {
+          "n": 1,
+          "p50": 685,
+          "p95": 685,
+          "max": 685
+        },
+        "exportComparison:a": {
+          "n": 1,
+          "p50": 762,
+          "p95": 762,
+          "max": 762
+        }
+      }
+    },
+    {
+      "run": "cloud-45-1791504514394",
+      "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+      "project": "indicadores-academia",
+      "scenario": "45",
+      "status": "success",
+      "startedAt": "2026-10-09T00:08:34.395Z",
+      "completedAt": "2026-10-09T00:12:20.114Z",
+      "seconds": 225.719,
+      "capacity": {
+        "courses": 45,
+        "cuts": [
+          "cloud-45-1791504514394-antes",
+          "cloud-45-1791504514394-despues"
+        ],
+        "uniqueStudents": 50,
+        "studentRowsPerCut": 650,
+        "activitiesPerFile": 5,
+        "bytesPerCut": 236972,
+        "batchesPerCut": 3,
+        "concurrency": 3,
+        "counts": {
+          "N": 1300,
+          "G": 650,
+          "V": 650,
+          "E": 650,
+          "Z": 650,
+          "D": 3250
+        }
+      },
+      "assertions": [
+        "anónimo rechazado",
+        "sin membresía rechazado",
+        "capacidad: a aislamiento",
+        "capacidad: b aislamiento",
+        "45: totales, personas únicas, reintentos, paginación, CSV, aislamiento y cierre cloud-45-1791504514394-antes",
+        "capacidad: a aislamiento",
+        "capacidad: b aislamiento",
+        "45: totales, personas únicas, reintentos, paginación, CSV, aislamiento y cierre cloud-45-1791504514394-despues"
+      ],
+      "expectedRejectedCalls": 6,
+      "latenciesMs": {
+        "overview:admin": {
+          "n": 2,
+          "p50": 234,
+          "p95": 234,
+          "max": 234
+        },
+        "assignMember:admin": {
+          "n": 2,
+          "p50": 223,
+          "p95": 223,
+          "max": 223
+        },
+        "createSource:admin": {
+          "n": 2,
+          "p50": 240,
+          "p95": 240,
+          "max": 240
+        },
+        "createCut:admin": {
+          "n": 2,
+          "p50": 160,
+          "p95": 160,
+          "max": 160
+        },
+        "createBatch:admin": {
+          "n": 12,
+          "p50": 1045,
+          "p95": 1136,
+          "max": 1136
+        },
+        "upload:admin": {
+          "n": 90,
+          "p50": 410,
+          "p95": 507,
+          "max": 6197
+        },
+        "preview:admin": {
+          "n": 187,
+          "p50": 204,
+          "p95": 345,
+          "max": 437
+        },
+        "processing:wait:worker": {
+          "n": 90,
+          "p50": 1384,
+          "p95": 2539,
+          "max": 2675
+        },
+        "publish:admin": {
+          "n": 90,
+          "p50": 198,
+          "p95": 272,
+          "max": 374
+        },
+        "configureMetrics:admin": {
+          "n": 90,
+          "p50": 195,
+          "p95": 292,
+          "max": 313
+        },
+        "dashboard:admin": {
+          "n": 54,
+          "p50": 1939,
+          "p95": 2529,
+          "max": 2923
+        },
+        "dashboard:a": {
+          "n": 2,
+          "p50": 997,
+          "p95": 997,
+          "max": 997
+        },
+        "dashboard:b": {
+          "n": 2,
+          "p50": 1447,
+          "p95": 1447,
+          "max": 1447
+        },
+        "exportDashboard:a": {
+          "n": 2,
+          "p50": 1022,
+          "p95": 1022,
+          "max": 1022
+        },
+        "exportDashboard:b": {
+          "n": 2,
+          "p50": 1263,
+          "p95": 1263,
+          "max": 1263
+        },
+        "closeCut:admin": {
+          "n": 2,
+          "p50": 936,
+          "p95": 936,
+          "max": 936
+        },
+        "configureComparison:admin": {
+          "n": 1,
+          "p50": 3603,
+          "p95": 3603,
+          "max": 3603
+        },
+        "compareCuts:admin": {
+          "n": 1,
+          "p50": 3506,
+          "p95": 3506,
+          "max": 3506
+        },
+        "exportComparison:a": {
+          "n": 1,
+          "p50": 1149,
+          "p95": 1149,
+          "max": 1149
+        }
+      }
+    },
+    {
+      "run": "cloud-230-1791504963874",
+      "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+      "project": "indicadores-academia",
+      "scenario": "230",
+      "status": "success",
+      "startedAt": "2026-10-09T00:16:03.875Z",
+      "completedAt": "2026-10-09T01:02:02.794Z",
+      "seconds": 2758.919,
+      "capacity": {
+        "courses": 230,
+        "cuts": [
+          "cloud-230-1791504963874-antes",
+          "cloud-230-1791504963874-despues"
+        ],
+        "uniqueStudents": 50,
+        "studentRowsPerCut": 3220,
+        "activitiesPerFile": 5,
+        "bytesPerCut": 1208712,
+        "batchesPerCut": 12,
+        "concurrency": 3,
+        "counts": {
+          "N": 6440,
+          "G": 3220,
+          "V": 3220,
+          "E": 3220,
+          "Z": 3220,
+          "D": 16100
+        }
+      },
+      "assertions": [
+        "anónimo rechazado",
+        "sin membresía rechazado",
+        "capacidad: a aislamiento",
+        "capacidad: b aislamiento",
+        "230: totales, personas únicas, reintentos, paginación, CSV, aislamiento y cierre cloud-230-1791504963874-antes",
+        "capacidad: a aislamiento",
+        "capacidad: b aislamiento",
+        "230: totales, personas únicas, reintentos, paginación, CSV, aislamiento y cierre cloud-230-1791504963874-despues"
+      ],
+      "expectedRejectedCalls": 6,
+      "latenciesMs": {
+        "overview:admin": {
+          "n": 2,
+          "p50": 164,
+          "p95": 164,
+          "max": 164
+        },
+        "assignMember:admin": {
+          "n": 2,
+          "p50": 232,
+          "p95": 232,
+          "max": 232
+        },
+        "createSource:admin": {
+          "n": 2,
+          "p50": 171,
+          "p95": 171,
+          "max": 171
+        },
+        "createCourse:admin": {
+          "n": 185,
+          "p50": 155,
+          "p95": 218,
+          "max": 351
+        },
+        "createCut:admin": {
+          "n": 2,
+          "p50": 308,
+          "p95": 308,
+          "max": 308
+        },
+        "createBatch:admin": {
+          "n": 48,
+          "p50": 1007,
+          "p95": 1298,
+          "max": 1484
+        },
+        "upload:admin": {
+          "n": 460,
+          "p50": 387,
+          "p95": 512,
+          "max": 2408
+        },
+        "preview:admin": {
+          "n": 950,
+          "p50": 194,
+          "p95": 290,
+          "max": 605
+        },
+        "processing:wait:worker": {
+          "n": 460,
+          "p50": 1356,
+          "p95": 1543,
+          "max": 13792
+        },
+        "publish:admin": {
+          "n": 460,
+          "p50": 188,
+          "p95": 292,
+          "max": 561
+        },
+        "configureMetrics:admin": {
+          "n": 460,
+          "p50": 188,
+          "p95": 281,
+          "max": 496
+        },
+        "dashboard:admin": {
+          "n": 260,
+          "p50": 8486,
+          "p95": 10578,
+          "max": 12072
+        },
+        "dashboard:a": {
+          "n": 2,
+          "p50": 3051,
+          "p95": 3051,
+          "max": 3051
+        },
+        "dashboard:b": {
+          "n": 2,
+          "p50": 3080,
+          "p95": 3080,
+          "max": 3080
+        },
+        "exportDashboard:a": {
+          "n": 2,
+          "p50": 2465,
+          "p95": 2465,
+          "max": 2465
+        },
+        "exportDashboard:b": {
+          "n": 2,
+          "p50": 3546,
+          "p95": 3546,
+          "max": 3546
+        },
+        "closeCut:admin": {
+          "n": 2,
+          "p50": 2257,
+          "p95": 2257,
+          "max": 2257
+        },
+        "configureComparison:admin": {
+          "n": 1,
+          "p50": 14555,
+          "p95": 14555,
+          "max": 14555
+        },
+        "compareCuts:admin": {
+          "n": 1,
+          "p50": 14649,
+          "p95": 14649,
+          "max": 14649
+        },
+        "exportComparison:a": {
+          "n": 1,
+          "p50": 4043,
+          "p95": 4043,
+          "max": 4043
+        }
+      }
+    }
+  ],
+  "browser": {
+    "run": "cloud-browser-1791504765116",
+    "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+    "project": "indicadores-academia",
+    "status": "success",
+    "startedAt": "2026-10-09T00:12:45.116Z",
+    "completedAt": "2026-10-09T00:13:31.479Z",
+    "seconds": 46.363,
+    "cases": [
+      {
+        "device": "desktop",
+        "cut": "cloud-browser-1791504765116-desktop",
+        "status": "success"
+      },
+      {
+        "device": "mobile",
+        "cut": "cloud-browser-1791504765116-mobile",
+        "status": "success"
+      }
+    ],
+    "latenciesMs": {}
+  },
+  "recovery": {
+    "cutId": "cloud-recovery-1791504812854",
+    "project": "indicadores-academia",
+    "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+    "startedAt": "2026-10-09T00:13:32.854Z",
+    "method": "Inyección controlada de estado processing/lease vencido en un trabajo sintético no publicado; no equivale a matar un contenedor",
+    "status": "success",
+    "results": {
+      "jobs": [
+        "98f90b38e1b4498fc86d311e5fa9e738dcecc33058b61f820832b1aae9636fe5",
+        "75b61bdf06c20291513d770ce9fd3a862f647b5a16f2253492d9e359261cd035",
+        "f78bafe8fa303d631dbd91f4c569b5bfc10db35cdf22e3387d247bb23ddb5fc5"
+      ],
+      "invalidRejected": true,
+      "duplicateBlocked": true,
+      "attemptBefore": 1,
+      "attemptAfter": 2,
+      "counts": {
+        "N": 1,
+        "G": 0,
+        "V": 0,
+        "E": 0,
+        "Z": 0,
+        "D": 1
+      },
+      "partialRowsNotPublished": true
+    },
+    "completedAt": "2026-10-09T00:13:40.083Z"
+  },
+  "history": {
+    "project": "indicadores-academia",
+    "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+    "startedAt": "2026-10-09T00:14:51.618Z",
+    "assertions": [
+      "Bitácora: idempotencia, concurrencia, 26 revisiones/25+1 paginadas, exportación, autor y fecha de contacto; aislamiento por ID y sin alterar fotografía",
+      "Revocación histórica vigente en servidor usando el mismo token: ID, paginación y exportación denegados; nuevo ámbito D2",
+      "Revisión de corte atribuible creada/cerrada; original conservado"
+    ],
+    "status": "success",
+    "completedAt": "2026-10-09T00:15:17.398Z"
+  },
+  "closureRace": {
+    "project": "indicadores-academia",
+    "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+    "cutId": "cloud-close-race-1791504955115",
+    "startedAt": "2026-10-09T00:15:55.115Z",
+    "status": "success",
+    "counts": {
+      "N": 1,
+      "G": 0,
+      "V": 0,
+      "E": 0,
+      "Z": 1,
+      "D": 1
+    },
+    "results": [
+      {
+        "status": "rejected",
+        "error": "Error: ABORTED: Otra operación cambió la versión. Actualiza y revisa de nuevo."
+      },
+      {
+        "status": "fulfilled"
+      },
+      {
+        "status": "fulfilled"
+      }
+    ],
+    "closureAndPointersConsistent": true,
+    "completedAt": "2026-10-09T00:16:03.752Z"
+  },
+  "deployment": {
+    "at": "2026-10-09T01:01:50.761Z",
+    "project": "indicadores-academia",
+    "sha": "114a60d26321c66f69f1ad118808a6d21867a069",
+    "trigger": {
+      "name": "projects/indicadores-academia/locations/us-central1/triggers/importworker-477668",
+      "serviceAccount": "seguimiento-runtime@indicadores-academia.iam.gserviceaccount.com",
+      "destination": {
+        "cloudFunction": "projects/indicadores-academia/locations/us-central1/functions/importWorker"
+      },
+      "eventFilters": [
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        },
+        {
+          "attribute": "document",
+          "value": "jobs/{jobId}",
+          "operator": "match-path-pattern"
+        },
+        {
+          "attribute": "type",
+          "value": "google.cloud.firestore.document.v1.written"
+        },
+        {
+          "attribute": "database",
+          "value": "(default)"
+        }
+      ]
+    },
+    "service": "projects/indicadores-academia/locations/us-central1/services/importworker",
+    "serviceAccount": "seguimiento-runtime@indicadores-academia.iam.gserviceaccount.com",
+    "policy": {
+      "version": 1,
+      "etag": "BwZdXMEAyXM=",
+      "bindings": [
+        {
+          "role": "roles/run.invoker",
+          "members": [
+            "serviceAccount:seguimiento-runtime@indicadores-academia.iam.gserviceaccount.com"
+          ]
+        }
+      ]
+    },
+    "anonymousWorkerStatus": 403,
+    "userManagedKeys": 0,
+    "url": "https://indicadores-academia.web.app/",
+    "hostingStatus": 200,
+    "hostingHeaders": {
+      "x-frame-options": "DENY",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer"
+    },
+    "hostingRelease": {
+      "name": "sites/indicadores-academia/releases/1791504151516000",
+      "version": "sites/indicadores-academia/versions/219b09f09bdd48d6",
+      "releaseTime": "2026-10-09T00:02:31.516Z"
+    }
+  }
+}

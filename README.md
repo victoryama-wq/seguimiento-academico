@@ -1,16 +1,37 @@
-# Seguimiento académico · etapa 05
+# Seguimiento académico · etapa 06
 
 React, TypeScript estricto y Firebase Emulator Suite, en español. La etapa 02
 conserva parsers ODS/XLSX/CSV, normalización, clasificación y resoluciones auditadas.
 La etapa 03 añade acceso institucional, fuentes privadas y carga persistente por
 lotes. La etapa 04 añade panel autorizado, selección versionada de actividades,
 conteos y exportaciones reproducibles. [Entrega](docs/entrega-etapa-04.md) y
-[cálculos manuales](docs/calculos-etapa-04.md). No se despliega
-ni se conecta un proyecto Firebase real. La etapa 05 añade calendario, fotografías
+[cálculos manuales](docs/calculos-etapa-04.md). La etapa 05 añade calendario, fotografías
 de cierre, comparación sobre universo común explícito y bitácora atribuible.
 [Operación e interpretación histórica](docs/operacion-etapa-05.md),
 [cálculos de dos cortes](docs/calculos-etapa-05.md) y
 [entrega de etapa 05](docs/entrega-etapa-05.md).
+
+La etapa 06 añade piloto sintético reproducible de 45/230 cursos, mediciones,
+recuperación y preparación revisable de publicación. Consulte la
+[entrega y aceptaciones](docs/entrega-etapa-06.md),
+[operación y staging](docs/operacion-etapa-06.md),
+[costos y retención propuestos](docs/costos-y-retencion-etapa-06.md) y
+[diagnóstico actualizado de dependencias](docs/dependencias-etapa-06.md).
+El entorno real de pruebas es [indicadores-academia](https://indicadores-academia.web.app),
+aislado de producción. [Despliegue por SHA, pruebas y limitaciones](docs/validacion-nube-ejecucion.md).
+El modo demo sigue conectado exclusivamente a emuladores. La aceptación operativa
+corresponde al usuario: [guía y procedimiento privado de acceso](docs/aceptacion-operativa.md).
+
+Coordinaciones: [seleccionar corte, subir, revisar, confirmar y consultar](docs/flujo-coordinadores.md).
+Administración conserva la preparación de fuentes, decisiones y avances. Las
+pruebas automáticas no sustituyen ni publican los archivos reales del propietario.
+
+El PR #5 incorpora [avance explícito y revisión acumulativa](docs/avance-explicito.md):
+corte Escolarizado y unidad Ejecutivo/Virtual independientes de fechas, actividades
+posteriores conservadas y advertencias antes de sustituir notas por vacío/guion.
+Se mantienen DEC-01–36, originales privados y cálculos históricos. El informe
+enlazado conserva las comprobaciones locales; el informe de ejecución cloud
+registra por separado las pruebas reales y sus pendientes.
 
 ## Arranque y comprobaciones
 
@@ -26,9 +47,11 @@ npm run build
 npx --no-install playwright install chromium
 npm run test:emulators
 npm run test:e2e
+npm run test:pilot
+npm run verify:hosting
 ```
 
-Los dos últimos comandos son **secuenciales** y arrancan entornos limpios con
+Los comandos de emuladores, E2E y piloto son **secuenciales** y arrancan entornos limpios con
 `demo-seguimiento-ci`. No reutilizan procesos ni credenciales del equipo. Puertos:
 Auth 9099, Firestore 8080, Storage 9199, Functions 5001, hub 4400 y Vite E2E 4173.
 En Linux CI se instala Chromium con `--with-deps`. El check `ci` exige calidad e
@@ -79,7 +102,7 @@ Las fórmulas y el fixture de referencia están en [cálculos](docs/calculos-eta
 | --- | --- |
 | `src/domain` | Reglas académicas puras y contratos Zod de operaciones. |
 | `src/importing` | Parsers Node compartidos con Functions, sin reglas duplicadas en UI. |
-| `src/infrastructure` | SDK explícitamente conectado a emuladores y validación de respuestas. |
+| `src/infrastructure` | SDK con modo demo/emuladores o staging verificado, sin fallback, y validación de respuestas. |
 | `src/ui` | Acceso, administración, carga, previsualización, panel y exportación. |
 | `functions/src` | Autorización, trabajos, staging, transacciones y almacenamiento privado. |
 | `scripts/bootstrap-admin.mjs` | Asignación inicial privilegiada, solo en entorno demo. |
@@ -90,10 +113,12 @@ Las fórmulas y el fixture de referencia están en [cálculos](docs/calculos-eta
 
 - [Entrega y criterios de etapa 04](docs/entrega-etapa-04.md), [modelo implementado](docs/modelo-datos.md)
   y [decisiones](docs/decisiones.md).
-- [Dependencias y bundle](docs/dependencias-y-bundle.md): 14 alertas pendientes,
-  sin actualizaciones automáticas ni aumento del umbral de Vite.
-- Sin conciliación con archivos privados, usuarios reales, prueba de carga de
-  45/230 cursos, costos medidos, recuperación/retención aprobadas ni validación nube.
+- [Dependencias](docs/dependencias-etapa-06.md) y [bundle de esta entrega](docs/avance-explicito.md):
+  pendientes conservados, sin actualizaciones automáticas ni aumento del umbral de Vite.
+- Conciliación privada y piloto sintético 45/230 documentados en etapa 06. Pendientes:
+  aceptación operativa institucional, usuarios reales, costos medidos, políticas de
+  recuperación/retención aprobadas y capacidad productiva. La evidencia cloud es
+  sintética; no se cargaron los libros privados ni se desplegó producción.
 - El mapeo se confirma como JSON por archivo; ZIP de lotes no está implementado.
   Las correspondencias históricas también requieren revisión explícita. No se
   infiere equivalencia entre ciclos ni entre instancias de curso diferentes.
