@@ -1,4 +1,3 @@
-import { openLegacySources } from "./legacy-sources";
 import { test, expect, type Page } from "@playwright/test";
 import {
   api,
@@ -111,25 +110,29 @@ test("selección explícita sin fecha y revisión de pérdida numérica en curso
   );
   await login(page, people.a);
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
-  await openLegacySources(page);
-  await page.getByLabel("Corte de seguimiento").selectOption("explicit-ui");
-  await page.getByLabel("Reportes Moodle").setInputFiles({
+  await page
+    .getByLabel("Corte para cargar y consultar")
+    .selectOption("explicit-ui");
+  await page.getByLabel("Seleccionar reportes originales").setInputFiles({
     name: filename,
     mimeType: "text/csv",
     buffer: Buffer.from(
       `${header}\n000EJE@example.invalid,,-,3,4\n000VIR@example.invalid,,-,3,4`,
     ),
   });
-  await page.getByRole("button", { name: "Enviar lote", exact: true }).click();
   const ready = page
-    .locator(".job-list li")
-    .filter({ hasText: "Validado para revisión" });
+    .getByRole("article", { name: "Trabajo Curso Multimodal" })
+    .filter({ hasText: "Listo para revisar" });
   await expect(ready).toHaveCount(1, { timeout: 45000 });
-  await ready.getByRole("button", { name: "Revisar mix" }).click();
-  await expect(page.locator(".preview")).not.toContainText(/000vir/i);
+  await ready
+    .getByRole("button", { name: "Revisar Curso Multimodal", exact: true })
+    .click();
   await expect(
-    page.getByRole("region", { name: "Cambios de esta propuesta" }),
-  ).toContainText("modificados: 2; sin cambios: 2");
+    page.getByRole("region", { name: "Revisión antes de publicar" }),
+  ).not.toContainText(/000vir/i);
+  await expect(
+    page.getByRole("region", { name: "Revisión antes de publicar" }),
+  ).toContainText("Calificaciones modificadas: 2. Valores sin cambios: 2");
   await expect(
     page
       .getByRole("alert")
@@ -149,12 +152,14 @@ test("selección explícita sin fecha y revisión de pérdida numérica en curso
   });
   await page
     .getByLabel(
-      "Confirmo sustituir la versión anterior, conservando su historial",
+      "He revisado esta propuesta y sus advertencias; confirmo la publicación en mi ámbito.",
     )
     .check();
   await page.getByRole("button", { name: "Confirmar publicación" }).click();
   await expect(
-    page.locator(".job-list li").filter({ hasText: "Publicado" }),
+    page
+      .getByRole("article", { name: "Trabajo Curso Multimodal" })
+      .filter({ hasText: "Publicado" }),
   ).toHaveCount(2);
   await page.getByRole("button", { name: "Panel", exact: true }).click();
   await page.getByLabel("Ciclo y corte").selectOption("explicit-ui");

@@ -1,3 +1,5 @@
+// Las cargas de referencia institucionales publican ambos ámbitos desde Administración.
+// coordinator-intake.test.ts prueba publicaciones independientes A/B sin alterar estos cálculos.
 import { identity } from "../../src/domain/academic";
 import { beforeAll, it, expect } from "vitest";
 import {
@@ -39,7 +41,7 @@ const csv = (units: number[], grades: string[][]) =>
   ].join("\n");
 async function send(content: string, cutId = "explicit") {
   const [job] = await batch(
-    sessions.a,
+    sessions.admin,
     [
       {
         name: "777._Curso_Multimodal_27-1 Calificaciones.csv",
@@ -54,7 +56,7 @@ async function send(content: string, cutId = "explicit") {
   return job!.id;
 }
 const publish = (jobId: string) =>
-  api("publish", { jobId, replace: true }, sessions.a);
+  api("publish", { jobId, replace: true }, sessions.admin);
 const current = async () =>
   overviewSchema
     .parse(await api("overview", {}, sessions.admin))
@@ -200,7 +202,7 @@ it("actualiza U1/U2 e incorpora U3 juntas o separadas; ausencias y reintentos co
   });
   for (const cut of ["together", "separate"]) {
     expect(await send(initial, cut)).toBe(ids.get(cut));
-    await api("retry", { jobId: ids.get(cut) }, sessions.a);
+    await api("retry", { jobId: ids.get(cut) }, sessions.admin);
     await publish(ids.get(cut)!);
     expect((await panel(cut)).counts.N).toBe(5);
     await expect(
@@ -245,7 +247,11 @@ it("revisión advierte numérico a vacío/guion y no revela otra carrera; una pu
   await publish(competing);
   await expect(publish(id)).rejects.toThrow("ABORTED");
   expect((await panel()).counts).toEqual({ ...previous.counts, Z: 0 });
-  const refreshed = (await api("revalidate", { jobId: id }, sessions.a)) as {
+  const refreshed = (await api(
+    "revalidate",
+    { jobId: id },
+    sessions.admin,
+  )) as {
     id: string;
   };
   await waitJob(refreshed.id);

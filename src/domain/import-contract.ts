@@ -141,7 +141,14 @@ export const operationSchemas = {
     cursor: keySchema.optional(),
     observationOffset: z.number().int().min(0).max(20000).default(0),
   }),
-  publish: z.strictObject({ jobId: keySchema, replace: z.boolean() }),
+  publish: z.strictObject({
+    jobId: keySchema,
+    replace: z.boolean(),
+    reviewToken: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+  }),
   retry: z.strictObject({ jobId: keySchema }),
   original: z.strictObject({ jobId: keySchema }),
   results: z.strictObject({
@@ -170,6 +177,7 @@ export const jobStatus = z.enum([
   "published",
 ]);
 export const jobViewSchema = z.object({
+  name: z.string().optional(),
   id: keySchema,
   status: jobStatus,
   kind: z.string(),

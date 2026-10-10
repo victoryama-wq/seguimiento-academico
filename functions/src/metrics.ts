@@ -323,6 +323,11 @@ export async function dashboard(
   if (f.careerId && !allowed(member, f.careerId)) denied();
   if (f.courseId && !entries.some((e) => e.course.id === f.courseId)) denied();
   const academic = await academicSnapshot(cut);
+  if (
+    member.role !== "admin" &&
+    !academic.enrollments.some((e) => member.careers.includes(e.careerId))
+  )
+    denied();
   const enrollments = new Map(academic.enrollments.map((e) => [e.id, e]));
   const persons = new Map(academic.persons.map((p) => [p.identity, p]));
   const catalog = academic.context.catalog.filter((c) => allowed(member, c.id));

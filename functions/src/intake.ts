@@ -5,6 +5,7 @@ import {
   type OriginalView,
 } from "../../src/domain/intake-contract";
 import type { Operation } from "../../src/domain/import-contract";
+import type { Member } from "../../src/domain/import-contract";
 import {
   courseFilename,
   courseNameKey,
@@ -42,10 +43,12 @@ import {
   jsonFile,
   membership,
   saveImmutable,
+  denied,
 } from "./store";
 import {
   academicSnapshot,
   confirmedRoster,
+  authorizeCut,
   type Artifact,
   type Course,
   type Cut,
@@ -54,6 +57,7 @@ import {
 } from "./jobs";
 
 type Original = {
+  cutId?: string;
   id: string;
   kind: z.infer<typeof intakeOperations.inspectOriginal>["kind"];
   name: string;
@@ -81,7 +85,10 @@ const stale = () =>
     "aborted",
     "Las fuentes cambiaron mientras revisabas. Actualiza la revisión antes de confirmar; se conservó tu propuesta.",
   );
-async function original(id: string) {
+async function original(
+  id: string,
+  access?: { actor: string; member: Member },
+) {
   const doc = await db.doc(`intakeFiles/${id}`).get();
   if (!doc.exists)
     throw new HttpsError(
@@ -89,6 +96,12 @@ async function original(id: string) {
       "No se encontró el archivo seleccionado. Selecciónalo de nuevo.",
     );
   const file = doc.data() as Original;
+  if (
+    access &&
+    access.member.role !== "admin" &&
+    (file.actor !== access.actor || file.kind !== "report")
+  )
+    denied();
   const [bytes] = await bucket()
     .file(`intakeOriginals/${file.id}/source`)
     .download();
@@ -118,6 +131,7 @@ async function fileView(
   file: Original,
   options: OriginalView["options"],
   offset = 0,
+  member?: Member,
 ): Promise<OriginalView> {
   const result: OriginalView = {
     ...file,
@@ -149,12 +163,106 @@ async function fileView(
     const table = readTable(bytes, file.name, options);
     result.headers = table.headers;
     result.columns = suggestFields(table.headers, file.kind);
-    const contentRows =
+    if (member?.role === "coordinator" && file.kind === "report") {
+      let detected: ReturnType<typeof courseFilename> | undefined;
+      try {
+        detected = courseFilename(file.name);
+      } catch {
+        /* Revisión institucional. */
+      }
+      if (detected) {
+        const external = (
+          await db
+            .doc(
+              `courseExternalIds/${hash(`${detected.cycle}:${detected.externalId}`)}`,
+            )
+            .get()
+        ).data();
+        const course = external
+          ? ((
+              await db.doc(`courses/${external.courseId}`).get()
+            ).data() as Course)
+          : undefined;
+        if (
+          course &&
+          courseNameKey(course.name) === courseNameKey(detected.name)
+        ) {
+          const scope = [
+            ...new Set(
+              member.careers.filter((id) => course.careers.includes(id)),
+            ),
+          ].sort();
+          const choice = (
+            await db
+              .doc(
+                `identityChoices/${hash(canonical([course.cycleId, course.id, scope]))}`,
+              )
+              .get()
+          ).data();
+          if (choice) {
+            const matches = table.headers.flatMap((header, i) =>
+              header === choice.header ? [i] : [],
+            );
+            const column =
+              matches.length === 1
+                ? matches[0]
+                : choice.headersHash === hash(canonical(table.headers))
+                  ? (choice.column as number)
+                  : undefined;
+            if (
+              column !== undefined &&
+              table.headers[column] === choice.header
+            ) {
+              result.columns.identity = column;
+              result.messages.push(
+                "Se reutilizó la columna de matrícula confirmada para esta asignatura, ciclo y ámbito.",
+              );
+            }
+          }
+        }
+      }
+    }
+    let contentRows =
       file.kind === "report"
         ? table.rows.filter((row) => !isEmptyRow(row))
         : table.rows;
+    if (member && member.role !== "admin") {
+      const cut = file.cutId
+        ? ((await db.doc(`cuts/${file.cutId}`).get()).data() as Cut | undefined)
+        : undefined;
+      if (!cut) denied();
+      await authorizeCut(member, cut);
+      const academic = await academicSnapshot(cut);
+      const entries = new Map(academic.enrollments.map((e) => [e.id, e]));
+      const people = new Map(academic.persons.map((p) => [p.identity, p]));
+      const col = result.columns.identity;
+      contentRows =
+        col === undefined
+          ? []
+          : contentRows.filter((r) => {
+              const person = people.get(
+                identity(r.cells[col]?.raw).normalized ?? "",
+              );
+              const base = person?.baseEnrollmentId
+                ? entries.get(person.baseEnrollmentId)
+                : undefined;
+              const careers = base
+                ? [base.careerId]
+                : [
+                    ...new Set(
+                      (person?.enrollmentIds ?? []).map(
+                        (id) => entries.get(id)!.careerId,
+                      ),
+                    ),
+                  ];
+              return (
+                careers.length > 0 &&
+                careers.every((id) => member.careers.includes(id))
+              );
+            });
+    }
     const emptyRows = table.rows.length - contentRows.length;
-    if (emptyRows)
+    if (emptyRows && (!member || member.role === "admin"))
       result.messages.push(
         `${emptyRows} filas totalmente vacías de formato omitidas. No representan alumnos ni calificaciones; el archivo original se conserva íntegro.`,
       );
@@ -246,6 +354,7 @@ async function fileView(
             ),
           ].sort();
   } catch (e) {
+    if (e instanceof HttpsError) throw e;
     result.messages.push(
       e instanceof Error
         ? e.message
@@ -310,17 +419,74 @@ export async function intakeOperation(
   actor: string,
   dispatch: Dispatch,
 ): Promise<unknown> {
-  admin(await membership(actor));
+  const member = await membership(actor);
+  if (
+    ![
+      "inspectOriginal",
+      "readOriginal",
+      "prepareOperationalReport",
+      "requestReportReview",
+    ].includes(op)
+  )
+    admin(member);
+  if (op === "pendingReportReviews") {
+    const files = await db
+      .collection("intakeFiles")
+      .where("requiresAdministration", "==", true)
+      .limit(50)
+      .get();
+    return {
+      files: files.docs.map((d) => ({
+        id: d.id,
+        name: String(d.data().name),
+        cutId: String(d.data().cutId ?? ""),
+        reason: String(
+          d.data().reviewReason ?? "Revisar identificación o columnas",
+        ),
+      })),
+    };
+  }
+  if (op === "requestReportReview") {
+    const v = intakeOperations.requestReportReview.parse(raw);
+    const { file } = await original(v.id, { actor, member });
+    if (file.kind !== "report") denied();
+    await db.doc(`intakeFiles/${v.id}`).update({
+      requiresAdministration: true,
+      reviewReason: v.reason,
+      reviewRequestedBy: actor,
+      reviewRequestedAt: Date.now(),
+    });
+    return { ok: true };
+  }
   if (op === "inspectOriginal") {
     const v = intakeOperations.inspectOriginal.parse(raw),
       bytes = Buffer.from(v.base64, "base64");
+    if (member.role !== "admin") {
+      if (v.kind !== "report" || !v.cutId) denied();
+      const cut = (await db.doc(`cuts/${v.cutId}`).get()).data() as
+        Cut | undefined;
+      if (!cut || cut.status !== "open")
+        throw new HttpsError(
+          "failed-precondition",
+          "Selecciona un corte abierto.",
+        );
+      await authorizeCut(member, cut);
+    }
     if (!bytes.length || bytes.length > 8 * 1024 * 1024)
       throw new HttpsError(
         "invalid-argument",
         "Selecciona un archivo de hasta 8 MiB.",
       );
     const sha256 = hash(bytes),
-      id = hash(canonical([actor, v.kind, v.name, sha256]));
+      id = hash(
+        canonical([
+          actor,
+          v.kind,
+          v.name,
+          sha256,
+          ...(v.cutId ? [v.cutId] : []),
+        ]),
+      );
     let sheets: string[],
       options: OriginalView["options"] = {};
     try {
@@ -360,6 +526,7 @@ export async function intakeOperation(
       sheets,
       options,
       actor,
+      ...(v.cutId ? { cutId: v.cutId } : {}),
     };
     await saveImmutable(
       `intakeOriginals/${id}/source`,
@@ -367,15 +534,25 @@ export async function intakeOperation(
       "application/octet-stream",
     );
     await db.runTransaction(async (tx) => {
-      admin(await membership(actor, tx));
+      const currentMember = await membership(actor, tx);
+      if (
+        currentMember.role !== "admin" &&
+        (v.kind !== "report" || canonical(currentMember) !== canonical(member))
+      )
+        denied();
       const ref = db.doc(`intakeFiles/${id}`);
       if (!(await tx.get(ref)).exists) tx.create(ref, file);
     });
-    return fileView(file, options);
+    return fileView(file, options, 0, member);
   }
   if (op === "readOriginal") {
     const v = intakeOperations.readOriginal.parse(raw);
-    return fileView((await original(v.id)).file, v.options, v.offset);
+    return fileView(
+      (await original(v.id, { actor, member })).file,
+      v.options,
+      v.offset,
+      member,
+    );
   }
   if (op === "inspectCutSources") {
     const v = intakeOperations.inspectCutSources.parse(raw);
@@ -692,7 +869,12 @@ export async function intakeOperation(
   }
   if (op === "prepareOperationalReport") {
     const v = intakeOperations.prepareOperationalReport.parse(raw),
-      selected = await original(v.file.id);
+      selected = await original(v.file.id, { actor, member });
+    if (
+      member.role !== "admin" &&
+      (v.identification || selected.file.cutId !== v.cutId)
+    )
+      denied();
     if (selected.file.kind !== "report")
       throw new HttpsError("invalid-argument", "Selecciona un reporte Moodle.");
     const cut = (await db.doc(`cuts/${v.cutId}`).get()).data() as
@@ -702,6 +884,7 @@ export async function intakeOperation(
         "failed-precondition",
         "Selecciona un corte abierto.",
       );
+    await authorizeCut(member, cut);
     let detected: ReturnType<typeof courseFilename> | undefined;
     try {
       detected = courseFilename(selected.file.name);
@@ -778,6 +961,29 @@ export async function intakeOperation(
     const identityIndex =
       v.file.columns.identity ?? table.headers.indexOf(mapping.identity.header);
     const activeRoster = await confirmedRoster(cut, academic);
+    if (member.role !== "admin") {
+      const view = await fileView(selected.file, v.file.options, 0, member);
+      const expectedActivities = view.activities.filter(
+        (c) => c.column !== v.file.columns.identity,
+      );
+      const choices = v.activities ?? expectedActivities;
+      if (
+        expectedActivities.some((c) => c.kind === "review") ||
+        choices.some((c) => {
+          const approved = expectedActivities.find(
+            (a) => a.column === c.column,
+          );
+          return (
+            !approved || canonical({ ...c }) !== canonical({ ...approved })
+          );
+        }) ||
+        choices.length !== expectedActivities.length
+      )
+        throw new HttpsError(
+          "failed-precondition",
+          "Las actividades ambiguas o cambios de clasificación requieren revisión de Administración. Se conserva el original.",
+        );
+    }
     const ids = new Set(
       table.rows
         .map((r) => identity(r.cells[identityIndex]?.raw).normalized)
@@ -791,11 +997,22 @@ export async function intakeOperation(
           .filter((id): id is string => !!id),
       ),
     ].sort();
+    if (
+      member.role !== "admin" &&
+      !careers.some((id) => member.careers.includes(id))
+    )
+      denied();
     const externalRef = db.doc(
       `courseExternalIds/${hash(`${cut.cycleId}:${identification.externalId}`)}`,
     );
     const courseId = await db.runTransaction(async (tx) => {
-      admin(await membership(actor, tx));
+      const currentMember = await membership(actor, tx);
+      if (
+        currentMember.role !== "admin" &&
+        (canonical(currentMember) !== canonical(member) ||
+          !careers.some((id) => currentMember.careers.includes(id)))
+      )
+        denied();
       const current = (await tx.get(db.doc(`cuts/${cut.id}`))).data() as Cut;
       if (
         current.status !== "open" ||
@@ -881,7 +1098,12 @@ export async function intakeOperation(
     )) as { jobs: { id: string }[] };
     const job = batch.jobs[0]!;
     await db.runTransaction(async (tx) => {
-      admin(await membership(actor, tx));
+      const currentMember = await membership(actor, tx);
+      if (
+        currentMember.role !== "admin" &&
+        canonical(currentMember) !== canonical(member)
+      )
+        denied();
       const ref = db.doc(`jobs/${job.id}`),
         stored = (await tx.get(ref)).data() as Job;
       const currentCourse = (
@@ -892,6 +1114,12 @@ export async function intakeOperation(
         stored.columnPolicyVersion === undefined
       )
         tx.update(ref, {
+          guided: true,
+          identityChoice: {
+            header: table.headers[identityIndex]!,
+            column: identityIndex,
+            headersHash: hash(canonical(table.headers)),
+          },
           columnPolicyVersion: currentCourse.columnPolicy?.version ?? null,
         });
     });

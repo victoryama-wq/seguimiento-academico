@@ -1,3 +1,4 @@
+import { cutLabel } from "./cut-selection";
 import { Progress } from "./Progress";
 import {
   lazy,
@@ -8,6 +9,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+const CoordinatorIntake = lazy(() => import("./CoordinatorIntake"));
 const History = lazy(() => import("./History"));
 const Dashboard = lazy(() => import("./Dashboard"));
 const AdministrativeIntake = lazy(() => import("./AdministrativeIntake"));
@@ -79,7 +81,13 @@ const states: Record<JobView["status"], string> = {
 const errorText = (e: unknown) =>
   e instanceof Error ? e.message : "No se pudo completar la operación.";
 
-export function AccessWorkspace({ section }: { section: string }) {
+export function AccessWorkspace({
+  section,
+  onResults,
+}: {
+  section: string;
+  onResults: () => void;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [error, setError] = useState("");
@@ -206,7 +214,7 @@ export function AccessWorkspace({ section }: { section: string }) {
               <ul>
                 {overview.cuts.map((c) => (
                   <li key={c.id}>
-                    {c.id} · {c.date} ·{" "}
+                    {cutLabel(c)} ·{" "}
                     {c.status === "closed" ? "Cerrado" : "Abierto"}
                   </li>
                 ))}
@@ -338,7 +346,14 @@ export function AccessWorkspace({ section }: { section: string }) {
                 </details>
               </>
             ) : (
-              <Imports overview={overview} />
+              <Suspense fallback={<p role="status">Cargando reportes…</p>}>
+                <CoordinatorIntake
+                  key={`${user.uid}:${JSON.stringify(overview.member)}`}
+                  overview={overview}
+                  changed={refresh}
+                  onResults={onResults}
+                />
+              </Suspense>
             ))}
           {section === "Panel" && (
             <Suspense fallback={<p role="status">Cargando panel…</p>}>

@@ -133,7 +133,10 @@ export function App() {
           {connection === "ready" && (
             <WorkspaceBoundary>
               <Suspense fallback={<p>Cargando acceso institucional…</p>}>
-                <AccessWorkspace section={section} />
+                <AccessWorkspace
+                  section={section}
+                  onResults={() => setSection("Panel")}
+                />
               </Suspense>
             </WorkspaceBoundary>
           )}

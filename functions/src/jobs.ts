@@ -104,6 +104,10 @@ export type Course = {
   };
 };
 export type Job = {
+  identityChoice?: { header: string; column: number; headersHash: string };
+  guided?: boolean;
+  // Ausente en versiones históricas administrativas. El servidor fija este ámbito.
+  scope?: string[];
   columnPolicyVersion?: string | null;
   progressId?: string | null;
   sources?: SourceRefs;
@@ -146,10 +150,55 @@ export async function authorizeJob(member: Member, job: Job) {
     Course | undefined;
   if (!course) throw new HttpsError("not-found", "Curso no disponible.");
   courseAccess(member, course);
+  if (
+    member.role !== "admin" &&
+    job.scope &&
+    !job.scope.some((id) => member.careers.includes(id))
+  )
+    throw new HttpsError(
+      "permission-denied",
+      "Trabajo fuera del alcance autorizado.",
+    );
+}
+export function assertPublicationScope(member: Member, job: Job) {
+  if (
+    member.role !== "admin" &&
+    (!job.scope?.length || job.scope.some((id) => !member.careers.includes(id)))
+  )
+    throw new HttpsError(
+      "permission-denied",
+      "El ámbito cambió o esta propuesta requiere Administración. Vuelve a validar dentro de tus carreras autorizadas.",
+    );
+}
+export const reviewToken = (job: Job, member: Member) =>
+  hash(
+    canonical({
+      job: job.id,
+      token: job.token,
+      expected: job.expected,
+      scope: job.scope ?? null,
+      member,
+    }),
+  );
+export async function cutCareers(cut: Cut) {
+  if (!cut.sources.roster && !cut.sources.academicPackage) return [];
+  const academic = await academicSnapshot(cut);
+  return [...new Set(academic.enrollments.map((e) => e.careerId))];
+}
+export async function authorizeCut(member: Member, cut: Cut) {
+  if (
+    member.role !== "admin" &&
+    !(await cutCareers(cut)).some((id) => member.careers.includes(id))
+  )
+    throw new HttpsError(
+      "permission-denied",
+      "Corte fuera del alcance autorizado.",
+    );
 }
 export function jobView(job: Job) {
   return {
     id: job.id,
+    name: job.file.name,
     kind: job.kind,
     status: job.status,
     courseId: job.courseId,
@@ -160,6 +209,7 @@ export function jobView(job: Job) {
   };
 }
 export type Artifact = {
+  heldObservations?: Observation[];
   includedByCareer?: Record<string, number>;
   review?: Record<string, ReviewSummary>;
   observations?: Observation[];
@@ -469,8 +519,73 @@ async function report(
   const autoMapping = mapping.profile === reportProfile;
   if (autoMapping && Object.keys(mapping).length !== 1)
     throw new Error("Perfil automático con campos ambiguos");
+  const resolvedMapping = autoMapping ? institutionalMapping(table) : mapping;
+  const heldObservations: Observation[] = [];
+  if (job.scope) {
+    // Validar el mapeo sobre la estructura completa antes de filtrar. El original
+    // permanece privado; compartir el libro no autoriza a publicar filas ajenas.
+    const structural = parseMoodle(
+      { ...table, rows: [] },
+      {
+        ...resolvedMapping,
+        approvedBy: job.uid,
+        version: job.id,
+      },
+    );
+    const selector = structural.mapping.identity;
+    const column = selector.column ?? table.headers.indexOf(selector.header);
+    const personsById = new Map(academic.persons.map((p) => [p.identity, p]));
+    const entries = new Map(academic.enrollments.map((e) => [e.id, e]));
+    table = {
+      ...table,
+      rows: table.rows.filter((r) => {
+        if (identity(r.cells[column]?.raw).teacher) return true;
+        const normalized = identity(r.cells[column]?.raw).normalized;
+        if (!normalized) return true; // La identidad inválida conserva su revisión bloqueante.
+        const person = personsById.get(normalized);
+        const base = person?.baseEnrollmentId
+          ? entries.get(person.baseEnrollmentId)
+          : undefined;
+        const careers = base
+          ? [base.careerId]
+          : [
+              ...new Set(
+                (person?.enrollmentIds ?? []).map(
+                  (id) => entries.get(id)!.careerId,
+                ),
+              ),
+            ];
+        const owned = base
+          ? job.scope!.includes(base.careerId)
+          : careers.length > 0 &&
+            careers.every((id) => job.scope!.includes(id));
+        if (!owned && r.cells.some((c) => c.raw !== null && c.raw !== ""))
+          heldObservations.push({
+            id: `held-${r.row}`,
+            identity: String(r.cells[column]?.raw ?? ""),
+            careerId: null,
+            group: "",
+            file: table.source.originalName,
+            sheet: table.source.sheet,
+            row: r.row,
+            original: r.cells[column]?.raw ?? null,
+            effective: null,
+            reason:
+              normalized && roster && !roster.identities.has(normalized)
+                ? absentRosterReason
+                : "Registro fuera del ámbito de publicación o sin atribución resuelta",
+            rule: "publicacion_por_ambito",
+            state: "pendiente",
+            action:
+              "Administración conserva el original para revisar la atribución; esta carga no publica sus calificaciones.",
+            sourceVersion: job.id,
+          });
+        return owned;
+      }),
+    };
+  }
   const parsed = parseMoodle(table, {
-    ...(autoMapping ? institutionalMapping(table) : mapping),
+    ...resolvedMapping,
     approvedBy: job.uid,
     version: job.id,
   });
@@ -733,6 +848,10 @@ async function report(
         excluded.map((e) => [identity(e.identity).normalized, e]),
       );
       for (const e of priorArtifact.excluded ?? []) {
+        if (job.scope && (!e.careerId || !job.scope.includes(e.careerId))) {
+          excluded.push(e);
+          continue;
+        }
         const id = identity(e.identity).normalized;
         if (reported.has(id)) {
           const current = currentExcluded.get(id);
@@ -811,6 +930,10 @@ async function report(
     }
     const eligible: RowView[] = [];
     for (const row of before) {
+      if (job.scope && !job.scope.includes(row.careerId)) {
+        eligible.push(row);
+        continue;
+      }
       const normalized = identity(row.identity).normalized;
       if (roster && normalized && !roster.identities.has(normalized)) {
         if (
@@ -889,6 +1012,7 @@ async function report(
   }
   if (cut.progress || schedule?.tracking)
     for (const row of rows) {
+      if (job.scope && !job.scope.includes(row.careerId)) continue;
       try {
         if (cut.progress)
           unitsForProgress(
@@ -922,6 +1046,7 @@ async function report(
     await batch.commit();
   }
   return {
+    heldObservations,
     observations,
     includedByCareer: Object.fromEntries(
       [...new Set(rows.map((r) => r.careerId))].map((id) => [
@@ -1064,16 +1189,31 @@ export async function rowsPage(
   careerId?: string,
   cursor?: string,
 ) {
-  if (
-    member.role !== "admin" &&
-    (!careerId || !member.careers.includes(careerId))
-  )
+  if (member.role !== "admin" && careerId && !member.careers.includes(careerId))
     throw new HttpsError(
       "permission-denied",
       "Selecciona una carrera autorizada.",
     );
   if (!job.token || !["ready", "published"].includes(job.status))
     return { rows: [], cursor: null };
+  if (member.role !== "admin" && !careerId) {
+    const careers = [...new Set(member.careers)];
+    const rows: RowView[] = [];
+    for (let i = 0; i < careers.length; i += 30) {
+      let query = db
+        .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
+        .where("careerId", "in", careers.slice(i, i + 30))
+        .orderBy(FieldPath.documentId())
+        .limit(101);
+      if (cursor) query = query.startAfter(cursor);
+      rows.push(...(await query.get()).docs.map((d) => d.data() as RowView));
+    }
+    rows.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    return {
+      rows: rows.slice(0, 100),
+      cursor: rows.length > 100 ? rows[99]!.id : null,
+    };
+  }
   let query = db
     .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
     .orderBy(FieldPath.documentId())
@@ -1095,11 +1235,14 @@ export async function previewJob(
 ) {
   const page = await rowsPage(job, member, careerId, cursor);
   const artifact = job.artifact ? await jsonFile<Artifact>(job.artifact) : null;
-  const observations = (artifact?.observations ?? []).filter(
+  const observations = [
+    ...(artifact?.observations ?? []),
+    ...(member.role === "admin" ? (artifact?.heldObservations ?? []) : []),
+  ].filter(
     (o) =>
       member.role === "admin" ||
       (o.careerId !== null &&
-        o.careerId === careerId &&
+        (!careerId || o.careerId === careerId) &&
         member.careers.includes(o.careerId)),
   );
   const summary: ReviewSummary = {
@@ -1111,7 +1254,12 @@ export async function previewJob(
     numericCleared: 0,
   };
   for (const [id, value] of Object.entries(artifact?.review ?? {})) {
-    if (careerId ? id !== careerId : member.role !== "admin") continue;
+    if (
+      careerId
+        ? id !== careerId
+        : member.role !== "admin" && !member.careers.includes(id)
+    )
+      continue;
     summary.newActivities = [
       ...new Set([...summary.newActivities, ...value.newActivities]),
     ];
@@ -1126,17 +1274,23 @@ export async function previewJob(
   }
   return {
     review: artifact?.review ? summary : null,
+    reviewToken: reviewToken(job, member),
     inclusion: {
       included:
         member.role === "admin"
           ? (artifact?.count ?? 0)
-          : careerId && member.careers.includes(careerId)
-            ? (artifact?.includedByCareer?.[careerId] ?? 0)
-            : null,
+          : Object.entries(artifact?.includedByCareer ?? {}).reduce(
+              (n, [id, count]) =>
+                n +
+                (member.careers.includes(id) && (!careerId || careerId === id)
+                  ? count
+                  : 0),
+              0,
+            ),
       excluded: (artifact?.excluded ?? []).filter(
         (r) =>
           member.role === "admin" ||
-          (r.careerId === careerId &&
+          ((!careerId || r.careerId === careerId) &&
             r.careerId !== null &&
             member.careers.includes(r.careerId)),
       ).length,
@@ -1168,7 +1322,9 @@ export async function previewJob(
       .filter(
         (r) =>
           member.role === "admin" ||
-          (r.careerId === careerId && member.careers.includes(r.careerId)),
+          (r.careerId !== null &&
+            (!careerId || r.careerId === careerId) &&
+            member.careers.includes(r.careerId)),
       )
       .slice(0, 100),
   };

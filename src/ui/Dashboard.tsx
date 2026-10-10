@@ -1,3 +1,4 @@
+import { cutLabel, rememberCut, selectedCut } from "./cut-selection";
 import { Progress } from "./Progress";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
@@ -41,7 +42,7 @@ const percent = (v: number | null) =>
     : `${v.toLocaleString("es-MX", { maximumFractionDigits: 2 })} %`;
 
 export default function Dashboard({ overview }: { overview: Overview }) {
-  const [cutId, setCutId] = useState(overview.cuts[0]?.id ?? "");
+  const [cutId, setCutId] = useState(() => selectedCut(overview));
   const [filters, setFilters] = useState<MetricRequest["filters"]>({});
   const [view, setView] = useState<MetricRequest["view"]>("institucion");
   const [section, setSection] = useState<MetricRequest["section"]>("groups");
@@ -193,6 +194,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
               value={cutId}
               onChange={(e) => {
                 setCutId(e.target.value);
+                rememberCut(e.target.value);
                 setFilters({});
                 setSnapshotId(undefined);
                 setData(null);
@@ -201,7 +203,7 @@ export default function Dashboard({ overview }: { overview: Overview }) {
             >
               {overview.cuts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.label ?? `${c.cycleId} / ${c.id} · ${c.date}`}
+                  {cutLabel(c)}
                 </option>
               ))}
             </select>

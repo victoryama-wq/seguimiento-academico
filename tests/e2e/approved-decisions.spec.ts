@@ -25,7 +25,7 @@ async function login(page: Page, uid: string) {
     page.getByRole("button", { name: "Cerrar sesión" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Fuentes", exact: true }).click();
-  await openLegacySources(page);
+  if (uid === people.admin) await openLegacySources(page);
 }
 test("paquete privado sintético: observación, corrección administrativa, revalidación y dos coordinadores", async ({
   browser,
@@ -154,18 +154,16 @@ test("paquete privado sintético: observación, corrección administrativa, reva
   const a = await browser.newContext();
   let pa = await a.newPage();
   await login(pa, people.a);
-  await pa.getByLabel("Reportes Moodle").setInputFiles({
+  await pa.getByLabel("Seleccionar reportes originales").setInputFiles({
     name: "1 Curso compartido 27-1.csv",
     mimeType: "text/csv",
-    buffer: Buffer.from(reportCsv),
+    buffer: Buffer.from(
+      reportCsv.replace("Correo,Nota", "Dirección Email,Tarea: Unidad 1"),
+    ),
   });
-  await pa
-    .getByLabel("Instancia para 1 Curso compartido 27-1.csv")
-    .selectOption("compartido");
-  await pa.getByRole("button", { name: "Enviar lote", exact: true }).click();
-  const jobs = pa.locator(".job-list li");
+  const jobs = pa.getByRole("article", { name: "Trabajo Curso compartido" });
   await expect(jobs).toHaveCount(1, { timeout: 45000 });
-  await expect(jobs).toContainText("Validado para revisión", {
+  await expect(jobs).toContainText("Listo para revisar", {
     timeout: 45000,
   });
   const reportId = (await jobs.getAttribute("data-testid"))!.slice(4);
@@ -173,34 +171,49 @@ test("paquete privado sintético: observación, corrección administrativa, reva
   pa = await a.newPage();
   await pa.goto("/");
   await pa.getByRole("button", { name: "Fuentes", exact: true }).click();
-  await openLegacySources(pa);
   await pa
     .getByTestId(`job-${reportId}`)
-    .getByRole("button", { name: "Revisar compartido" })
+    .getByRole("button", { name: "Revisar Curso compartido", exact: true })
     .click();
-  await expect(pa.locator(".preview")).not.toContainText("000SINT02");
   await expect(
-    pa.locator(".preview").getByRole("button", { name: /Registrar revisión/ }),
+    pa.getByRole("region", { name: "Revisión antes de publicar" }),
+  ).not.toContainText("000SINT02");
+  await expect(
+    pa
+      .getByRole("region", { name: "Revisión antes de publicar" })
+      .getByRole("button", { name: /Registrar revisión/ }),
   ).toHaveCount(0);
   await pa
-    .getByRole("button", { name: "Volver a validar el original" })
+    .getByTestId(`job-${reportId}`)
+    .getByRole("button", { name: "Revalidar con fuentes vigentes" })
     .click();
-  await expect(pa.locator(".job-list li")).toHaveCount(2, { timeout: 45000 });
+  await expect(
+    pa.getByRole("article", { name: "Trabajo Curso compartido" }),
+  ).toHaveCount(2, { timeout: 45000 });
   const all = (await api("jobs", { cutId: "corte-1" }, sessions.a)) as {
     jobs: { id: string }[];
   };
   const revalidated = all.jobs.find((j) => j.id !== reportId)!.id;
   await waitJob(revalidated);
-  await pa.getByRole("button", { name: "Actualizar trabajos" }).click();
+  await pa.getByRole("button", { name: "Recuperar trabajos" }).click();
   await pa
     .getByTestId(`job-${revalidated}`)
-    .getByRole("button", { name: "Revisar compartido" })
+    .getByRole("button", { name: "Revisar Curso compartido", exact: true })
     .click();
-  await pa
-    .getByText("000SINT01 · 27-1 LAF 11 01A · resuelto", { exact: true })
-    .click();
-  await expect(pa.locator(".preview")).toContainText("17/09/2026");
-  await expect(pa.locator(".preview")).toContainText("2026-08-31");
+  const observation = pa
+    .getByRole("region", { name: "Revisión antes de publicar" })
+    .getByRole("article")
+    .filter({ hasText: "000SINT01" })
+    .first();
+  await observation.getByText("Diagnóstico", { exact: true }).click();
+  await expect(observation).toContainText("17/09/2026");
+  await expect(observation).toContainText("2026-08-31");
+  expect(
+    await pa.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await pa.getByRole("checkbox").check();
   await pa.getByRole("button", { name: "Confirmar publicación" }).click();
   await expect(pa.getByTestId(`job-${revalidated}`)).toContainText("Publicado");
   await pa.screenshot({
@@ -210,12 +223,24 @@ test("paquete privado sintético: observación, corrección administrativa, reva
   const b = await browser.newContext();
   const pb = await b.newPage();
   await login(pb, people.b);
-  await pb
-    .getByTestId(`job-${revalidated}`)
-    .getByRole("button", { name: "Revisar compartido" })
+  await expect(pb.getByTestId(`job-${revalidated}`)).toHaveCount(0);
+  await pb.getByLabel("Seleccionar reportes originales").setInputFiles({
+    name: "1 Curso compartido 27-1.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      reportCsv.replace("Correo,Nota", "Dirección Email,Tarea: Unidad 1"),
+    ),
+  });
+  const own = pb.getByRole("article", { name: "Trabajo Curso compartido" });
+  await expect(own).toContainText("Listo para revisar", { timeout: 45000 });
+  await own
+    .getByRole("button", { name: "Revisar Curso compartido", exact: true })
     .click();
-  await expect(pb.locator(".preview")).toContainText("000SINT02");
-  await expect(pb.locator(".preview")).not.toContainText("000SINT01");
+  const previewB = pb.getByRole("region", {
+    name: "Revisión antes de publicar",
+  });
+  await expect(previewB).toContainText("000SINT02");
+  await expect(previewB).not.toContainText("000SINT01");
   await a.close();
   await b.close();
 });

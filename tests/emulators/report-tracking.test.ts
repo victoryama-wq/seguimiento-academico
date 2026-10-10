@@ -1,3 +1,5 @@
+// Las cargas de referencia institucionales publican ambos ámbitos desde Administración.
+// coordinator-intake.test.ts prueba publicaciones independientes A/B sin alterar estos cálculos.
 import { beforeAll, it, expect } from "vitest";
 import {
   api,
@@ -47,7 +49,7 @@ async function send(
   name = "777._Curso_Multimodal_27-1 Calificaciones.csv",
 ) {
   const jobs = await batch(
-    sessions.a,
+    sessions.admin,
     [{ name, content, courseId: "mix", mapping: profile }],
     cut,
   );
@@ -86,7 +88,7 @@ it("Escolarizado conserva el ordinal con fechas flexibles; el calendario y las o
     sessions.admin,
   );
   const id = await send(fullTrackingCsv, "flexible");
-  await api("publish", { jobId: id, replace: false }, sessions.a);
+  await api("publish", { jobId: id, replace: false }, sessions.admin);
   const data = await panel("flexible");
   expect(data.counts).toEqual({ N: 2, G: 1, V: 0, E: 0, Z: 2, D: 3 });
   expect(
@@ -116,7 +118,7 @@ it("Escolarizado conserva el ordinal con fechas flexibles; el calendario y las o
 });
 it("curso compartido: afiliación principal, C.A., unidades por modalidad, acumulación y cierre sin pérdida", async () => {
   const id = await send(fullTrackingCsv);
-  await api("publish", { jobId: id, replace: false }, sessions.a);
+  await api("publish", { jobId: id, replace: false }, sessions.admin);
   expect(await send(fullTrackingCsv)).toBe(id);
   const initial = await panel();
   expect(initial.counts).toEqual({ N: 3, G: 1, V: 1, E: 1, Z: 2, D: 6 });
@@ -150,7 +152,7 @@ it("curso compartido: afiliación principal, C.A., unidades por modalidad, acumu
   const partial =
     "Dirección Email,Tarea:Actividad | Unidad 2 (Real),Tarea:Actividad | Unidad 1 (Real),Tarea:Sesión virtual (Real)\n000ESC@example.invalid,8,,0\n";
   const replacement = await send(partial);
-  await api("publish", { jobId: replacement, replace: true }, sessions.a);
+  await api("publish", { jobId: replacement, replace: true }, sessions.admin);
   expect(await send(partial)).toBe(replacement);
   const updated = await panel();
   expect(updated.counts).toEqual({ N: 4, G: 1, V: 2, E: 1, Z: 2, D: 8 });
@@ -203,7 +205,7 @@ it("curso compartido: afiliación principal, C.A., unidades por modalidad, acumu
     "Dirección Email,Tarea:Actividad | Unidad 3 (Real)\n000ESC@example.invalid,9\n",
     "semana5",
   );
-  await api("publish", { jobId: next, replace: false }, sessions.a);
+  await api("publish", { jobId: next, replace: false }, sessions.admin);
   const later = await panel("semana5");
   expect(later.counts).toEqual({ N: 5, G: 1, V: 2, E: 1, Z: 2, D: 9 });
   expect(later.details.map((d) => d.relationshipId).sort()).toEqual(
@@ -250,7 +252,7 @@ it("excluye matrículas ausentes sin unir por nombre; conserva bloqueos de curso
   expect(
     (await stores().db.doc(`jobs/${unknown}`).get()).data()?.blocking,
   ).toBe(false);
-  await api("publish", { jobId: unknown, replace: true }, sessions.a);
+  await api("publish", { jobId: unknown, replace: true }, sessions.admin);
   expect(
     JSON.stringify(
       (

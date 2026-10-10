@@ -22,6 +22,10 @@ aislado de producción. [Despliegue por SHA, pruebas y limitaciones](docs/valida
 El modo demo sigue conectado exclusivamente a emuladores. La aceptación operativa
 corresponde al usuario: [guía y procedimiento privado de acceso](docs/aceptacion-operativa.md).
 
+Coordinaciones: [seleccionar corte, subir, revisar, confirmar y consultar](docs/flujo-coordinadores.md).
+Administración conserva la preparación de fuentes, decisiones y avances. Las
+pruebas automáticas no sustituyen ni publican los archivos reales del propietario.
+
 El PR #5 incorpora [avance explícito y revisión acumulativa](docs/avance-explicito.md):
 corte Escolarizado y unidad Ejecutivo/Virtual independientes de fechas, actividades
 posteriores conservadas y advertencias antes de sustituir notas por vacío/guion.

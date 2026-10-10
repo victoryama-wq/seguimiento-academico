@@ -15,6 +15,7 @@ import {
 } from "./store";
 import {
   authorizeJob,
+  assertPublicationScope,
   getJob,
   jobView,
   pointerRef,
@@ -187,6 +188,15 @@ export async function correctionOperation(
       await tx.get(db.doc(`courses/${old.courseId}`))
     ).data() as Course;
     courseAccess(current, course);
+    const scope =
+      current.role === "admin"
+        ? old.scope
+        : [
+            ...new Set(
+              current.careers.filter((id) => course.careers.includes(id)),
+            ),
+          ].sort();
+    if (old.scope) assertPublicationScope(current, old);
     if (cut.status !== "open") throw conflict();
     if (
       old.columnPolicyVersion !== undefined &&
@@ -224,6 +234,7 @@ export async function correctionOperation(
         progressId: cut.progress?.id ?? null,
         revalidationOf: old.id,
         reportPolicy: "active-roster-v1",
+        ...(scope ? { scope } : {}),
         ...(old.columnPolicyVersion !== undefined
           ? { columnPolicyVersion: course.columnPolicy?.version ?? null }
           : {}),
@@ -246,7 +257,8 @@ export async function correctionOperation(
       ...old,
       id,
       sources: cut.sources,
-      cumulative: !!cut.sources.academicPackage,
+      cumulative: !!cut.sources.academicPackage || !!scope,
+      ...(scope ? { scope } : {}),
       progressId: cut.progress?.id ?? null,
       carryVersion: expected ?? carry ?? null,
       revalidationOf: old.id,

@@ -595,3 +595,37 @@ Ni el cargador ni compartir una asignatura autorizan conocer a personas sin
 atribución. Administración conserva esos casos; los coordinadores solo ven los
 atribuibles a sus carreras vigentes. Originales, fuentes fijadas, CAS y fotografías
 cerradas se conservan. Ver [regla, cálculos y recuperación](padron-activo-y-posibles-bajas.md).
+
+### Recorrido definitivo de coordinaciones (decisión institucional y técnica, 2026-10-10)
+
+El coordinador selecciona un corte disponible, carga originales, revisa y confirma
+sus propuestas y consulta resultados. Administración conserva fuentes, decisiones,
+preparación de cortes y avance. Se sustituye la restricción técnica que reservaba
+la preparación de todo reporte y el alta inequívoca de cursos a Administración;
+no se delegan sus decisiones institucionales ni la asignación de permisos.
+
+El servidor fija las carreras de cada trabajo con la membresía vigente. Filtra los
+originales mostrados y procesa solo registros atribuibles; los no atribuibles y
+los de otros ámbitos quedan conservados en el original para Administración. Una
+identidad inválida mantiene revisión bloqueante. La baja o ausencia del padrón
+confirmado conserva la regla aprobada; no se transforma un padrón ausente en bajas.
+
+Cada versión compuesta conserva intactas las filas y exclusiones previamente
+publicadas por otros ámbitos. El coordinador no puede añadir ni sustituir sus
+calificaciones. El cambio del puntero sigue siendo atómico y rechaza propuestas
+obsoletas: dos ámbitos concurrentes deben revalidar después de otra publicación.
+Reintentos publicados no vuelven a aplicar valores antiguos. Las versiones
+históricas sin ámbito no se alteran; un coordinador debe generar una revalidación
+con su ámbito antes de publicar. La revisión incluye una huella de versión y
+membresía, y la interfaz limpia la confirmación cuando cambia la propuesta.
+
+La elección de columna de identidad confirmada se reutiliza por curso, ciclo y
+ámbito; solo se reutiliza un encabezado exacto único o la misma estructura completa
+si está repetido. Las clasificaciones institucionales de actividades confirmadas
+por Administración siguen separadas. Las ambigüedades de nombre/actividad quedan
+en una cola privada administrativa, sin conceder acceso por cargar el archivo.
+
+La selección del corte se conserva en la sesión y enlaza la publicación al panel.
+No se crean cuentas ni permisos para personas reales en las pruebas automáticas.
+Guía: [flujo de coordinadores](flujo-coordinadores.md). DEC-01–36, principal C.A.,
+modalidades, avance explícito, cortes cerrados y conciliación permanecen vigentes.

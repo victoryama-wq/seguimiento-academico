@@ -29,6 +29,9 @@ import {
 } from "./store";
 import {
   authorizeJob,
+  assertPublicationScope,
+  reviewToken,
+  cutCareers,
   getJob,
   jobView,
   pointerRef,
@@ -80,10 +83,28 @@ export async function academicOperation(
         db.collection("cuts").limit(100).get(),
         db.collection("courses").limit(500).get(),
       ]);
+      const availableCuts: typeof cuts.docs = [];
+      const sourceCareers = new Map<string, string[]>();
+      for (const doc of cuts.docs) {
+        const cut = doc.data() as Cut;
+        if (member.role !== "admin") {
+          const key = canonical([cut.cycleId, cut.sources]);
+          const careers = sourceCareers.get(key) ?? (await cutCareers(cut));
+          sourceCareers.set(key, careers);
+          if (!careers.some((id) => member.careers.includes(id))) continue;
+        }
+        availableCuts.push(doc);
+      }
       return {
         member,
-        cycles: cycles.docs.map((d) => ({ id: d.id })),
-        cuts: cuts.docs.map((d) => {
+        cycles: cycles.docs
+          .filter(
+            (d) =>
+              member.role === "admin" ||
+              availableCuts.some((c) => c.data().cycleId === d.id),
+          )
+          .map((d) => ({ id: d.id })),
+        cuts: availableCuts.map((d) => {
           const v = d.data() as Cut;
           return {
             id: d.id,
@@ -375,6 +396,7 @@ export async function academicOperation(
             "Cierra el corte de origen para fijar el acumulado antes de cargar.",
           );
         const jobs: Job[] = [];
+        const resultIds: string[] = [];
         const found = new Set<string>();
         for (const file of input.files) {
           const course = (
@@ -382,6 +404,16 @@ export async function academicOperation(
           ).data() as Course | undefined;
           if (!course || course.cycleId !== cut.cycleId) throw missing();
           courseAccess(currentMember, course);
+          const scope =
+            currentMember.role === "admin"
+              ? undefined
+              : [
+                  ...new Set(
+                    currentMember.careers.filter((id) =>
+                      course.careers.includes(id),
+                    ),
+                  ),
+                ].sort();
           if (
             file.filenameResolution &&
             (file.filenameResolution.externalId !== course.externalId ||
@@ -398,6 +430,7 @@ export async function academicOperation(
               sources: cut.sources,
               hash: file.sha256,
               mapping: file.mapping,
+              ...(scope ? { scope } : {}),
               ...(file.filenameResolution
                 ? {
                     filename: {
@@ -408,6 +441,7 @@ export async function academicOperation(
                 : {}),
             }),
           );
+          resultIds.push(id);
           if (found.has(id)) continue;
           found.add(id);
           const previous = await tx.get(db.doc(`jobs/${id}`));
@@ -421,7 +455,8 @@ export async function academicOperation(
             id,
             kind: "report",
             sources: cut.sources,
-            cumulative: !!cut.sources.academicPackage,
+            cumulative: !!cut.sources.academicPackage || !!scope,
+            ...(scope ? { scope } : {}),
             progressId: cut.progress?.id ?? null,
             carryVersion:
               (pointer.data()?.versionId as string | undefined) ??
@@ -445,25 +480,7 @@ export async function academicOperation(
           });
         }
         for (const job of jobs) tx.create(db.doc(`jobs/${job.id}`), job);
-        return input.files.map((file) =>
-          hash(
-            canonical({
-              cut: cut.id,
-              course: file.courseId,
-              sources: cut.sources,
-              hash: file.sha256,
-              mapping: file.mapping,
-              ...(file.filenameResolution
-                ? {
-                    filename: {
-                      original: file.name,
-                      decision: file.filenameResolution,
-                    },
-                  }
-                : {}),
-            }),
-          ),
-        );
+        return resultIds;
       });
       return {
         jobs: await Promise.all(
@@ -499,6 +516,7 @@ export async function academicOperation(
             await tx.get(db.doc(`courses/${job.courseId}`))
           ).data() as Course;
           courseAccess(freshMember, course);
+          assertPublicationScope(freshMember, job);
           if (
             (await tx.get(db.doc(`cuts/${job.cutId}`))).data()?.status !==
             "open"
@@ -599,6 +617,15 @@ export async function academicOperation(
           await tx.get(db.doc(`courses/${job.courseId}`))
         ).data() as Course;
         courseAccess(freshMember, course);
+        assertPublicationScope(freshMember, job);
+        if (
+          (input.reviewToken || (job.guided && freshMember.role !== "admin")) &&
+          input.reviewToken !== reviewToken(job, freshMember)
+        )
+          throw new HttpsError(
+            "aborted",
+            "La revisión o tus permisos cambiaron. Abre de nuevo el resultado antes de confirmar.",
+          );
         if (job.status === "published") return;
         if (
           job.columnPolicyVersion !== undefined &&
@@ -683,7 +710,19 @@ export async function academicOperation(
           publishedAt: Date.now(),
         });
         tx.set(pointer, { versionId: job.id, revision });
-        if (job.columnPolicyVersion !== undefined) {
+        if (job.guided && job.scope && job.identityChoice)
+          tx.set(
+            db.doc(
+              `identityChoices/${hash(canonical([job.cycleId, job.courseId, job.scope]))}`,
+            ),
+            {
+              ...job.identityChoice,
+              version: job.id,
+              approvedBy: actor,
+              recordedAt: Date.now(),
+            },
+          );
+        if (job.columnPolicyVersion !== undefined && !job.scope) {
           const fields = { ...course.columnPolicy?.fields };
           const columns = job.file.mapping.columns as {
             selector: { header: string };
@@ -725,6 +764,7 @@ export async function academicOperation(
         const freshMember = await membership(actor, tx);
         if (job.kind !== "report") admin(freshMember);
         else {
+          assertPublicationScope(freshMember, job);
           courseAccess(
             freshMember,
             (await tx.get(db.doc(`courses/${job.courseId}`))).data() as Course,

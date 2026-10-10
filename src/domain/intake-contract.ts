@@ -36,6 +36,11 @@ export const catalogChoice = z.strictObject({
 });
 export const intakeOperations = {
   inspectOriginal: z.strictObject({
+    cutId: z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]+$/)
+      .max(100)
+      .optional(),
     kind: fileKind,
     name: z.string().min(1).max(180),
     base64: z
@@ -48,6 +53,8 @@ export const intakeOperations = {
     options: readOptionsSchema,
     offset: z.number().int().min(0).max(10000).default(0),
   }),
+  requestReportReview: z.strictObject({ id, reason: text }),
+  pendingReportReviews: z.strictObject({}),
   prepareAdministration: z.strictObject({
     calendarChoices: z
       .array(

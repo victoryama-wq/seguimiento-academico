@@ -169,7 +169,7 @@ describe.sequential(
           sessions.a,
         ),
       ).rejects.toThrow("PERMISSION_DENIED");
-      await api("publish", { jobId: id, replace: false }, sessions.a);
+      await api("publish", { jobId: id, replace: false }, sessions.admin);
       const csv = await api(
         "export",
         { cutId: "aprobadas", courseId: "compartido", careerId: "laf-plan-1" },
@@ -318,7 +318,7 @@ describe.sequential(
         "aprobadas",
         ["Extra"],
       );
-      await api("publish", { jobId: id, replace: true }, sessions.a);
+      await api("publish", { jobId: id, replace: true }, sessions.admin);
       await api(
         "configureMetrics",
         {
@@ -395,7 +395,7 @@ describe.sequential(
         "acumulado-2",
         ["Extra"],
       );
-      await api("publish", { jobId: next, replace: false }, sessions.a);
+      await api("publish", { jobId: next, replace: false }, sessions.admin);
       await api(
         "configureMetrics",
         {
