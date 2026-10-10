@@ -205,7 +205,7 @@ try {
       ],
     ]),
   );
-  const draft = await api("prepareAdministration", {
+  const configuration = {
     cycle,
     expected: null,
     roster: selected(roster),
@@ -225,6 +225,23 @@ try {
         date: "2026-08-28",
         kind: "excluida",
         reason: "Calendario de fixture sintética",
+      },
+    ],
+  };
+  let draft = await api("prepareAdministration", configuration);
+  const excluded = draft.rows.find((row) => row.identity === "000BAJA");
+  assert(excluded, "La inscripción sintética excluida debe ser revisable");
+  // Una exclusión por calendario no acredita baja. Confirmar expresamente la
+  // decisión individual por el mismo mecanismo auditado de Administración.
+  draft = await api("prepareAdministration", {
+    ...configuration,
+    individualChoices: [
+      {
+        key: excluded.key,
+        kind: "baja",
+        primary: false,
+        reason:
+          "Baja individual aprobada exclusivamente para el fixture sintético",
       },
     ],
   });
