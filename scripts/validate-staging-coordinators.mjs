@@ -326,8 +326,17 @@ try {
       await expect(
         flow.getByRole("button", { name: "Reintentar este archivo" }),
       ).toBeEnabled();
+      // La recuperación depende de una consulta real tras montar el módulo
+      // diferido. Esperar su respuesta, no asumir que terminó con el HTML.
+      const recovered = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/academicApi") &&
+          response.request().postDataJSON()?.data?.op === "jobs" &&
+          response.ok(),
+      );
       await page.reload();
       await page.getByRole("button", { name: "Fuentes", exact: true }).click();
+      await recovered;
       flow = page.getByRole("region", {
         name: "Carga de reportes de coordinación",
       });
