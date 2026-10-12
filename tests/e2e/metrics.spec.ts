@@ -32,7 +32,12 @@ test("administración selecciona universo persistente y revisa cálculo manual",
     for (const activity of name === "Curso compartido"
       ? ["A", "B", "C"]
       : ["A"])
-      await card.getByRole("checkbox", { name: activity, exact: true }).check();
+      await card
+        .getByRole("checkbox", {
+          name: name === "Curso A" ? "Nota" : activity,
+          exact: true,
+        })
+        .check();
     await card
       .getByLabel("Motivo de la selección o asignación")
       .fill("Universo sintético revisado desde UI");
@@ -85,7 +90,10 @@ test("dos coordinadores navegan por teclado, conservan filtros y exportan su alc
   await detail.focus();
   await detail.press("Enter");
   await expect(
-    page.getByRole("combobox", { name: "Grupo base", exact: true }),
+    page.getByRole("combobox", {
+      name: "Grupo principal de seguimiento",
+      exact: true,
+    }),
   ).toHaveValue("27-1 LAF 24 01A");
   await expect(page.locator(".metrics table")).toContainText("000SINT01");
   await expect(page.locator(".metrics")).not.toContainText("000SINT02");

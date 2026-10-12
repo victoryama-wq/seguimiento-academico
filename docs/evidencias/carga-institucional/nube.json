@@ -1,0 +1,94 @@
+{
+  "run": "cloud-intake-1791565601060",
+  "project": "indicadores-academia",
+  "sha": "ddbcadb2e6cdb76a967cb155e3599eafcae684d8",
+  "verifierRevision": "ddbcadb2e6cdb76a967cb155e3599eafcae684d8",
+  "url": "https://indicadores-academia.web.app",
+  "cases": [
+    {
+      "name": "desktop: originales CSV/XLSX, calendario visual y confirmación de fuentes",
+      "result": "success"
+    },
+    {
+      "name": "desktop: lote parcial conserva el reporte válido ante un archivo inválido",
+      "result": "success"
+    },
+    {
+      "name": "desktop: Eventarc efectivo, curso automático, principal C.A., avance y exclusión",
+      "counts": {
+        "N": 3,
+        "G": 1,
+        "V": 0,
+        "E": 0,
+        "Z": 1,
+        "D": 4
+      },
+      "students": 3,
+      "result": "success"
+    },
+    {
+      "name": "desktop: coordinadores A/B aislados y fuentes privadas denegadas",
+      "result": "success"
+    },
+    {
+      "name": "desktop: trabajo recuperado después de recargar navegador",
+      "result": "success"
+    },
+    {
+      "name": "desktop: actualización parcial, aviso numérico, reintento idempotente y corte cerrado conservado",
+      "counts": {
+        "N": 2,
+        "G": 1,
+        "V": 1,
+        "E": 0,
+        "Z": 0,
+        "D": 4
+      },
+      "result": "success"
+    },
+    {
+      "name": "mobile: originales CSV/XLSX, calendario visual y confirmación de fuentes",
+      "result": "success"
+    },
+    {
+      "name": "mobile: lote parcial conserva el reporte válido ante un archivo inválido",
+      "result": "success"
+    },
+    {
+      "name": "mobile: Eventarc efectivo, curso automático, principal C.A., avance y exclusión",
+      "counts": {
+        "N": 3,
+        "G": 1,
+        "V": 0,
+        "E": 0,
+        "Z": 1,
+        "D": 4
+      },
+      "students": 3,
+      "result": "success"
+    },
+    {
+      "name": "mobile: coordinadores A/B aislados y fuentes privadas denegadas",
+      "result": "success"
+    },
+    {
+      "name": "mobile: trabajo recuperado después de recargar navegador",
+      "result": "success"
+    },
+    {
+      "name": "mobile: actualización parcial, aviso numérico, reintento idempotente y corte cerrado conservado",
+      "counts": {
+        "N": 2,
+        "G": 1,
+        "V": 1,
+        "E": 0,
+        "Z": 0,
+        "D": 4
+      },
+      "result": "success"
+    }
+  ],
+  "startedAt": "2026-10-09T17:06:41.060Z",
+  "status": "success",
+  "finishedAt": "2026-10-09T17:07:54.117Z"
+}

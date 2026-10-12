@@ -1,0 +1,2491 @@
+{
+  "scenario": 230,
+  "startedAt": "2026-10-05T21:53:50.026Z",
+  "environment": {
+    "node": "v22.22.0",
+    "platform": "win32",
+    "release": "10.0.26300",
+    "cpus": 16,
+    "ramBytes": 16837013504
+  },
+  "status": "passed",
+  "apiConcurrency": 4,
+  "batchLimit": 20,
+  "memoryScope": "Proceso de pruebas: RSS muestreada y maxRSS del SO; Functions: muestras pilot-metric en log, no pico continuo.",
+  "files": [
+    {
+      "course": "piloto-1",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-2",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-3",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-4",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-5",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-6",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-7",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-8",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-9",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-10",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-11",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-12",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-13",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-14",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-15",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-16",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-17",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-18",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-19",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-20",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-21",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-22",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-23",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-24",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-25",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-26",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-27",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-28",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-29",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-30",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-31",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-32",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-33",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-34",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-35",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-36",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-37",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-38",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-39",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-40",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-41",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-42",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-43",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-44",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-45",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-46",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-47",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-48",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-49",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-50",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-51",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-52",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-53",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-54",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-55",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-56",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-57",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-58",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-59",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-60",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-61",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-62",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-63",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-64",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-65",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-66",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-67",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-68",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-69",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-70",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-71",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-72",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-73",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-74",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-75",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-76",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-77",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-78",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-79",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-80",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-81",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-82",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-83",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-84",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-85",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-86",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-87",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-88",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-89",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-90",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-91",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-92",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-93",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-94",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-95",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-96",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-97",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-98",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-99",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-100",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-101",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-102",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-103",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-104",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-105",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-106",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-107",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-108",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-109",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-110",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-111",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-112",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-113",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-114",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-115",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-116",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-117",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-118",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-119",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-120",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-121",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-122",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-123",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-124",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-125",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-126",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-127",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-128",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-129",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-130",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-131",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-132",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-133",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-134",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-135",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-136",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-137",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-138",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-139",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-140",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-141",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-142",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-143",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-144",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-145",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-146",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-147",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-148",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-149",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-150",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-151",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-152",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-153",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-154",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-155",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-156",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-157",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-158",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-159",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-160",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-161",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-162",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-163",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-164",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-165",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-166",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-167",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-168",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-169",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-170",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-171",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-172",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-173",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-174",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-175",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-176",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-177",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-178",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-179",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-180",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-181",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-182",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-183",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-184",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-185",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-186",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-187",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-188",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-189",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-190",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-191",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-192",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-193",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-194",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-195",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-196",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-197",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-198",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-199",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-200",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-201",
+      "format": "ods",
+      "bytes": 8648,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-202",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-203",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-204",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-205",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-206",
+      "format": "xlsx",
+      "bytes": 9258,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-207",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-208",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-209",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-210",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-211",
+      "format": "csv",
+      "bytes": 2280,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-212",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-213",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-214",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-215",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-216",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-217",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-218",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-219",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-220",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-221",
+      "format": "xlsx",
+      "bytes": 11359,
+      "students": 50,
+      "rows": 51,
+      "activities": 5,
+      "shared": true
+    },
+    {
+      "course": "piloto-222",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-223",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-224",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-225",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-226",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-227",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-228",
+      "format": "ods",
+      "bytes": 5280,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-229",
+      "format": "csv",
+      "bytes": 520,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    },
+    {
+      "course": "piloto-230",
+      "format": "xlsx",
+      "bytes": 9259,
+      "students": 10,
+      "rows": 11,
+      "activities": 5,
+      "shared": false
+    }
+  ],
+  "population": {
+    "uniqueStudents": 50,
+    "studentRowsPerCut": 3220,
+    "teacherRowsPerCut": 230,
+    "activitiesPerFile": 5,
+    "cellsPerCut": 22080
+  },
+  "cut0": {
+    "counts": {
+      "N": 6440,
+      "G": 3220,
+      "V": 3220,
+      "E": 3220,
+      "Z": 3220,
+      "D": 16100
+    },
+    "students": 50,
+    "coverage": 40,
+    "exportBytesCareer0": 1110038
+  },
+  "cut1": {
+    "counts": {
+      "N": 6440,
+      "G": 3220,
+      "V": 3220,
+      "E": 3220,
+      "Z": 3220,
+      "D": 16100
+    },
+    "students": 50,
+    "coverage": 40,
+    "exportBytesCareer0": 1110040
+  },
+  "storage": {
+    "scope": "Bucket demo completo al terminar; incluye seed y escenarios anteriores; no es incremento aislado.",
+    "prefixes": {
+      "closures": {
+        "objects": 2,
+        "bytes": 850064
+      },
+      "derived": {
+        "objects": 464,
+        "bytes": 1467434
+      },
+      "exports": {
+        "objects": 3,
+        "bytes": 2702053
+      },
+      "metricSnapshots": {
+        "objects": 16,
+        "bytes": 2583194
+      },
+      "originals": {
+        "objects": 464,
+        "bytes": 2422605
+      }
+    }
+  },
+  "firestore": {
+    "jobsForScenario": 462,
+    "reportRowsWritten": 6900,
+    "readWriteBilling": "No medido. Consultas callable medidas en measurements; inventario no equivale a operaciones facturadas."
+  },
+  "elapsedMs": 423555,
+  "clientMemory": {
+    "sampledPeakRssBytes": 165244928,
+    "osMaxRssKiB": 170336
+  },
+  "timings": {
+    "seed": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 12301,
+      "p50Ms": 12301,
+      "p95Ms": 12301,
+      "maxMs": 12301
+    },
+    "createCycle": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 48,
+      "p50Ms": 48,
+      "p95Ms": 48,
+      "maxMs": 48
+    },
+    "assignMember": {
+      "count": 5,
+      "failures": 0,
+      "sumMs": 346,
+      "p50Ms": 71,
+      "p95Ms": 75,
+      "maxMs": 75
+    },
+    "createCourse": {
+      "count": 230,
+      "failures": 0,
+      "sumMs": 31595,
+      "p50Ms": 82,
+      "p95Ms": 111,
+      "maxMs": 4078
+    },
+    "createCut": {
+      "count": 2,
+      "failures": 0,
+      "sumMs": 111,
+      "p50Ms": 53,
+      "p95Ms": 58,
+      "maxMs": 58
+    },
+    "createBatch": {
+      "count": 48,
+      "failures": 0,
+      "sumMs": 40103,
+      "p50Ms": 873,
+      "p95Ms": 956,
+      "maxMs": 972
+    },
+    "upload": {
+      "count": 460,
+      "failures": 0,
+      "sumMs": 86985,
+      "p50Ms": 185,
+      "p95Ms": 258,
+      "maxMs": 414
+    },
+    "processing:waitReady": {
+      "count": 460,
+      "failures": 0,
+      "sumMs": 237931,
+      "p50Ms": 500,
+      "p95Ms": 858,
+      "maxMs": 1173
+    },
+    "publish": {
+      "count": 460,
+      "failures": 0,
+      "sumMs": 47836,
+      "p50Ms": 103,
+      "p95Ms": 135,
+      "maxMs": 172
+    },
+    "configureMetrics": {
+      "count": 462,
+      "failures": 2,
+      "sumMs": 47792,
+      "p50Ms": 103,
+      "p95Ms": 132,
+      "maxMs": 169
+    },
+    "batch:0:0": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 8880,
+      "p50Ms": 8880,
+      "p95Ms": 8880,
+      "maxMs": 8880
+    },
+    "batch:0:20": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 9724,
+      "p50Ms": 9724,
+      "p95Ms": 9724,
+      "maxMs": 9724
+    },
+    "batch:0:40": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 9117,
+      "p50Ms": 9117,
+      "p95Ms": 9117,
+      "maxMs": 9117
+    },
+    "batch:0:60": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 8511,
+      "p50Ms": 8511,
+      "p95Ms": 8511,
+      "maxMs": 8511
+    },
+    "batch:0:80": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 8346,
+      "p50Ms": 8346,
+      "p95Ms": 8346,
+      "maxMs": 8346
+    },
+    "batch:0:100": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7467,
+      "p50Ms": 7467,
+      "p95Ms": 7467,
+      "maxMs": 7467
+    },
+    "batch:0:120": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7521,
+      "p50Ms": 7521,
+      "p95Ms": 7521,
+      "maxMs": 7521
+    },
+    "batch:0:140": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7200,
+      "p50Ms": 7200,
+      "p95Ms": 7200,
+      "maxMs": 7200
+    },
+    "batch:0:160": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 6997,
+      "p50Ms": 6997,
+      "p95Ms": 6997,
+      "maxMs": 6997
+    },
+    "batch:0:180": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7081,
+      "p50Ms": 7081,
+      "p95Ms": 7081,
+      "maxMs": 7081
+    },
+    "batch:0:200": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7377,
+      "p50Ms": 7377,
+      "p95Ms": 7377,
+      "maxMs": 7377
+    },
+    "batch:0:220": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 3931,
+      "p50Ms": 3931,
+      "p95Ms": 3931,
+      "maxMs": 3931
+    },
+    "dashboard": {
+      "count": 26,
+      "failures": 10,
+      "sumMs": 151611,
+      "p50Ms": 4664,
+      "p95Ms": 17718,
+      "maxMs": 19650
+    },
+    "exportDashboard": {
+      "count": 2,
+      "failures": 0,
+      "sumMs": 7222,
+      "p50Ms": 3364,
+      "p95Ms": 3858,
+      "maxMs": 3858
+    },
+    "closeCut": {
+      "count": 2,
+      "failures": 0,
+      "sumMs": 35183,
+      "p50Ms": 17467,
+      "p95Ms": 17716,
+      "maxMs": 17716
+    },
+    "batch:1:0": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7886,
+      "p50Ms": 7886,
+      "p95Ms": 7886,
+      "maxMs": 7886
+    },
+    "batch:1:20": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7498,
+      "p50Ms": 7498,
+      "p95Ms": 7498,
+      "maxMs": 7498
+    },
+    "batch:1:40": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7864,
+      "p50Ms": 7864,
+      "p95Ms": 7864,
+      "maxMs": 7864
+    },
+    "batch:1:60": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7470,
+      "p50Ms": 7470,
+      "p95Ms": 7470,
+      "maxMs": 7470
+    },
+    "batch:1:80": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7695,
+      "p50Ms": 7695,
+      "p95Ms": 7695,
+      "maxMs": 7695
+    },
+    "batch:1:100": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7482,
+      "p50Ms": 7482,
+      "p95Ms": 7482,
+      "maxMs": 7482
+    },
+    "batch:1:120": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7579,
+      "p50Ms": 7579,
+      "p95Ms": 7579,
+      "maxMs": 7579
+    },
+    "batch:1:140": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7669,
+      "p50Ms": 7669,
+      "p95Ms": 7669,
+      "maxMs": 7669
+    },
+    "batch:1:160": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7445,
+      "p50Ms": 7445,
+      "p95Ms": 7445,
+      "maxMs": 7445
+    },
+    "batch:1:180": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7657,
+      "p50Ms": 7657,
+      "p95Ms": 7657,
+      "maxMs": 7657
+    },
+    "batch:1:200": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 7339,
+      "p50Ms": 7339,
+      "p95Ms": 7339,
+      "maxMs": 7339
+    },
+    "batch:1:220": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 3976,
+      "p50Ms": 3976,
+      "p95Ms": 3976,
+      "maxMs": 3976
+    },
+    "configureComparison": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 10183,
+      "p50Ms": 10183,
+      "p95Ms": 10183,
+      "maxMs": 10183
+    },
+    "compareCuts": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 12421,
+      "p50Ms": 12421,
+      "p95Ms": 12421,
+      "maxMs": 12421
+    },
+    "exportComparison": {
+      "count": 1,
+      "failures": 0,
+      "sumMs": 1634,
+      "p50Ms": 1634,
+      "p95Ms": 1634,
+      "maxMs": 1634
+    }
+  },
+  "worker": {
+    "count": 464,
+    "failures": 0,
+    "sumMs": 83673,
+    "p50Ms": 174,
+    "p95Ms": 237,
+    "maxMs": 846
+  },
+  "functionsMemory": {
+    "scope": "Muestras RSS/heap de procesos Functions antes/después; no pico continuo, incluye concurrencia y GC",
+    "samples": 4366,
+    "maxRssBytes": 413196288,
+    "maxHeapUsedBytes": 268447088
+  }
+}

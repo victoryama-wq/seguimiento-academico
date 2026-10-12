@@ -1,0 +1,15 @@
+{
+  "status": "pending-project-and-cloud-validation",
+  "projectId": null,
+  "region": null,
+  "storageBucket": null,
+  "hostingSite": null,
+  "authDomain": null,
+  "runtimeServiceAccount": null,
+  "deployerPrincipal": null,
+  "initialAdminUid": null,
+  "billingAccountApproved": false,
+  "runtimeMode": "emulator",
+  "cloudActivationReviewed": false,
+  "destructiveRetentionEnabled": false
+}

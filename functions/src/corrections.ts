@@ -1,0 +1,282 @@
+import { HttpsError } from "firebase-functions/v2/https";
+import { identity } from "../../src/domain/academic";
+import { operationSchemas } from "../../src/domain/import-contract";
+import { validateAcademicPackage } from "../../src/importing/decisions";
+import {
+  admin,
+  bucket,
+  canonical,
+  courseAccess,
+  db,
+  hash,
+  jsonFile,
+  membership,
+  saveImmutable,
+} from "./store";
+import {
+  authorizeJob,
+  assertPublicationScope,
+  getJob,
+  jobView,
+  pointerRef,
+  sourceJobId,
+  type Artifact,
+  type Course,
+  type Cut,
+  type Cycle,
+  type Job,
+} from "./jobs";
+
+const conflict = () =>
+  new HttpsError(
+    "failed-precondition",
+    "Actualiza y revisa la propuesta; las fuentes o el corte cambiaron.",
+  );
+
+export async function correctionOperation(
+  op:
+    | "reviseAcademicDecision"
+    | "reviseCycleWithdrawal"
+    | "refreshCutSources"
+    | "revalidate",
+  raw: unknown,
+  actor: string,
+) {
+  const member = await membership(actor);
+  if (op === "refreshCutSources") {
+    admin(member);
+    const input = operationSchemas.refreshCutSources.parse(raw);
+    await db.runTransaction(async (tx) => {
+      admin(await membership(actor, tx));
+      const ref = db.doc(`cuts/${input.cutId}`);
+      const cut = (await tx.get(ref)).data() as Cut | undefined;
+      if (
+        !cut ||
+        cut.status !== "open" ||
+        canonical(cut.sources) !== canonical(input.expectedSources)
+      )
+        throw conflict();
+      const cycle = (
+        await tx.get(db.doc(`cycles/${cut.cycleId}`))
+      ).data() as Cycle;
+      const published = await tx.get(ref.collection("courses").limit(1));
+      // Un corte con resultados requiere una revisión histórica; no mezclar fuentes.
+      if (!published.empty)
+        throw new HttpsError(
+          "failed-precondition",
+          "El corte ya tiene resultados. Crea una revisión atribuible del corte.",
+        );
+      if (canonical(cycle.sources) === canonical(cut.sources)) return;
+      tx.create(db.collection("sourceRefreshAudit").doc(), {
+        cutId: cut.id,
+        previous: cut.sources,
+        sources: cycle.sources,
+        actor,
+        reason: input.reason,
+        createdAt: Date.now(),
+      });
+      tx.update(ref, { sources: cycle.sources, dates: cycle.dates });
+    });
+    return { ok: true };
+  }
+  if (op === "reviseAcademicDecision" || op === "reviseCycleWithdrawal") {
+    admin(member);
+    const input = operationSchemas[op].parse(raw);
+    const old = await getJob(input.jobId);
+    if (old.kind !== "academicPackage" || !old.artifact) throw conflict();
+    const artifact = await jsonFile<Artifact>(old.artifact);
+    const p = validateAcademicPackage(artifact.data, old.cycleId);
+    const revised = validateAcademicPackage(
+      {
+        ...p,
+        revisionOf: old.id,
+        reason: input.decision.reason,
+        ...("enrollmentId" in input.decision
+          ? {
+              decisions: [
+                ...p.decisions.filter(
+                  (d) =>
+                    d.enrollmentId !==
+                    ("enrollmentId" in input.decision
+                      ? input.decision.enrollmentId
+                      : null),
+                ),
+                input.decision,
+              ],
+            }
+          : {
+              cycleWithdrawals: [
+                ...(p.cycleWithdrawals ?? []).filter(
+                  (d) =>
+                    identity(d.identity).normalized !==
+                    identity(
+                      "identity" in input.decision
+                        ? input.decision.identity
+                        : null,
+                    ).normalized,
+                ),
+                input.decision,
+              ],
+            }),
+      },
+      old.cycleId,
+    );
+    const bytes = Buffer.from(canonical(revised));
+    const file = {
+      name: "decisiones-revisadas.json",
+      bytes: bytes.length,
+      sha256: hash(bytes),
+      mapping: {},
+    };
+    if (file.bytes > 8 * 1024 * 1024) throw conflict();
+    const id = sourceJobId(old.cycleId, old.kind, file);
+    await db.runTransaction(async (tx) => {
+      admin(await membership(actor, tx));
+      const cycle = (
+        await tx.get(db.doc(`cycles/${old.cycleId}`))
+      ).data() as Cycle;
+      const ref = db.doc(`jobs/${id}`);
+      if ((await tx.get(ref)).exists) return;
+      const parent = (await tx.get(db.doc(`jobs/${old.id}`))).data() as Job;
+      const current = cycle.sources.academicPackage ?? null;
+      // Una revisión hereda la base que realmente leyó. No hacer pasar una
+      // fotografía antigua por una revisión de la fuente vigente.
+      if (
+        parent.artifact !== old.artifact ||
+        (parent.status === "published"
+          ? current !== parent.id
+          : current !== parent.expected)
+      )
+        throw conflict();
+      await saveImmutable(`originals/${id}/source`, bytes, "application/json");
+      const job: Job = {
+        ...old,
+        id,
+        file,
+        uid: actor,
+        status: "queued",
+        attempt: 0,
+        lease: 0,
+        token: null,
+        artifact: null,
+        error: null,
+        blocking: false,
+        createdAt: Date.now(),
+        expected: current,
+      };
+      tx.create(ref, job);
+      tx.create(db.doc(`decisionRevisionAudit/${id}`), {
+        previous: old.id,
+        version: id,
+        actor,
+        decision: input.decision,
+        createdAt: Date.now(),
+      });
+    });
+    return jobView(await getJob(id));
+  }
+  const input = operationSchemas.revalidate.parse(raw);
+  const old = await getJob(input.jobId);
+  await authorizeJob(member, old);
+  if (old.kind !== "report") throw conflict();
+  const [bytes] = await bucket().file(`originals/${old.id}/source`).download();
+  // El original y las resoluciones mantienen su autor. Revalidar no concede facultades administrativas.
+  const id = await db.runTransaction(async (tx) => {
+    const current = await membership(actor, tx);
+    const cut = (await tx.get(db.doc(`cuts/${old.cutId}`))).data() as Cut;
+    const course = (
+      await tx.get(db.doc(`courses/${old.courseId}`))
+    ).data() as Course;
+    courseAccess(current, course);
+    const scope =
+      current.role === "admin"
+        ? old.scope
+        : [
+            ...new Set(
+              current.careers.filter((id) => course.careers.includes(id)),
+            ),
+          ].sort();
+    if (old.scope) assertPublicationScope(current, old);
+    if (cut.status !== "open") throw conflict();
+    if (
+      old.columnPolicyVersion !== undefined &&
+      old.columnPolicyVersion !== (course.columnPolicy?.version ?? null)
+    ) {
+      const columns = old.file.mapping.columns as {
+        selector: { header: string };
+        kind: string;
+        unit?: number;
+        additional?: boolean;
+      }[];
+      if (
+        columns.some((c) => {
+          const approved = course.columnPolicy?.fields[c.selector.header];
+          return (
+            !approved ||
+            approved.kind !== c.kind ||
+            approved.unit !== c.unit ||
+            !!approved.additional !== !!c.additional
+          );
+        })
+      )
+        throw new HttpsError(
+          "failed-precondition",
+          "Cambió la clasificación de columnas. Vuelve a seleccionar el original y revisar las columnas vigentes.",
+        );
+    }
+    const expected = (await tx.get(pointerRef(cut.id, course.id))).data()
+      ?.versionId as string | undefined;
+    const freshJob = (await tx.get(db.doc(`jobs/${old.id}`))).data() as Job;
+    if (freshJob.status === "published" && expected !== old.id)
+      throw conflict();
+    const id = hash(
+      canonical({
+        progressId: cut.progress?.id ?? null,
+        revalidationOf: old.id,
+        reportPolicy: "active-roster-v1",
+        ...(scope ? { scope } : {}),
+        ...(old.columnPolicyVersion !== undefined
+          ? { columnPolicyVersion: course.columnPolicy?.version ?? null }
+          : {}),
+        sources: cut.sources,
+        expected: expected ?? null,
+      }),
+    );
+    const ref = db.doc(`jobs/${id}`);
+    if ((await tx.get(ref)).exists) return id;
+    const carry = cut.carryCutId
+      ? ((await tx.get(pointerRef(cut.carryCutId, course.id))).data()
+          ?.versionId as string | undefined)
+      : undefined;
+    await saveImmutable(
+      `originals/${id}/source`,
+      bytes,
+      "application/octet-stream",
+    );
+    tx.create(ref, {
+      ...old,
+      id,
+      sources: cut.sources,
+      cumulative: !!cut.sources.academicPackage || !!scope,
+      ...(scope ? { scope } : {}),
+      progressId: cut.progress?.id ?? null,
+      carryVersion: expected ?? carry ?? null,
+      revalidationOf: old.id,
+      ...(old.columnPolicyVersion !== undefined
+        ? { columnPolicyVersion: course.columnPolicy?.version ?? null }
+        : {}),
+      revalidatedBy: actor,
+      status: "queued",
+      attempt: 0,
+      lease: 0,
+      token: null,
+      artifact: null,
+      error: null,
+      blocking: false,
+      createdAt: Date.now(),
+      expected: expected ?? null,
+    });
+    return id;
+  });
+  return jobView(await getJob(id));
+}

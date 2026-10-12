@@ -14,6 +14,59 @@ import { odsFixture, zipFixture } from "../fixtures/synthetic/zip";
 import { prepareRoster } from "../../src/importing/roster";
 import { resolveAffiliations } from "../../src/domain/academic";
 import { context } from "../fixtures/synthetic/academic";
+import { wideMoodleRows, book, csv } from "../fixtures/synthetic/intake";
+import { institutionalMapping } from "../../src/importing/report-layout";
+
+it.each(["xlsx", "ods", "csv"] as const)(
+  "Moodle %s: conserva filas reales y omite solo filas totalmente vacías sin eludir límites",
+  (format) => {
+    const rows = wideMoodleRows();
+    const bytes = format === "csv" ? csv(rows) : book(rows, format);
+    const table = readTable(bytes, `910 Curso 27-1.${format}`);
+    expect(table.rows).toHaveLength(999);
+    const report = parseMoodle(table, {
+      ...institutionalMapping(table),
+      version: "test",
+      approvedBy: "admin",
+    });
+    expect(report.accepted).toHaveLength(4);
+    expect(report.unresolved).toHaveLength(0);
+    expect(report.issues).toEqual([]);
+    expect(report.accepted.map((r) => r.row)).toEqual([2, 3, 4, 5]);
+    expect(report.accepted[0]!.values[0]!.grade).toMatchObject({
+      state: "numerica",
+      value: 0,
+    });
+    expect(report.activities).toHaveLength(3);
+    // Tener nota, un error o fórmula sin identidad sigue siendo una incidencia.
+    const blank = table.rows[4]!;
+    for (const cell of [
+      { ...blank.cells[1]!, raw: 0 },
+      { ...blank.cells[1]!, raw: false },
+      { ...blank.cells[1]!, raw: "-" },
+      { ...blank.cells[1]!, raw: null, type: "e" },
+      { ...blank.cells[1]!, raw: "", formula: 'IF(1,"","")' },
+    ]) {
+      const altered = {
+        ...table,
+        rows: [
+          { ...blank, cells: blank.cells.map((v, i) => (i === 1 ? cell : v)) },
+        ],
+      };
+      const invalid = parseMoodle(altered, {
+        ...institutionalMapping(table),
+        version: "test",
+        approvedBy: "admin",
+      });
+      expect(invalid.unresolved).toHaveLength(1);
+      expect(
+        invalid.issues.some(
+          (i) => i.code === "identidad_faltante_o_no_literal",
+        ),
+      ).toBe(true);
+    }
+  },
+);
 
 const mapping = {
   version: "moodle-sintetico-v1",

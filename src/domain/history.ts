@@ -47,7 +47,7 @@ export function compareHistory(
           identity(row.identity).normalized !== null &&
           identity(e.identity).normalized ===
             identity(row.identity).normalized &&
-          /baja/i.test(e.reason),
+          (e.withdrawalStatus === "baja confirmada" || /baja/i.test(e.reason)),
       );
       changes.push({
         kind: withdrawal ? "baja" : "fuera_del_universo",

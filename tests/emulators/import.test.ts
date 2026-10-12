@@ -147,15 +147,9 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
     );
     expect(JSON.stringify(a)).toContain("000SINT01");
     expect(JSON.stringify(a)).not.toContain("000SINT02");
-    expect(
-      JSON.stringify(
-        await api(
-          "preview",
-          { jobId: valid, careerId: "arq-plan-1" },
-          sessions.b,
-        ),
-      ),
-    ).not.toContain("000SINT01");
+    await expect(
+      api("preview", { jobId: valid, careerId: "arq-plan-1" }, sessions.b),
+    ).rejects.toThrow("PERMISSION_DENIED");
     await expect(
       api("preview", { jobId: valid, careerId: "arq-plan-1" }, sessions.a),
     ).rejects.toThrow("PERMISSION_DENIED");
@@ -175,7 +169,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
     const rows = await stores()
       .db.collection(`jobs/${valid}/attempts/${staged.token}/rows`)
       .get();
-    expect(rows.size).toBe(2);
+    expect(rows.size).toBe(1);
     const env = await initializeTestEnvironment({
       projectId: "demo-seguimiento-ci",
       firestore: { host: "127.0.0.1", port: 8080 },
@@ -203,7 +197,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
       await assertFails(
         env.unauthenticatedContext().firestore().doc(`${path}/000002`).get(),
       );
-      await assertSucceeds(
+      await assertFails(
         env
           .authenticatedContext(people.b)
           .firestore()
@@ -245,7 +239,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
   });
 
   it("reimportación, confirmaciones concurrentes y reintentos conservan conteos", async () => {
-    const [a, b] = await Promise.all([batch(sessions.a), batch(sessions.b)]);
+    const [a, b] = await Promise.all([batch(sessions.a), batch(sessions.a)]);
     expect(a[0]!.id).toBe(b[0]!.id);
     const id = a[0]!.id;
     const before = (
@@ -253,7 +247,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
     ).data();
     await Promise.all([
       api("publish", { jobId: id, replace: false }, sessions.a),
-      api("publish", { jobId: id, replace: false }, sessions.b),
+      api("publish", { jobId: id, replace: false }, sessions.a),
       api("retry", { jobId: id }, sessions.a),
     ]);
     expect(
@@ -538,7 +532,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
     const content =
       "Correo,Numero,Cero,Guion,Vacio,Texto\n000SINT01@example.invalid,8,0,-,,texto-A\n000SINT02@example.invalid,7,0,-,,texto-B\n";
     const [job] = await batch(
-      sessions.a,
+      sessions.admin,
       [
         {
           name: "1 Curso compartido 27-1.csv",
@@ -550,7 +544,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
       cutId,
     );
     expect((await waitJob(job!.id)).blocking).toBe(false);
-    await api("publish", { jobId: job!.id, replace: false }, sessions.a);
+    await api("publish", { jobId: job!.id, replace: false }, sessions.admin);
     for (const [session, careerId, own, other, number] of [
       [sessions.a, "laf-plan-1", "A", "B", "8"],
       [sessions.b, "arq-plan-1", "B", "A", "7"],
@@ -847,13 +841,13 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
           },
         ],
       },
-      sessions.a,
+      sessions.admin,
     )) as { jobs: { id: string }[] };
     const jobId = created.jobs[0]!.id;
     await api(
       "upload",
       { jobId, base64: Buffer.from(reportCsv).toString("base64") },
-      sessions.a,
+      sessions.admin,
     );
     await waitJob(jobId);
     const a = await api(
@@ -879,7 +873,7 @@ describe.sequential("etapa 03: autorización, fuentes y trabajos reales", () => 
     expect(
       JSON.stringify(await api("preview", { jobId }, sessions.admin)),
     ).toContain("tup-d1");
-    await api("publish", { jobId, replace: false }, sessions.a);
+    await api("publish", { jobId, replace: false }, sessions.admin);
   });
 
   it("pagina un curso compartido sin filtrar otras carreras ni duplicar filas", async () => {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { grade, identity, type Issue } from "../domain/academic";
-import type { Cell, Table } from "./files";
+import { isEmptyRow, type Cell, type Table } from "./files";
 
 const selectorSchema = z.strictObject({
   header: z.string().min(1),
@@ -109,10 +109,10 @@ export function mapRecords(
 export function suggestColumn(
   header: string,
 ): "total" | "category" | "metadata" | "activity" | "review" {
-  if (/^total\b|^course total\b/i.test(header)) return "total";
+  if (/^(?:total|subtotal)\b|^course total\b/i.test(header)) return "total";
   if (/^categor[ií]a[: ]/i.test(header)) return "category";
   if (/^Último descargado desde este curso$/i.test(header)) return "metadata";
-  if (/^(tarea|cuestionario|foro|assignment|quiz)[: ]/i.test(header))
+  if (/^(tarea|cuestionario|examen|foro|assignment|quiz)[: ]/i.test(header))
     return "activity";
   return "review";
 }
@@ -130,6 +130,8 @@ const moodleMappingSchema = z.strictObject({
       selector: selectorSchema,
       kind: z.enum(["activity", "category", "total", "metadata"]),
       activityId: z.string().trim().min(1).optional(),
+      additional: z.boolean().optional(),
+      unit: z.number().int().positive().max(100).optional(),
     }),
   ),
 });
@@ -158,37 +160,45 @@ export function parseMoodle(table: Table, mappingInput: unknown) {
     throw new Error("Mapear cada columna exactamente una vez");
   const activities = columns.filter((c) => c.kind === "activity");
   if (
+    activities.some((c) =>
+      ["total", "category"].includes(suggestColumn(c.selector.header)),
+    )
+  )
+    throw new Error("Un total o categoría no es una actividad");
+  if (
     activities.some((c) => !c.activityId) ||
     new Set(activities.map((c) => c.activityId)).size !== activities.length ||
     columns.some((c) => c.kind !== "activity" && c.activityId)
   )
     throw new Error("IDs de actividades ausentes o repetidos");
   const issues: Issue[] = [];
-  const parsed = table.rows.map((row) => {
-    const cell = row.cells[identityColumn]!;
-    const person = identity(
-      cell.formula || cell.type === "e" ? null : cell.raw,
-    );
-    if (!person.normalized)
-      issues.push({
-        code: "identidad_faltante_o_no_literal",
-        refs: [String(row.row)],
-      });
-    const values = activities.map((c) => {
-      const source = row.cells[c.index]!;
-      const result =
-        source.formula || source.type === "e"
-          ? { state: "invalida" as const, raw: source.raw }
-          : grade(source.raw);
-      if (result.state === "invalida")
+  const parsed = table.rows
+    .filter((row) => !isEmptyRow(row))
+    .map((row) => {
+      const cell = row.cells[identityColumn]!;
+      const person = identity(
+        cell.formula || cell.type === "e" ? null : cell.raw,
+      );
+      if (!person.normalized)
         issues.push({
-          code: "calificacion_invalida",
-          refs: [String(row.row), c.activityId!],
+          code: "identidad_faltante_o_no_literal",
+          refs: [String(row.row)],
         });
-      return { activityId: c.activityId!, grade: result, source };
+      const values = activities.map((c) => {
+        const source = row.cells[c.index]!;
+        const result =
+          source.formula || source.type === "e"
+            ? { state: "invalida" as const, raw: source.raw }
+            : grade(source.raw);
+        if (result.state === "invalida")
+          issues.push({
+            code: "calificacion_invalida",
+            refs: [String(row.row), c.activityId!],
+          });
+        return { activityId: c.activityId!, grade: result, source };
+      });
+      return { row: row.row, person, values, original: row.cells };
     });
-    return { row: row.row, person, values, original: row.cells };
-  });
   const accepted: typeof parsed = [],
     teachers: typeof parsed = [],
     unresolved: typeof parsed = [];

@@ -3,6 +3,8 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
+import { redactAuthLog } from "./redact-auth-log.mjs";
 
 const project = process.env.GCLOUD_PROJECT ?? "demo-seguimiento-ci";
 if (!/^demo-[a-z0-9-]+$/.test(project) || project !== "demo-seguimiento-ci") {
@@ -36,7 +38,7 @@ for (const name of names) {
   ports.add(endpoint.port);
 }
 const mode = process.argv[2];
-if (!["start", "integration", "e2e", "check"].includes(mode))
+if (!["start", "integration", "e2e", "pilot", "check"].includes(mode))
   throw new Error("Modo desconocido");
 if (mode !== "check") {
   // Impedir la reutilización accidental de un proceso con datos de otra sesión.
@@ -58,6 +60,7 @@ if (mode !== "check") {
   if (mode === "integration")
     args.push("vitest run --config vitest.emulators.config.ts");
   if (mode === "e2e") args.push("playwright test");
+  if (mode === "pilot") args.push("vitest run --config vitest.pilot.config.ts");
   // Perfil efímero: no heredar login de Firebase CLI ni credenciales ADC del equipo.
   // La ruta ADC inexistente fuerza un fallo de credenciales en servicios no emulados.
   const isolatedConfig = mkdtempSync(join(tmpdir(), "seguimiento-emulators-"));
@@ -65,7 +68,7 @@ if (mode !== "check") {
   delete childEnv.FIREBASE_TOKEN;
   delete childEnv.FIREBASE_CONFIG;
   const child = spawn(process.execPath, args, {
-    stdio: "inherit",
+    stdio: ["inherit", "pipe", "pipe"],
     env: {
       ...childEnv,
       XDG_CONFIG_HOME: isolatedConfig,
@@ -77,8 +80,17 @@ if (mode !== "check") {
       GOOGLE_CLOUD_PROJECT: project,
       VITE_FIREBASE_MODE: "emulator",
       VITE_FIREBASE_PROJECT_ID: project,
+      PILOT_METRICS: mode === "pilot" ? "1" : "0",
     },
   });
+  for (const [stream, output] of [
+    [child.stdout, process.stdout],
+    [child.stderr, process.stderr],
+  ]) {
+    createInterface({ input: stream }).on("line", (line) =>
+      output.write(`${redactAuthLog(line)}\n`),
+    );
+  }
   child.once("error", (error) => {
     console.error(error);
     process.exitCode = 1;

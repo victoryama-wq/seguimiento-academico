@@ -1,7 +1,3 @@
-import { initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
-
 // Herramienta privilegiada local, nunca una operación pública o una selección de rol.
 if (
   process.env.GCLOUD_PROJECT !== "demo-seguimiento-ci" ||
@@ -15,6 +11,10 @@ if (
 const uid = process.argv[2];
 if (!uid || !/^[a-zA-Z0-9_-]{1,100}$/.test(uid))
   throw new Error("Indica el UID de una cuenta Auth existente.");
+// Validar el entorno antes de cargar los SDK privilegiados.
+const { initializeApp } = await import("firebase-admin/app");
+const { getAuth } = await import("firebase-admin/auth");
+const { getFirestore } = await import("firebase-admin/firestore");
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT });
 await getAuth(app).getUser(uid);
 const db = getFirestore(app);

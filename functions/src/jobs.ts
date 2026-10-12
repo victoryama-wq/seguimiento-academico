@@ -1,23 +1,46 @@
 import { randomUUID } from "node:crypto";
+import { absentRosterReason } from "../../src/domain/possible-withdrawals";
 import { z } from "zod";
 import { HttpsError } from "firebase-functions/v2/https";
 import { FieldPath } from "firebase-admin/firestore";
 import {
   applySupplement,
+  identity,
   catalogSchema,
   contextSchema,
   courseFilename,
+  courseNameKey,
   resolveCourseFilename,
   resolveAffiliations,
   supplementSchema,
 } from "../../src/domain/academic";
 import { readTable } from "../../src/importing/files";
+import { readOptionsSchema } from "../../src/domain/intake-contract";
+import {
+  institutionalMapping,
+  reportProfile,
+} from "../../src/importing/report-layout";
+import {
+  unitsForProgress,
+  type AcademicProgress,
+  unitsForPrincipal,
+} from "../../src/domain/report-policy";
 import {
   mapRecords,
   parseMoodle,
   resolveDuplicateRows,
 } from "../../src/importing/mapping";
 import { prepareRoster } from "../../src/importing/roster";
+import {
+  resolveAcademicPackage,
+  validateAcademicPackage,
+} from "../../src/importing/decisions";
+import type { Observation } from "../../src/domain/decision-package";
+import type { ReviewSummary } from "../../src/domain/import-contract";
+import {
+  reviewAccumulation,
+  accumulateRows,
+} from "../../src/domain/accumulation";
 import {
   type Member,
   type RowView,
@@ -34,7 +57,7 @@ import {
   db,
   hash,
   jsonFile,
-  localOnly,
+  requireRuntime,
   saveImmutable,
 } from "./store";
 
@@ -46,14 +69,19 @@ export type Cycle = {
   sources: SourceRefs;
 };
 export type Cut = {
+  label?: string;
   id: string;
   cycleId: string;
   date: string;
+  schoolCut?: number;
+  progress?: AcademicProgress;
+  academicDate?: string;
   status: "open" | "closed";
   sources: SourceRefs;
   dates: Cycle["dates"];
   parentId: string | null;
   reason: string | null;
+  carryCutId?: string;
   frozenCourseIds?: string[];
   closurePath?: string;
 };
@@ -63,8 +91,33 @@ export type Course = {
   externalId: string;
   name: string;
   careers: string[];
+  columnPolicy?: {
+    version: string;
+    fields: Record<
+      string,
+      {
+        kind: "activity" | "total" | "category" | "metadata";
+        unit?: number;
+        additional?: boolean;
+      }
+    >;
+  };
 };
 export type Job = {
+  identityChoice?: { header: string; column: number; headersHash: string };
+  guided?: boolean;
+  // Ausente en versiones históricas administrativas. El servidor fija este ámbito.
+  scope?: string[];
+  columnPolicyVersion?: string | null;
+  progressId?: string | null;
+  sources?: SourceRefs;
+  cumulative?: boolean;
+  activityIds?: string[];
+  activityLabels?: Record<string, string>;
+  automaticActivities?: boolean;
+  carryVersion?: string | null;
+  revalidationOf?: string;
+  revalidatedBy?: string;
   id: string;
   kind: SourceKind | "report";
   cycleId: string;
@@ -97,10 +150,55 @@ export async function authorizeJob(member: Member, job: Job) {
     Course | undefined;
   if (!course) throw new HttpsError("not-found", "Curso no disponible.");
   courseAccess(member, course);
+  if (
+    member.role !== "admin" &&
+    job.scope &&
+    !job.scope.some((id) => member.careers.includes(id))
+  )
+    throw new HttpsError(
+      "permission-denied",
+      "Trabajo fuera del alcance autorizado.",
+    );
+}
+export function assertPublicationScope(member: Member, job: Job) {
+  if (
+    member.role !== "admin" &&
+    (!job.scope?.length || job.scope.some((id) => !member.careers.includes(id)))
+  )
+    throw new HttpsError(
+      "permission-denied",
+      "El ámbito cambió o esta propuesta requiere Administración. Vuelve a validar dentro de tus carreras autorizadas.",
+    );
+}
+export const reviewToken = (job: Job, member: Member) =>
+  hash(
+    canonical({
+      job: job.id,
+      token: job.token,
+      expected: job.expected,
+      scope: job.scope ?? null,
+      member,
+    }),
+  );
+export async function cutCareers(cut: Cut) {
+  if (!cut.sources.roster && !cut.sources.academicPackage) return [];
+  const academic = await academicSnapshot(cut);
+  return [...new Set(academic.enrollments.map((e) => e.careerId))];
+}
+export async function authorizeCut(member: Member, cut: Cut) {
+  if (
+    member.role !== "admin" &&
+    !(await cutCareers(cut)).some((id) => member.careers.includes(id))
+  )
+    throw new HttpsError(
+      "permission-denied",
+      "Corte fuera del alcance autorizado.",
+    );
 }
 export function jobView(job: Job) {
   return {
     id: job.id,
+    name: job.file.name,
     kind: job.kind,
     status: job.status,
     courseId: job.courseId,
@@ -110,7 +208,11 @@ export function jobView(job: Job) {
     replaces: job.expected,
   };
 }
-type Artifact = {
+export type Artifact = {
+  heldObservations?: Observation[];
+  includedByCareer?: Record<string, number>;
+  review?: Record<string, ReviewSummary>;
+  observations?: Observation[];
   filename?:
     | ReturnType<typeof resolveCourseFilename>
     | ReturnType<typeof courseFilename>;
@@ -123,10 +225,91 @@ type Artifact = {
     careerId: string | null;
     row: number;
     reason: string;
+    name?: string;
+    withdrawalStatus?: "posible baja" | "baja confirmada";
+    sourceVersion?: string;
+    originalReports?: {
+      identity: string;
+      name: string;
+      sourceVersion: string;
+      row: number;
+    }[];
   }[];
 };
+// Solo una fuente íntegra, confirmada y fijada habilita la ausencia del padrón.
+// Las versiones antiguas publicadas conservan sus derivados, sin reclasificación.
+export async function confirmedRoster(
+  cut: Cut,
+  academic?: Awaited<ReturnType<typeof academicSnapshot>>,
+) {
+  const id = cut.sources.academicPackage ?? cut.sources.roster;
+  if (!id) return null;
+  const source = (await db.doc(`sources/${id}`).get()).data();
+  const job = (await db.doc(`jobs/${id}`).get()).data() as Job | undefined;
+  if (
+    !source?.approvedBy ||
+    !source.publishedAt ||
+    source.cycleId !== cut.cycleId ||
+    source.kind !==
+      (cut.sources.academicPackage ? "academicPackage" : "roster") ||
+    !job ||
+    job.status !== "published" ||
+    job.blocking ||
+    job.artifact !== source.artifact ||
+    !source.artifact
+  )
+    throw new InvalidSource("padron_activo_sin_confirmar");
+  const artifact = await jsonFile<Artifact>(source.artifact as string);
+  if (artifact.issues.length || !artifact.count)
+    throw new InvalidSource("padron_activo_incompleto");
+  if (!cut.sources.academicPackage) {
+    const resolved = academic ?? (await academicSnapshot(cut));
+    return {
+      id,
+      identities: new Set(
+        resolved.enrollments
+          .map((e) => identity(e.identity).normalized)
+          .filter((v): v is string => !!v),
+      ),
+    };
+  }
+  const p = validateAcademicPackage(artifact.data, cut.cycleId);
+  if (p.enrollments.length !== artifact.count)
+    throw new InvalidSource("padron_activo_incompleto");
+  return {
+    id,
+    identities: new Set(
+      p.enrollments
+        .map((e) => identity(e.original.identity).normalized)
+        .filter((v): v is string => !!v),
+    ),
+  };
+}
 async function administrative(job: Job, bytes: Buffer): Promise<Artifact> {
   const version = job.id;
+  if (job.kind === "academicPackage") {
+    const p = validateAcademicPackage(
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+      job.cycleId,
+    );
+    const resolved = resolveAcademicPackage(
+      p,
+      job.cycleId,
+      "preview",
+      "9999-12-31",
+      version,
+      job.uid,
+    );
+    return {
+      data: p,
+      source: { sha256: hash(bytes), parserVersion: "academic-package/1" },
+      count: p.enrollments.length,
+      observations: resolved.observations,
+      issues: resolved.observations
+        .filter((o) => o.state === "pendiente")
+        .map((o) => ({ code: o.reason, refs: [o.id] })),
+    };
+  }
   if (["withdrawals", "exceptions"].includes(job.kind)) {
     if (!job.file.name.endsWith(".json")) throw new InvalidSource();
     const input: unknown = JSON.parse(
@@ -245,6 +428,18 @@ export async function academicSnapshot(
       source.artifact as string,
     );
   }
+  if (loaded.academicPackage) {
+    const id = cut.sources.academicPackage!;
+    const source = (await db.doc(`sources/${id}`).get()).data()!;
+    return resolveAcademicPackage(
+      loaded.academicPackage.data,
+      cut.cycleId,
+      cut.id,
+      cut.academicDate ?? cut.date,
+      id,
+      String(source.approvedBy),
+    ).academic;
+  }
   const supplemented = applySupplement(
     loaded.roster?.data,
     loaded.supplement?.data ?? [],
@@ -256,7 +451,7 @@ export async function academicSnapshot(
   return resolveAffiliations(supplemented.active, {
     cycle: cut.cycleId,
     cutId: cut.id,
-    cutDate: cut.date,
+    cutDate: cut.academicDate ?? cut.date,
     catalogVersion: cut.sources.catalog,
     catalog: loaded.catalog?.data,
     calendar: { cycle: cut.cycleId, dates: cut.dates },
@@ -270,7 +465,8 @@ async function report(
   bytes: Buffer,
   token: string,
 ): Promise<Artifact> {
-  const cut = (await db.doc(`cuts/${job.cutId}`).get()).data() as Cut;
+  const currentCut = (await db.doc(`cuts/${job.cutId}`).get()).data() as Cut;
+  const cut = { ...currentCut, sources: job.sources ?? currentCut.sources };
   const course = (
     await db.doc(`courses/${job.courseId}`).get()
   ).data() as Course;
@@ -280,14 +476,24 @@ async function report(
         approvedBy: job.uid,
         version: job.id,
       })
-    : courseFilename(job.file.name);
+    : (() => {
+        try {
+          return courseFilename(job.file.name);
+        } catch {
+          throw new InvalidSource("identificacion_curso_ambigua");
+        }
+      })();
   if (
     fileCourse.cycle !== cut.cycleId ||
     fileCourse.externalId !== course.externalId
   )
-    throw new InvalidSource();
-  let table = readTable(bytes, job.file.name);
-  const { resolutions, ...mapping } = job.file.mapping;
+    throw new InvalidSource("curso_o_ciclo_incompatible");
+  const { resolutions, readOptions, ...mapping } = job.file.mapping;
+  let table = readTable(
+    bytes,
+    job.file.name,
+    readOptionsSchema.parse(readOptions ?? {}),
+  );
   const audits: unknown[] = [];
   if (resolutions)
     for (const decision of z
@@ -302,15 +508,118 @@ async function report(
       table = resolved.table;
       audits.push(resolved.audit);
     }
+  const academic = await academicSnapshot(cut);
+  const roster = await confirmedRoster(cut, academic);
+  const schedule = academic.context.trackingSchedule;
+  if (
+    (cut.progress || schedule?.tracking) &&
+    courseNameKey(fileCourse.name) !== courseNameKey(course.name)
+  )
+    throw new InvalidSource("nombre_curso_incompatible");
+  const autoMapping = mapping.profile === reportProfile;
+  if (autoMapping && Object.keys(mapping).length !== 1)
+    throw new Error("Perfil automático con campos ambiguos");
+  const resolvedMapping = autoMapping ? institutionalMapping(table) : mapping;
+  const heldObservations: Observation[] = [];
+  if (job.scope) {
+    // Validar el mapeo sobre la estructura completa antes de filtrar. El original
+    // permanece privado; compartir el libro no autoriza a publicar filas ajenas.
+    const structural = parseMoodle(
+      { ...table, rows: [] },
+      {
+        ...resolvedMapping,
+        approvedBy: job.uid,
+        version: job.id,
+      },
+    );
+    const selector = structural.mapping.identity;
+    const column = selector.column ?? table.headers.indexOf(selector.header);
+    const personsById = new Map(academic.persons.map((p) => [p.identity, p]));
+    const entries = new Map(academic.enrollments.map((e) => [e.id, e]));
+    table = {
+      ...table,
+      rows: table.rows.filter((r) => {
+        if (identity(r.cells[column]?.raw).teacher) return true;
+        const normalized = identity(r.cells[column]?.raw).normalized;
+        if (!normalized) return true; // La identidad inválida conserva su revisión bloqueante.
+        const person = personsById.get(normalized);
+        const base = person?.baseEnrollmentId
+          ? entries.get(person.baseEnrollmentId)
+          : undefined;
+        const careers = base
+          ? [base.careerId]
+          : [
+              ...new Set(
+                (person?.enrollmentIds ?? []).map(
+                  (id) => entries.get(id)!.careerId,
+                ),
+              ),
+            ];
+        const owned = base
+          ? job.scope!.includes(base.careerId)
+          : careers.length > 0 &&
+            careers.every((id) => job.scope!.includes(id));
+        if (!owned && r.cells.some((c) => c.raw !== null && c.raw !== ""))
+          heldObservations.push({
+            id: `held-${r.row}`,
+            identity: String(r.cells[column]?.raw ?? ""),
+            careerId: null,
+            group: "",
+            file: table.source.originalName,
+            sheet: table.source.sheet,
+            row: r.row,
+            original: r.cells[column]?.raw ?? null,
+            effective: null,
+            reason:
+              normalized && roster && !roster.identities.has(normalized)
+                ? absentRosterReason
+                : "Registro fuera del ámbito de publicación o sin atribución resuelta",
+            rule: "publicacion_por_ambito",
+            state: "pendiente",
+            action:
+              "Administración conserva el original para revisar la atribución; esta carga no publica sus calificaciones.",
+            sourceVersion: job.id,
+          });
+        return owned;
+      }),
+    };
+  }
   const parsed = parseMoodle(table, {
-    ...mapping,
+    ...resolvedMapping,
     approvedBy: job.uid,
     version: job.id,
   });
-  const academic = await academicSnapshot(cut);
+  const observations: Observation[] = [];
+  if (cut.sources.academicPackage) {
+    const source = (
+      await db.doc(`sources/${cut.sources.academicPackage}`).get()
+    ).data()!;
+    const stored = await jsonFile<Artifact>(source.artifact as string);
+    const all = resolveAcademicPackage(
+      stored.data,
+      cut.cycleId,
+      cut.id,
+      cut.academicDate ?? cut.date,
+      cut.sources.academicPackage,
+      String(source.approvedBy),
+    ).observations;
+    const reported = new Set(
+      [...parsed.accepted, ...parsed.unresolved].map(
+        (r) => r.person.normalized,
+      ),
+    );
+    observations.push(
+      ...all.filter((o) => reported.has(identity(o.identity).normalized)),
+    );
+  }
   const persons = new Map(academic.persons.map((p) => [p.identity, p]));
   const enrollments = new Map(academic.enrollments.map((e) => [e.id, e]));
   const issues = [...parsed.issues];
+  issues.push(
+    ...observations
+      .filter((o) => o.state === "pendiente")
+      .map((o) => ({ code: "observacion_academica_pendiente", refs: [o.id] })),
+  );
   const issuesByRow = new Map<string, string[]>();
   for (const issue of parsed.issues)
     for (const ref of issue.refs) {
@@ -326,7 +635,12 @@ async function report(
       reason: "docente",
     }),
   );
-  const rows: RowView[] = [];
+  let rows: RowView[] = [];
+  const nameColumns = table.headers.flatMap((h, i) =>
+    /^(nombre(?:\(s\))?|apellidos?(?:\(s\))?|nombre completo)$/i.test(h.trim())
+      ? [i]
+      : [],
+  );
   for (const row of [...parsed.accepted, ...parsed.unresolved]) {
     const person = row.person.normalized
       ? persons.get(row.person.normalized)
@@ -336,6 +650,51 @@ async function report(
       : undefined;
     const records =
       person?.enrollmentIds.map((id) => enrollments.get(id)!) ?? [];
+    const name = nameColumns
+      .map((i) => row.original[i]?.text ?? "")
+      .filter(Boolean)
+      .join(" ");
+    if (
+      roster &&
+      row.person.normalized &&
+      !roster.identities.has(row.person.normalized)
+    ) {
+      const confirmed = academic.context.withdrawals.some(
+        (w) =>
+          identity(w.identity).normalized === row.person.normalized &&
+          (w.effectiveDate
+            ? w.effectiveDate <= (cut.academicDate ?? cut.date)
+            : w.confirmedCutId === cut.id),
+      );
+      excluded.push({
+        identity: String(row.person.original),
+        name,
+        careerId: null,
+        row: row.row,
+        reason: absentRosterReason,
+        withdrawalStatus: confirmed ? "baja confirmada" : "posible baja",
+        sourceVersion: job.id,
+      });
+      observations.push({
+        id: `report-${row.row}-padron`,
+        identity: String(row.person.original),
+        careerId: null,
+        group: "",
+        file: table.source.originalName,
+        sheet: table.source.sheet,
+        row: row.row,
+        original: row.person.original,
+        effective: null,
+        reason: absentRosterReason,
+        rule: "padron_activo_confirmado",
+        state: "excluido",
+        action: confirmed
+          ? "Baja confirmada para el ciclo; conservar evidencia."
+          : "Administración puede revisar el padrón o confirmar la baja; no se incluyen calificaciones.",
+        sourceVersion: job.id,
+      });
+      continue;
+    }
     // Bajas y otras inscripciones excluidas se conservan en el original, sin publicar notas.
     if (
       records.length &&
@@ -348,7 +707,14 @@ async function report(
         identity: String(row.person.original),
         careerId: careers.length === 1 ? careers[0]! : null,
         row: row.row,
-        reason: [...new Set(records.map((e) => e.kind))].join(", "),
+        reason: [
+          ...new Set(records.map((e) => e.exclusionReason ?? e.kind)),
+        ].join(", "),
+        name,
+        ...(records.some((e) => e.kind === "baja")
+          ? { withdrawalStatus: "baja confirmada" as const }
+          : {}),
+        sourceVersion: job.id,
       });
       continue;
     }
@@ -357,18 +723,101 @@ async function report(
         code: "afiliacion_requiere_revision_administrativa",
         refs: [String(row.row)],
       });
+      observations.push({
+        id: `report-${row.row}`,
+        identity: String(row.person.original ?? ""),
+        careerId: base?.careerId ?? null,
+        group: base?.group ?? "",
+        file: table.source.originalName,
+        sheet: table.source.sheet,
+        row: row.row,
+        original: row.person.original,
+        effective: null,
+        reason: "Identidad, carrera o afiliación principal sin resolver",
+        rule: "atribucion",
+        state: "pendiente",
+        action:
+          "Solicitar resolución administrativa o cargar archivo corregido",
+        sourceVersion: job.id,
+      });
       continue;
     }
     const rowIssues = issuesByRow.get(String(row.row)) ?? [];
+    for (const code of rowIssues)
+      observations.push({
+        id: `report-${row.row}-${code}`,
+        identity: String(row.person.original),
+        careerId: base.careerId,
+        group: base.group,
+        file: table.source.originalName,
+        sheet: table.source.sheet,
+        row: row.row,
+        original: row.values.map((v) => ({
+          activityId: v.activityId,
+          raw: v.grade.raw,
+        })),
+        effective: row.values.map((v) => ({
+          activityId: v.activityId,
+          state: v.grade.state,
+        })),
+        reason:
+          code === "calificacion_invalida"
+            ? "La calificación no se puede interpretar; se conserva el valor original como inválido."
+            : code === "identidad_faltante"
+              ? "La matrícula está vacía o no es texto."
+              : code === "filas_conflictivas"
+                ? "La matrícula aparece con valores contradictorios."
+                : code === "fila_duplicada"
+                  ? "La matrícula tiene filas repetidas que requieren revisión."
+                  : "La fila requiere revisión antes de publicar.",
+        rule: "clasificacion_sin_coercion",
+        state: code === "calificacion_invalida" ? "resuelto" : "pendiente",
+        action:
+          code === "calificacion_invalida"
+            ? "Conservar estado inválido o cargar una corrección"
+            : "Corregir archivo o solicitar resolución administrativa",
+        sourceVersion: job.id,
+      });
     const value: RowView = {
       id: String(row.row).padStart(6, "0"),
       identity: String(row.person.original),
       careerId: base.careerId,
       row: row.row,
+      relationship: {
+        id: hash(canonical([cut.cycleId, course.id, row.person.normalized])),
+        cycleId: cut.cycleId,
+        courseId: course.id,
+        trackingEnrollmentId: base.id,
+        trackingGroup: base.parsed.normalized,
+        trackingModality: base.parsed.modality ?? "",
+        teachingEnrollmentId: null,
+        teachingGroup: null,
+        teachingAssignment: "no_determinada",
+      },
       values: row.values.map((v) => ({
         activityId: v.activityId,
         state: v.grade.state,
+        label: parsed.mapping.columns.find(
+          (c) => c.activityId === v.activityId,
+        )!.selector.header,
         raw: v.grade.raw,
+        sourceVersion: job.id,
+        ...(parsed.mapping.columns.find((c) => c.activityId === v.activityId)
+          ?.additional !== undefined
+          ? {
+              additional: parsed.mapping.columns.find(
+                (c) => c.activityId === v.activityId,
+              )!.additional,
+            }
+          : {}),
+        ...(parsed.mapping.columns.find((c) => c.activityId === v.activityId)
+          ?.unit !== undefined
+          ? {
+              unit: parsed.mapping.columns.find(
+                (c) => c.activityId === v.activityId,
+              )!.unit,
+            }
+          : {}),
       })),
       issues: rowIssues,
     };
@@ -376,23 +825,257 @@ async function report(
       throw new InvalidSource();
     rows.push(value);
   }
+  let review = reviewAccumulation([], rows);
+  rows = review.rows;
+  if (job.cumulative && job.carryVersion) {
+    const previous = await getJob(job.carryVersion);
+    if (
+      previous.status !== "published" ||
+      previous.courseId !== job.courseId ||
+      previous.cycleId !== job.cycleId ||
+      !previous.token
+    )
+      throw new InvalidSource();
+    const before: RowView[] = [];
+    if (previous.artifact) {
+      const priorArtifact = await jsonFile<Artifact>(previous.artifact);
+      const reported = new Set(
+        [...parsed.accepted, ...parsed.unresolved, ...parsed.teachers].map(
+          (r) => r.person.normalized,
+        ),
+      );
+      const currentExcluded = new Map(
+        excluded.map((e) => [identity(e.identity).normalized, e]),
+      );
+      for (const e of priorArtifact.excluded ?? []) {
+        if (job.scope && (!e.careerId || !job.scope.includes(e.careerId))) {
+          excluded.push(e);
+          continue;
+        }
+        const id = identity(e.identity).normalized;
+        if (reported.has(id)) {
+          const current = currentExcluded.get(id);
+          if (current?.withdrawalStatus && e.withdrawalStatus) {
+            const originals = [
+              ...(current.originalReports ?? []),
+              ...(e.originalReports ?? []),
+              {
+                identity: e.identity,
+                name: e.name ?? "",
+                sourceVersion: e.sourceVersion ?? previous.id,
+                row: e.row,
+              },
+            ];
+            current.originalReports = [
+              ...new Map(originals.map((o) => [canonical(o), o])).values(),
+            ];
+          }
+          continue;
+        }
+        // Una nueva fuente puede dar de alta la identidad; sus notas requieren revalidar el original.
+        if (e.reason === absentRosterReason && roster?.identities.has(id ?? ""))
+          continue;
+        excluded.push({
+          ...e,
+          ...(e.reason === absentRosterReason
+            ? {
+                withdrawalStatus: academic.context.withdrawals.some(
+                  (w) =>
+                    identity(w.identity).normalized === id &&
+                    (w.effectiveDate
+                      ? w.effectiveDate <= (cut.academicDate ?? cut.date)
+                      : w.confirmedCutId === cut.id),
+                )
+                  ? ("baja confirmada" as const)
+                  : ("posible baja" as const),
+              }
+            : {}),
+          sourceVersion: e.sourceVersion ?? previous.id,
+        });
+      }
+    }
+    let cursor: string | undefined;
+    do {
+      const page = await rowsPage(
+        previous,
+        { role: "admin", active: true, careers: [] },
+        undefined,
+        cursor,
+      );
+      before.push(...page.rows);
+      if (before.length > 10000) throw new InvalidSource();
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+    if (autoMapping) {
+      const existingIds = new Map<string, Set<string>>();
+      for (const row of before)
+        for (const v of row.values) {
+          if (!v.label)
+            throw new Error(
+              "Versión sin encabezados auditados: conservar su mapeo explícito antes de cambiar al perfil automático",
+            );
+          const ids = existingIds.get(v.label) ?? new Set<string>();
+          ids.add(v.activityId);
+          existingIds.set(v.label, ids);
+        }
+      if (
+        parsed.activities.some((a) => {
+          const ids = existingIds.get(a.selector.header);
+          return ids && (ids.size !== 1 || !ids.has(a.activityId!));
+        })
+      )
+        throw new Error(
+          "Cambio de mapeo: conservar los IDs de actividades ya publicados mediante revisión explícita",
+        );
+    }
+    const eligible: RowView[] = [];
+    for (const row of before) {
+      if (job.scope && !job.scope.includes(row.careerId)) {
+        eligible.push(row);
+        continue;
+      }
+      const normalized = identity(row.identity).normalized;
+      if (roster && normalized && !roster.identities.has(normalized)) {
+        if (
+          !excluded.some((e) => identity(e.identity).normalized === normalized)
+        )
+          excluded.push({
+            identity: row.identity,
+            careerId: null,
+            row: row.row,
+            reason: absentRosterReason,
+            withdrawalStatus: academic.context.withdrawals.some(
+              (w) =>
+                identity(w.identity).normalized === normalized &&
+                (w.effectiveDate
+                  ? w.effectiveDate <= (cut.academicDate ?? cut.date)
+                  : w.confirmedCutId === cut.id),
+            )
+              ? "baja confirmada"
+              : "posible baja",
+            sourceVersion: previous.id,
+          });
+        continue;
+      }
+      const person = persons.get(identity(row.identity).normalized ?? "");
+      const base = person?.baseEnrollmentId
+        ? enrollments.get(person.baseEnrollmentId)
+        : undefined;
+      if (base && course.careers.includes(base.careerId))
+        eligible.push({
+          ...row,
+          careerId: base.careerId,
+          relationship: {
+            id: hash(
+              canonical([
+                cut.cycleId,
+                course.id,
+                identity(row.identity).normalized,
+              ]),
+            ),
+            cycleId: cut.cycleId,
+            courseId: course.id,
+            trackingEnrollmentId: base.id,
+            trackingGroup: base.parsed.normalized,
+            trackingModality: base.parsed.modality ?? "",
+            teachingEnrollmentId: null,
+            teachingGroup: null,
+            teachingAssignment: "no_determinada",
+          },
+        });
+      else {
+        const records =
+          person?.enrollmentIds.map((id) => enrollments.get(id)!) ?? [];
+        if (
+          records.length &&
+          records.every((e) =>
+            ["baja", "excluida", "practica", "docente"].includes(e.kind),
+          )
+        )
+          excluded.push({
+            identity: row.identity,
+            careerId: row.careerId,
+            row: row.row,
+            reason: [
+              ...new Set(records.map((e) => e.exclusionReason ?? e.kind)),
+            ].join(", "),
+          });
+        else
+          issues.push({
+            code: "afiliacion_acumulada_requiere_revision",
+            refs: [row.id],
+          });
+      }
+    }
+    review = reviewAccumulation(eligible, rows);
+    rows = accumulateRows(eligible, review.rows);
+  }
+  if (cut.progress || schedule?.tracking)
+    for (const row of rows) {
+      if (job.scope && !job.scope.includes(row.careerId)) continue;
+      try {
+        if (cut.progress)
+          unitsForProgress(
+            cut.progress,
+            row.relationship?.trackingModality ?? "",
+          );
+        else if (schedule?.tracking)
+          unitsForPrincipal(
+            schedule,
+            row.relationship?.trackingModality ?? "",
+            cut.academicDate ?? cut.date,
+            cut.schoolCut,
+          );
+      } catch {
+        issues.push({
+          code: "modalidad_principal_sin_calendario",
+          refs: [String(row.row)],
+        });
+      }
+    }
   for (let i = 0; i < rows.length; i += 200) {
     const batch = db.batch();
-    for (const row of rows.slice(i, i + 200))
+    for (const row of rows.slice(i, i + 200)) {
+      if (Buffer.byteLength(JSON.stringify(row)) > 128 * 1024)
+        throw new InvalidSource();
       batch.create(
         db.doc(`jobs/${job.id}/attempts/${token}/rows/${row.id}`),
         row,
       );
+    }
     await batch.commit();
   }
   return {
+    heldObservations,
+    observations,
+    includedByCareer: Object.fromEntries(
+      [...new Set(rows.map((r) => r.careerId))].map((id) => [
+        id,
+        rows.filter((r) => r.careerId === id).length,
+      ]),
+    ),
+    review: review.summaries,
     filename: fileCourse,
     data: {
       mapping: parsed.mapping,
+      automaticActivities: !!cut.progress || !!schedule?.tracking,
+      activityLabels: Object.fromEntries(
+        rows.flatMap((r) =>
+          r.values.map((v) => [v.activityId, v.label ?? v.activityId]),
+        ),
+      ),
       audits,
       sources: cut.sources,
+      reportPolicy: "active-roster-v1",
       teachers: parsed.teachers,
       academicIssues: academic.issues,
+      activityIds: [
+        ...new Set([
+          ...parsed.activities.map((a) => a.activityId!),
+          ...rows.flatMap((r) => r.values.map((v) => v.activityId)),
+        ]),
+      ],
+      carryVersion: job.carryVersion ?? null,
     },
     source: table.source,
     issues,
@@ -404,7 +1087,7 @@ async function report(
 // Los eventos pueden repetirse. El token de arrendamiento impide que un worker
 // antiguo cambie el resultado; los intentos incompletos nunca son publicables.
 export async function processJob(id: string) {
-  localOnly();
+  requireRuntime();
   const ref = db.doc(`jobs/${id}`);
   const job = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -440,11 +1123,8 @@ export async function processJob(id: string) {
           : await administrative(job, bytes);
     } catch (error) {
       // Errores del parser y del contrato son permanentes; fallos de infraestructura se reintentan.
-      if (
-        error instanceof z.ZodError ||
-        error instanceof InvalidSource ||
-        !(error as { code?: unknown }).code
-      )
+      if (error instanceof InvalidSource) throw error;
+      if (error instanceof z.ZodError || !(error as { code?: unknown }).code)
         throw new InvalidSource();
       throw error;
     }
@@ -461,6 +1141,18 @@ export async function processJob(id: string) {
       tx.update(ref, {
         status: "ready",
         artifact: path,
+        ...(job.kind === "report"
+          ? {
+              activityIds: (artifact.data as { activityIds: string[] })
+                .activityIds,
+              automaticActivities: !!(
+                artifact.data as { automaticActivities?: boolean }
+              ).automaticActivities,
+              activityLabels: (
+                artifact.data as { activityLabels: Record<string, string> }
+              ).activityLabels,
+            }
+          : {}),
         // Una nota inválida es un estado publicable, no una identidad sin resolver.
         // Todo código nuevo/desconocido sigue bloqueando por defecto.
         blocking: artifact.issues.some(
@@ -484,7 +1176,7 @@ export async function processJob(id: string) {
               : "queued",
         error:
           error instanceof InvalidSource
-            ? "archivo_o_mapeo_invalido"
+            ? error.message || "archivo_o_mapeo_invalido"
             : "fallo_temporal",
         lease: 0,
       });
@@ -497,16 +1189,31 @@ export async function rowsPage(
   careerId?: string,
   cursor?: string,
 ) {
-  if (
-    member.role !== "admin" &&
-    (!careerId || !member.careers.includes(careerId))
-  )
+  if (member.role !== "admin" && careerId && !member.careers.includes(careerId))
     throw new HttpsError(
       "permission-denied",
       "Selecciona una carrera autorizada.",
     );
   if (!job.token || !["ready", "published"].includes(job.status))
     return { rows: [], cursor: null };
+  if (member.role !== "admin" && !careerId) {
+    const careers = [...new Set(member.careers)];
+    const rows: RowView[] = [];
+    for (let i = 0; i < careers.length; i += 30) {
+      let query = db
+        .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
+        .where("careerId", "in", careers.slice(i, i + 30))
+        .orderBy(FieldPath.documentId())
+        .limit(101);
+      if (cursor) query = query.startAfter(cursor);
+      rows.push(...(await query.get()).docs.map((d) => d.data() as RowView));
+    }
+    rows.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    return {
+      rows: rows.slice(0, 100),
+      cursor: rows.length > 100 ? rows[99]!.id : null,
+    };
+  }
   let query = db
     .collection(`jobs/${job.id}/attempts/${job.token}/rows`)
     .orderBy(FieldPath.documentId())
@@ -524,10 +1231,79 @@ export async function previewJob(
   member: Member,
   careerId?: string,
   cursor?: string,
+  observationOffset = 0,
 ) {
   const page = await rowsPage(job, member, careerId, cursor);
   const artifact = job.artifact ? await jsonFile<Artifact>(job.artifact) : null;
+  const observations = [
+    ...(artifact?.observations ?? []),
+    ...(member.role === "admin" ? (artifact?.heldObservations ?? []) : []),
+  ].filter(
+    (o) =>
+      member.role === "admin" ||
+      (o.careerId !== null &&
+        (!careerId || o.careerId === careerId) &&
+        member.careers.includes(o.careerId)),
+  );
+  const summary: ReviewSummary = {
+    newActivities: [],
+    added: 0,
+    changed: 0,
+    unchanged: 0,
+    preserved: 0,
+    numericCleared: 0,
+  };
+  for (const [id, value] of Object.entries(artifact?.review ?? {})) {
+    if (
+      careerId
+        ? id !== careerId
+        : member.role !== "admin" && !member.careers.includes(id)
+    )
+      continue;
+    summary.newActivities = [
+      ...new Set([...summary.newActivities, ...value.newActivities]),
+    ];
+    for (const key of [
+      "added",
+      "changed",
+      "unchanged",
+      "preserved",
+      "numericCleared",
+    ] as const)
+      summary[key] += value[key];
+  }
   return {
+    review: artifact?.review ? summary : null,
+    reviewToken: reviewToken(job, member),
+    inclusion: {
+      included:
+        member.role === "admin"
+          ? (artifact?.count ?? 0)
+          : Object.entries(artifact?.includedByCareer ?? {}).reduce(
+              (n, [id, count]) =>
+                n +
+                (member.careers.includes(id) && (!careerId || careerId === id)
+                  ? count
+                  : 0),
+              0,
+            ),
+      excluded: (artifact?.excluded ?? []).filter(
+        (r) =>
+          member.role === "admin" ||
+          ((!careerId || r.careerId === careerId) &&
+            r.careerId !== null &&
+            member.careers.includes(r.careerId)),
+      ).length,
+    },
+    observations: observations.slice(
+      observationOffset,
+      observationOffset + 100,
+    ),
+    observationsCount: observations.length,
+    observationNext:
+      observationOffset + 100 < observations.length
+        ? observationOffset + 100
+        : null,
     ...page,
     filename:
       member.role === "admin" && job.kind === "report"
@@ -546,7 +1322,9 @@ export async function previewJob(
       .filter(
         (r) =>
           member.role === "admin" ||
-          (r.careerId === careerId && member.careers.includes(r.careerId)),
+          (r.careerId !== null &&
+            (!careerId || r.careerId === careerId) &&
+            member.careers.includes(r.careerId)),
       )
       .slice(0, 100),
   };

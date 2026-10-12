@@ -26,6 +26,8 @@ const data = (id: string, states: string[]): Dashboard => ({
   pending: 0,
   state: "datos",
   exclusionsCount: 0,
+  possibleWithdrawalsCount: 0,
+  possibleWithdrawals: [],
   groups: [],
   exclusions: [],
   total: 1,
@@ -193,28 +195,34 @@ describe("historial sobre correspondencias explícitas", () => {
     ])
       expect(() => validateCorrespondences(pairs)).toThrow(/ambigua/);
   });
-  it("no presenta una baja como recuperación ni como mejora comparable", () => {
-    const a = data("a", ["guion"]),
-      b = data("b", []);
-    b.details = [];
-    b.exclusions = [
-      {
-        identity: "00001",
-        careerId: "a",
-        courseId: "curso",
-        reason: "baja",
-        provenance: "retiro/1",
-      },
-    ];
-    const r = compareHistory(a, b, [
-      { courseId: "curso", before: "0", after: "0" },
-    ]);
-    expect(r.comparable).toBe(false);
-    expect(r.before.D).toBe(0);
-    expect(r.changes.find((c) => c.kind === "baja")?.provenance).toBe(
-      "retiro/1",
-    );
-  });
+  it.each(["baja", "No pertenece al padrón activo del ciclo"])(
+    "no presenta baja confirmada (%s) como recuperación ni como mejora comparable",
+    (reason) => {
+      const a = data("a", ["guion"]),
+        b = data("b", []);
+      b.details = [];
+      b.exclusions = [
+        {
+          identity: "00001",
+          careerId: "a",
+          courseId: "curso",
+          reason,
+          ...(reason !== "baja"
+            ? { withdrawalStatus: "baja confirmada" as const }
+            : {}),
+          provenance: "retiro/1",
+        },
+      ];
+      const r = compareHistory(a, b, [
+        { courseId: "curso", before: "0", after: "0" },
+      ]);
+      expect(r.comparable).toBe(false);
+      expect(r.before.D).toBe(0);
+      expect(r.changes.find((c) => c.kind === "baja")?.provenance).toBe(
+        "retiro/1",
+      );
+    },
+  );
   it("conserva originales y registra cambio de afiliación sin perder la identidad textual", () => {
     const a = data("a", ["guion"]),
       b = data("b", ["numerica"]);

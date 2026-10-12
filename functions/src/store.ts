@@ -5,19 +5,34 @@ import { getStorage } from "firebase-admin/storage";
 import { HttpsError } from "firebase-functions/v2/https";
 import { createHash } from "node:crypto";
 import { memberSchema, type Member } from "../../src/domain/import-contract";
-import { isEmulatorEnvironment } from "./environment";
+import { runtimeEnvironment } from "./environment";
 
-const app = getApps()[0] ?? initializeApp();
+const app =
+  getApps()[0] ??
+  initializeApp(
+    process.env.GCLOUD_PROJECT ? { projectId: process.env.GCLOUD_PROJECT } : {},
+  );
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const bucket = () =>
-  getStorage(app).bucket(`${process.env.GCLOUD_PROJECT}.appspot.com`);
-export function localOnly() {
-  if (!isEmulatorEnvironment(process.env))
+export const bucket = () => {
+  const config = runtimeEnvironment(process.env);
+  return getStorage(app).bucket(
+    config.mode === "staging"
+      ? config.storageBucket
+      : `${config.projectId}.appspot.com`,
+  );
+};
+export function requireRuntime() {
+  try {
+    const config = runtimeEnvironment(process.env);
+    if (app.options.projectId !== config.projectId)
+      throw new Error("SDK administrativo fuera del proyecto autorizado");
+  } catch {
     throw new HttpsError(
       "failed-precondition",
-      "Etapa 03 requiere emuladores demo completos.",
+      "Entorno no autorizado; se requiere configuración completa y revisada.",
     );
+  }
 }
 export const hash = (value: string | Buffer) =>
   createHash("sha256").update(value).digest("hex");

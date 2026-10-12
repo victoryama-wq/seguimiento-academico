@@ -11,7 +11,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src", "../src/importing/approved-matrix.ts"]
 }

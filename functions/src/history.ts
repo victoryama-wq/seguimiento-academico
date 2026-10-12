@@ -1,6 +1,11 @@
+import { progressSchema } from "../../src/domain/report-policy";
 import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { identity } from "../../src/domain/academic";
+import {
+  academicPackageSchema,
+  approvedCalendarDates,
+} from "../../src/domain/decision-package";
 import {
   historyOperations,
   casePage,
@@ -14,7 +19,7 @@ import {
 } from "../../src/domain/history";
 import { dashboardSchema } from "../../src/domain/metrics-contract";
 import { csvCell } from "../../src/domain/metrics";
-import { academicSnapshot, type Cut, type Cycle } from "./jobs";
+import { academicSnapshot, type Artifact, type Cut, type Cycle } from "./jobs";
 import { captureMetrics, dashboard } from "./metrics";
 import {
   db,
@@ -24,6 +29,7 @@ import {
   canonical,
   hash,
   saveImmutable,
+  jsonFile,
 } from "./store";
 
 const conflict = () =>
@@ -81,7 +87,7 @@ export async function closeHistoricalCut(cutId: string, uid: string) {
   const academic = await academicSnapshot(captured.data.cut);
   const payload = {
     schema: "closure/1",
-    academicRules: "etapa02-04/1",
+    academicRules: academic.context.rulesVersion ?? "etapa02-04/1",
     snapshot: captured.data,
     academic,
     actor: uid,
@@ -116,30 +122,99 @@ export async function historyOperation(
     case "planCalendar": {
       admin(member);
       const input = historyOperations.planCalendar.parse(raw);
-      const dates = calendarDates(input.firstDate, input.count);
+      let dates = calendarDates(input.firstDate, input.count);
+      let tracking = false;
       await db.runTransaction(async (tx) => {
         admin(await membership(uid, tx));
         const cycle = (
           await tx.get(db.doc(`cycles/${input.cycleId}`))
         ).data() as Cycle | undefined;
-        if (!cycle?.sources.roster || !cycle.sources.catalog)
+        if (
+          !cycle ||
+          (!cycle.sources.academicPackage &&
+            (!cycle.sources.roster || !cycle.sources.catalog))
+        )
           throw precondition("Publica padrón y catálogo antes de planificar.");
+        if (cycle.sources.academicPackage && !input.progress) {
+          if (!input.modality)
+            throw precondition(
+              "Selecciona modalidad para el calendario aprobado; Virtual requiere configuración explícita.",
+            );
+          const source = (
+            await tx.get(db.doc(`sources/${cycle.sources.academicPackage}`))
+          ).data()!;
+          const artifact = await jsonFile<Artifact>(String(source.artifact));
+          tracking = !!academicPackageSchema.parse(artifact.data).schedule
+            .tracking;
+          if (
+            tracking &&
+            input.modality !== "escolarizado" &&
+            input.schoolCut === undefined &&
+            !input.progress
+          )
+            throw precondition(
+              "Indica el bloque escolarizado 1–3 que acompaña a estos cortes semanales; para cambiar de bloque, planifica otro lote.",
+            );
+          try {
+            dates = approvedCalendarDates(
+              academicPackageSchema.parse(artifact.data),
+              input.modality,
+              input.firstDate,
+              input.count,
+            );
+          } catch (error) {
+            throw precondition(
+              error instanceof Error ? error.message : "Calendario inválido",
+            );
+          }
+        }
         const refs = dates.map((date) =>
-          db.doc(`cuts/${input.cycleId}-${date}`),
+          db.doc(
+            `cuts/${input.cycleId}-${date}${cycle.sources.academicPackage && !input.progress ? `-${input.modality}` : ""}`,
+          ),
         );
         const previous = await tx.getAll(...refs);
         for (let i = 0; i < refs.length; i++) {
           if (previous[i]!.exists) continue; // Reenvío conserva fechas editadas y cortes cerrados.
+          const progress = input.progress
+            ? progressSchema.parse({
+                ...input.progress,
+                id: hash(
+                  canonical({ cutId: refs[i]!.id, progress: input.progress }),
+                ),
+                policy: "explicit-progress-v1",
+                actor: uid,
+                recordedAt: Date.now(),
+                previous: null,
+                reason: "Planificación con avance explícito",
+              })
+            : undefined;
+          if (progress)
+            tx.create(db.doc(`progressHistory/${progress.id}`), {
+              ...progress,
+              cutId: refs[i]!.id,
+            });
           tx.create(refs[i]!, {
             id: refs[i]!.id,
             cycleId: cycle.id,
             date: dates[i],
+            ...(progress ? { progress, academicDate: dates[i] } : {}),
+            ...(tracking && !input.progress
+              ? {
+                  schoolCut:
+                    input.modality === "escolarizado" ? i + 1 : input.schoolCut,
+                }
+              : {}),
             sources: cycle.sources,
             dates: cycle.dates,
             status: "open",
             parentId: null,
+            ...(cycle.sources.academicPackage && i > 0
+              ? { carryCutId: refs[i - 1]!.id }
+              : {}),
             reason: null,
             createdBy: uid,
+            ...(input.modality ? { modality: input.modality } : {}),
             createdAt: Date.now(),
           });
         }
@@ -157,7 +232,7 @@ export async function historyOperation(
         const jobs = await tx.get(
           db.collection("jobs").where("cutId", "==", cut.id).limit(1),
         );
-        if (cut.status !== "open" || !jobs.empty)
+        if (cut.status !== "open" || (!cut.progress && !jobs.empty))
           throw precondition(
             "La fecha académica solo se edita antes de aceptar archivos; después crea una revisión atribuible.",
           );
@@ -191,6 +266,8 @@ export async function historyOperation(
         cuts.push({
           id: c.id,
           date: c.date,
+          ...(c.progress ? { progress: c.progress } : {}),
+          ...(c.schoolCut ? { schoolCut: c.schoolCut } : {}),
           status: c.status,
           parentId: c.parentId,
           reason: c.reason,

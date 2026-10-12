@@ -1,9 +1,9 @@
-# Parsers y previsualización de dominio · etapa 02
+# Parsers y previsualización de dominio
 
-Esta API local Node no está conectada a React, Functions, Storage ni Firestore.
-No publica cortes, autoriza usuarios o calcula indicadores. Las aprobaciones son
-datos de entrada del dominio; un futuro backend deberá comprobar identidad y
-rol antes de construirlas. Una cadena `approvedBy` no constituye autenticación.
+Estos módulos Node separan el parser del servidor. Functions los invoca después
+de comprobar identidad y permisos; una cadena `approvedBy` por sí sola no
+constituye autenticación. Publicación, persistencia e indicadores viven fuera del
+parser. El contrato original de etapa 02 se conserva con las ampliaciones probadas.
 
 ## Recorrido verificable
 
@@ -63,9 +63,12 @@ valores deducidos de un nombre de archivo o de la fecha de hoy.
 
 ```ts
 const mapa = {
-  identity: { header: "Matrícula" }, name: { header: "Nombre" },
-  careerId: { header: "Carrera" }, group: { header: "Grupo" },
-  modality: { header: "Modalidad" }, shift: { header: "Turno" },
+  identity: { header: "Matrícula" },
+  name: { header: "Nombre" },
+  careerId: { header: "Carrera" },
+  group: { header: "Grupo" },
+  modality: { header: "Modalidad" },
+  shift: { header: "Turno" },
   date: { header: "Fecha de inscripción" },
   // Opcional si el ciclo se obtiene de un grupo reconocido:
   // cycle: { header: "Ciclo de origen" },
@@ -118,6 +121,7 @@ mapeo futuro aprobado; actualmente son incidencias y no se convierten. Fórmulas
 y errores nunca se ejecutan ni se usan como calificaciones válidas. Los valores
 numéricos no permiten inferir una escala ni un umbral de aprobación.
 
-El parser es síncrono y acotado; aislamiento de procesos, cuotas, procesamiento
-persistente, versiones atómicas e interfaz de revisión pertenecen a la importación
-servidor posterior. No hay conciliación real ni prueba de carga 45/230 cursos.
+El parser es síncrono y acotado. Trabajos persistentes, versiones atómicas e
+interfaz de revisión se verifican en las suites de servidor; el piloto sintético
+45/230 y la conciliación privada se documentan por separado. Véase
+[integración de reportes](../../docs/integracion-reportes.md).

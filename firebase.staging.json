@@ -1,0 +1,51 @@
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log",
+        "private",
+        "local-data",
+        "**/.env*",
+        "**/private/**",
+        "**/local-data/**",
+        "**/*.csv",
+        "**/*.ods",
+        "**/*.xlsx",
+        "**/*.pem",
+        "**/service-account*.json",
+        "**/*serviceAccount*.json",
+        "**/*credentials*.json",
+        "**/*.key",
+        "**/*.p12"
+      ],
+      "predeploy": ["npm run build --workspace functions"]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": { "rules": "storage.rules" },
+  "hosting": {
+    "site": "indicadores-academia",
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "predeploy": ["npm run verify:hosting"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "no-referrer" },
+          { "key": "X-Frame-Options", "value": "DENY" }
+        ]
+      }
+    ]
+  }
+}

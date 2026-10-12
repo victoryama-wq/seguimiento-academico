@@ -70,6 +70,11 @@ test("administrador revisa equivalencias, cambios y calendario con evidencia sin
   await page.getByLabel("Primer corte", { exact: true }).fill("2026-11-02");
   await page.getByLabel("Número de cortes", { exact: true }).fill("2");
   await page
+    .getByLabel("Corte Escolarizado (1: U1–2; 2: U1–5; 3: U1–7)")
+    .selectOption("1");
+  await page.getByLabel("Unidad de avance Ejecutivo").selectOption("3");
+  await page.getByLabel("Unidad de avance Virtual").selectOption("2");
+  await page
     .getByRole("button", { name: "Crear calendario", exact: true })
     .click();
   await expect(

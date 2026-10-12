@@ -139,3 +139,37 @@ Bitácora por estudiante/curso/corte: observación, responsable, fecha de contac
 - Retención, recuperación, presupuesto y tamaño real de archivos antes de producción.
 
 No inventar valores para completar esos pendientes. Implementar estados «por configurar» y continuar con el desarrollo verificable.
+
+## Actualización aprobada del catálogo y cargas
+
+Las reglas vigentes recibidas en octubre de 2026 se detallan en
+[integración de decisiones aprobadas](integracion-decisiones-aprobadas.md).
+La referencia original a cinco coordinaciones describe el dimensionamiento inicial;
+no es un límite de autorización. El catálogo revisado tiene seis responsables y
+las membresías del sistema se asignan por separado.
+
+Para el perfil aprobado, Escolarizado sigue bloques 1–2, 3–5, 6–7 y Ejecutivo
+unidades semanales, por semana vencida y con fechas flexibles. Virtual tiene horario
+confirmado y calendario semanal independiente aprobado en la integración de
+reportes. Las cargas parciales acumulan datos por ID
+estable de actividad sin convertir ausencias en cero. La prioridad de excepciones
+individuales se limita a su inscripción y ciclo; no se alteran cortes cerrados.
+
+La relación operativa es matrícula + instancia de curso + ciclo. La afiliación
+principal conciliada (también C.A.) organiza carrera, grupo, modalidad y ámbito.
+La inscripción específica de impartición no está determinada y no bloquea cargas.
+El perfil institucional reconoce unidades/sesiones 1–7, cierre/final como unidad 7,
+y adicionales con nota numérica, incluido cero; excluye totales y subtotales.
+Contrato y límites en [integración de reportes](integracion-reportes.md).
+
+### Continuación aprobada: avance explícito (2026-10-08)
+
+Para los nuevos cortes, el avance deja de depender de semanas vencidas o fechas
+operativas: Escolarizado selecciona corte 1/2/3 (acumulado 1–2/1–5/1–7), y
+Ejecutivo/Virtual seleccionan por separado unidad 1–7. La configuración se versiona
+por corte con auditoría de servidor; la fecha es opcional y no determina unidades.
+Las unidades posteriores se guardan sin contribuir a N ni D hasta seleccionarlas.
+Las cargas parciales conservan ausencias y no modifican el avance. La revisión
+señala notas nuevas, modificadas, sin cambios y numéricos reemplazados por vacío/guion.
+Los cálculos anteriores y cortes cerrados conservan sus políticas y fotografías.
+Detalles y pruebas en [avance explícito](avance-explicito.md); DEC-01–36 no cambian.

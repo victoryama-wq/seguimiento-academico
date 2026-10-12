@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
+import { scheduleSchema } from "./report-policy";
 
 export type Issue = { code: string; refs: string[] };
 const text = z.string().trim().min(1);
@@ -84,17 +85,30 @@ const schedules: Record<string, readonly [string, string]> = {
   "53": ["Virtual", "Sabatino Matutino"],
   "48": ["Escolarizado", "Nocturno"],
 };
-export function group(raw: string, architecture: boolean) {
-  const normalized = raw
+export function group(raw: string, architecture: boolean, approved = false) {
+  let normalized = raw
     .trim()
     .toUpperCase()
     .replace(/\bCOMPUB\b/g, "CONPUB");
-  const special = /C\.A$/.test(normalized);
-  const match = /^(\d{2}-\d+) ([A-Z]+) (\d{2}) (\d{2})([A-Z]|C\.A)$/.exec(
-    normalized,
-  );
+  if (approved)
+    normalized = normalized
+      .replace(/\s+/g, " ")
+      .replace(/^(\d{2})\s*-\s*(\d+)\s+/, "$1-$2 ")
+      .replace(/\bDIGRAF\b/g, "DIGRAFT")
+      .replace(/(?:C\.A\.?|CA)$/, "C.A");
+  const architectureSpecial =
+    approved && /^(\d{2}-\d+) ARQ EJEC\. ESP\.?$/.exec(normalized);
+  const special = /C\.A$/.test(normalized) || !!architectureSpecial;
+  const match = (
+    approved
+      ? /^(\d{2}-\d+) ([A-Z-]+) (\d{2}) (\d{2})([A-Z]|C\.A)$/
+      : /^(\d{2}-\d+) ([A-Z]+) (\d{2}) (\d{2})([A-Z]|C\.A)$/
+  ).exec(normalized);
   const issues: string[] = [];
-  if (!match) issues.push("grupo_ilegible");
+  const prefix = approved
+    ? /^(\d{2}-\d+) ([A-Z-]+)(?: |$)/.exec(normalized)
+    : null;
+  if (!match && !architectureSpecial) issues.push("grupo_ilegible");
   const code = match?.[3];
   const schedule = code ? schedules[code] : undefined;
   if (match && !schedule) issues.push("codigo_desconocido");
@@ -103,11 +117,13 @@ export function group(raw: string, architecture: boolean) {
     original: raw,
     normalized,
     special,
-    cycle: match?.[1] ?? null,
-    career: match?.[2] ?? null,
+    cycle:
+      match?.[1] ??
+      (architectureSpecial ? architectureSpecial[1]! : (prefix?.[1] ?? null)),
+    career: match?.[2] ?? (architectureSpecial ? "ARQ" : (prefix?.[2] ?? null)),
     grade: match?.[4] ?? null,
     section: match?.[5] ?? null,
-    modality: schedule?.[0] ?? null,
+    modality: schedule?.[0] ?? (architectureSpecial ? "Ejecutivo" : null),
     shift: schedule?.[1] ?? null,
     issues,
   };
@@ -135,6 +151,12 @@ export const catalogSchema = z.array(
     coordination: text.nullable(),
     architecture: z.boolean(),
     kind: z.enum(["carrera", "ingles", "clinicos", "deportes", "practica"]),
+    program: text.optional(),
+    responsible: text.optional(),
+    faculty: z.string().optional(),
+    campus: z.string().optional(),
+    original: z.record(z.string(), z.string()).optional(),
+    sourceReference: z.string().optional(),
   }),
 );
 const calendarSchema = z.strictObject({
@@ -145,7 +167,29 @@ const calendarSchema = z.strictObject({
   ),
 });
 const audit = { version: text, approvedBy: text, reason: text };
+export const enrollmentDecisionSchema = z.strictObject({
+  ...audit,
+  enrollmentId: text,
+  date: civilDateSchema.optional(),
+  originalDateApproved: z.boolean().optional(),
+  kind: z.enum(["base", "especial", "excluida", "baja"]).optional(),
+  exclusionReason: z
+    .enum(["baja", "ciclo", "antecedente_sustituido", "error_captura"])
+    .optional(),
+  primary: z.boolean().default(false),
+  groupApproved: z.boolean().optional(),
+  relatedEnrollmentIds: z
+    .array(z.string().regex(/^[a-f0-9]{64}$/))
+    .max(100)
+    .optional(),
+  rule: text,
+  decisionDate: civilDateSchema,
+  sourceReference: text,
+});
 export const contextSchema = z.strictObject({
+  trackingSchedule: scheduleSchema.optional(),
+  rulesVersion: z.literal("approved-2026-10").optional(),
+  enrollmentDecisions: z.array(enrollmentDecisionSchema).optional(),
   cycle: text,
   cutId: text,
   cutDate: civilDateSchema,
@@ -158,6 +202,7 @@ export const contextSchema = z.strictObject({
       identity: text,
       effectiveDate: civilDateSchema.nullable(),
       confirmedCutId: text,
+      sourceReference: text.optional(),
     }),
   ),
   exceptions: z.array(
@@ -196,13 +241,24 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
   const classified = rows.map((row) => {
     const person = identity(row.identity);
     const catalog = context.catalog.find((c) => c.id === row.careerId);
-    const parsed = group(row.group, catalog?.architecture ?? false);
+    const approved = context.rulesVersion === "approved-2026-10";
+    const decisions = (context.enrollmentDecisions ?? []).filter(
+      (d) => d.enrollmentId === row.id,
+    );
+    if (decisions.length > 1)
+      throw new Error("Decisión de inscripción ambigua");
+    const decision = decisions[0];
+    const parsed = group(row.group, catalog?.architecture ?? false, approved);
     // Un serial requiere la época de su propia fuente, no la del calendario.
-    const date =
+    const originalDate =
       typeof row.date === "number" && !row.provenance.source
         ? null
         : civilDate(row.date, row.provenance.source?.epoch);
-    const problems = [...parsed.issues];
+    const date = decision?.date ?? originalDate;
+    const problems = parsed.issues.filter(
+      (code) =>
+        !(approved && decision?.groupApproved && code === "grupo_ilegible"),
+    );
     if (typeof row.date === "number" && !row.provenance.source)
       problems.push("fecha_sin_epoca_de_origen");
     if (row.trackingCycle && row.trackingCycle !== context.cycle)
@@ -211,9 +267,9 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
     if (!catalog?.coordination) problems.push("carrera_sin_coordinacion");
     if (catalog && parsed.career && parsed.career !== catalog.abbreviation)
       problems.push("carrera_discrepante");
-    if (row.modality && row.modality !== parsed.modality)
+    if (!approved && row.modality && row.modality !== parsed.modality)
       problems.push("modalidad_discrepante");
-    if (row.shift && row.shift !== parsed.shift)
+    if (!approved && row.shift && row.shift !== parsed.shift)
       problems.push("turno_discrepante");
     if (parsed.cycle && parsed.cycle !== row.cycle)
       problems.push("ciclo_grupo_discrepante");
@@ -227,7 +283,11 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
     if (exceptions.length > 1) problems.push("excepcion_ambigua");
     if (row.cycle !== context.cycle && exceptions.length !== 1)
       problems.push("ciclo_sin_excepcion");
-    if (!date || !context.calendar.dates[date])
+    if (
+      !date ||
+      (!context.calendar.dates[date] &&
+        !(approved && (parsed.special || decision?.originalDateApproved)))
+    )
       problems.push("fecha_desconocida");
     const withdrawal = context.withdrawals.find(
       (w) =>
@@ -260,6 +320,14 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
       kind = date
         ? (context.calendar.dates[date] ?? "por_resolver")
         : "por_resolver";
+    if (decision?.kind && !person.teacher && !withdrawal) kind = decision.kind;
+    // Los valores administrativos originales prevalecen sobre una deducción del
+    // código en el perfil aprobado; nunca convertir Ejecutivo en Virtual por 53.
+    if (approved) {
+      if (row.modality) parsed.modality = row.modality;
+      if (row.shift) parsed.shift = row.shift;
+      if (row.modality === "Virtual") parsed.shift = "Sabatino Matutino";
+    }
     if (exceptions.length === 1 && kind !== "especial")
       problems.push("excepcion_no_especial");
     for (const code of problems) issues.push({ code, refs: [row.id] });
@@ -268,6 +336,9 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
       person,
       parsed,
       date,
+      originalDate,
+      decision,
+      exclusionReason: decision?.exclusionReason ?? null,
       kind,
       problems,
       catalog,
@@ -292,6 +363,24 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
     const specials = enrollments.filter((r) => r.kind === "especial");
     let baseId =
       bases.length === 1 && candidates.length === 1 ? bases[0]!.id : null;
+    if (context.rulesVersion && !candidates.length) {
+      const eligible = specials.filter((r) => !r.problems.length);
+      if (eligible.length === 1) baseId = eligible[0]!.id;
+    }
+    const selected = enrollments.filter((r) => r.decision?.primary);
+    if (selected.length) {
+      baseId =
+        selected.length === 1 &&
+        !selected[0]!.problems.length &&
+        ["base", "especial"].includes(selected[0]!.kind)
+          ? selected[0]!.id
+          : null;
+      if (!baseId)
+        issues.push({
+          code: "decision_principal_invalida",
+          refs: selected.map((r) => r.id),
+        });
+    }
     const resolutions = context.baseResolutions.filter(
       (r) =>
         identity(r.identity).normalized === person && r.cutId === context.cutId,
@@ -309,7 +398,7 @@ export function resolveAffiliations(input: unknown, contextInput: unknown) {
         refs: enrollments.map((r) => r.id),
       });
     }
-    if (candidates.length > 1 && !resolution)
+    if (candidates.length > 1 && !resolution && !selected.length)
       issues.push({ code: "varias_bases", refs: candidates.map((r) => r.id) });
     if (!baseId && specials.length)
       issues.push({
@@ -440,16 +529,37 @@ export function grade(raw: unknown) {
   return { state: "invalida" as const, raw };
 }
 
+export function courseNameKey(name: string) {
+  return name
+    .normalize("NFC")
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 export function courseFilename(original: string) {
+  // Solo un prefijo etiquetado se puede separar sin adivinar cuál número es el ID.
+  const prefix = /^(?:muestra|orden)\s+(\d+)\s*[-_]\s*/i.exec(original);
+  const filename = prefix ? original.slice(prefix[0].length) : original;
   const match =
-    /^(\d+)\s+(.+?)\s+(\d{2}-\d+)(?:[-_ ](?:calificaciones|grades))?\.(ods|xlsx|csv)$/i.exec(
-      original,
+    /^(\d+)(?:\._|[ _]+)(.+?)[ _]+(\d{2}-\d+)(?:[-_ ](?:calificaciones|grades))?\.(ods|xlsx|csv)$/i.exec(
+      filename,
     );
-  if (!match || /^\d+\s/.test(match[2]!) || /\b\d{2}-\d+\b/.test(match[2]!))
+  if (
+    !match ||
+    /^\d+(?:\._|[ ._-])/.test(match[2]!) ||
+    /\b\d{2}-\d+\b/.test(match[2]!)
+  )
     throw new Error(
       "Nombre de curso ambiguo: confirmar ID, nombre y ciclo mediante mapeo revisado",
     );
-  return { original, externalId: match[1]!, name: match[2]!, cycle: match[3]! };
+  return {
+    original,
+    externalId: match[1]!,
+    name: match[2]!.replaceAll("_", " "),
+    cycle: match[3]!,
+    ...(prefix ? { orderPrefix: prefix[0] } : {}),
+  };
 }
 
 export const courseFilenameResolutionSchema = z.strictObject({

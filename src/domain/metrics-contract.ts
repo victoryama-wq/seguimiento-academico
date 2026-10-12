@@ -1,5 +1,7 @@
+import { progressSchema } from "./report-policy";
 import { z } from "zod";
 import { countsSchema } from "./metrics";
+import { possibleWithdrawalSchema } from "./possible-withdrawals";
 
 const key = z
   .string()
@@ -42,7 +44,7 @@ const request = z.strictObject({
   snapshotId: key.optional(),
   offset: z.number().int().min(0).max(100000).default(0),
   section: z
-    .enum(["groups", "details", "exclusions", "courses"])
+    .enum(["groups", "details", "exclusions", "courses", "possibleWithdrawals"])
     .default("groups"),
 });
 export const metricOperations = {
@@ -82,11 +84,23 @@ export const metricDetail = z.object({
   plan: z.string(),
   special: z.boolean(),
   attribution: z.string(),
+  relationshipId: z.string().optional(),
+  teachingAssignment: z.literal("no_determinada").optional(),
+  expectedUnits: z.array(z.number()).optional(),
+  deferredUnits: z.array(z.number()).optional(),
   enrollmentIds: z.array(z.string()),
   sourceVersions: z.record(z.string(), z.string()),
   issues: z.array(z.string()),
   values: z.array(
-    z.object({ activityId: z.string(), state: z.string(), raw: z.unknown() }),
+    z.object({
+      activityId: z.string(),
+      label: z.string().optional(),
+      state: z.string(),
+      raw: z.unknown(),
+      sourceVersion: z.string().optional(),
+      unit: z.number().optional(),
+      additional: z.boolean().optional(),
+    }),
   ),
   counts: countsSchema,
 });
@@ -104,11 +118,13 @@ export const metricCourse = z.object({
   selectionId: z.string().nullable(),
   activities: z.array(z.string()),
   available: z.array(z.string()),
+  activityLabels: z.record(z.string(), z.string()).optional(),
   teachers: z.array(z.string()),
   teacherSource: z.string(),
   status: z.string(),
 });
 export const metricExclusion = z.object({
+  withdrawalStatus: z.enum(["posible baja", "baja confirmada"]).optional(),
   identity: z.string(),
   careerId: z.string().nullable(),
   courseId: z.string().nullable(),
@@ -116,6 +132,7 @@ export const metricExclusion = z.object({
   provenance: z.string(),
 });
 export const dashboardSchema = z.object({
+  progress: progressSchema.optional(),
   snapshotId: z.string(),
   cutId: z.string(),
   cycleId: z.string(),
@@ -133,6 +150,8 @@ export const dashboardSchema = z.object({
   pending: z.number(),
   state: z.string(),
   exclusionsCount: z.number(),
+  possibleWithdrawalsCount: z.number().default(0),
+  possibleWithdrawals: z.array(possibleWithdrawalSchema).default([]),
   groups: z.array(metricGroup),
   details: z.array(metricDetail),
   exclusions: z.array(metricExclusion),
