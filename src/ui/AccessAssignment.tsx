@@ -4,22 +4,40 @@ import {
   accessAccountSchema,
   accessCatalogSchema,
   accessReviewSchema,
+  newUserReviewSchema,
+  newUserResultSchema,
   type memberSchema,
 } from "../domain/access-contract";
 import { callAcademic, okSchema } from "../infrastructure/academic-api";
 import type { Overview } from "../domain/import-contract";
 type Member = z.infer<typeof memberSchema>;
 const empty: Member = { role: "coordinator", active: true, careers: [] };
-export default function AccessAssignment({ overview }: { overview: Overview }) {
+export default function AccessAssignment({
+  overview,
+  initialEmail = "",
+  newUser = false,
+  onExisting,
+  onSaved,
+}: {
+  overview: Overview;
+  initialEmail?: string;
+  newUser?: boolean;
+  onExisting?: (email: string) => void;
+  onSaved?: () => void;
+}) {
   const [cycle, setCycle] = useState(overview.cycles[0]?.id ?? ""),
     [catalog, setCatalog] = useState<z.infer<
       typeof accessCatalogSchema
     > | null>(null);
-  const [email, setEmail] = useState(""),
+  const [email, setEmail] = useState(initialEmail),
     [account, setAccount] = useState<z.infer<
       typeof accessAccountSchema
     > | null>(null),
     [member, setMember] = useState<Member>(empty);
+  const [name, setName] = useState("");
+  const [creation, setCreation] = useState<z.infer<
+    typeof newUserResultSchema
+  > | null>(null);
   const [search, setSearch] = useState(""),
     [responsible, setResponsible] = useState("");
   const [review, setReview] = useState<z.infer<
@@ -30,6 +48,28 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const epoch = useRef(0);
+  useEffect(() => {
+    if (!initialEmail) return;
+    let live = true;
+    const current = epoch.current;
+    void callAcademic(
+      "lookupAccess",
+      { email: initialEmail },
+      accessAccountSchema,
+    )
+      .then((v) => {
+        if (live && epoch.current === current) {
+          setAccount(v);
+          setMember(v.member ?? empty);
+        }
+      })
+      .catch((e: Error) => {
+        if (live) setError(e.message);
+      });
+    return () => {
+      live = false;
+    };
+  }, [initialEmail]);
   const invalidate = () => {
     epoch.current++;
     setReview(null);
@@ -121,18 +161,46 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
   async function prepare() {
     invalidate();
     const current = epoch.current;
-    if (!account || !catalog?.version) return;
+    if ((!account && !newUser) || !catalog?.version) return;
     setBusy(true);
     setError("");
     try {
+      if (newUser) {
+        const v = await callAcademic(
+          "reviewNewUser",
+          {
+            name,
+            email: email.trim(),
+            cycleId: cycle,
+            catalogVersion: catalog.version,
+            member,
+          },
+          newUserReviewSchema,
+        );
+        if (current !== epoch.current) return;
+        if (v.existing) {
+          setNotice(
+            "El correo ya existe. Su identidad se conserva; abre la cuenta para gestionar permisos.",
+          );
+          onExisting?.(v.email);
+          return;
+        }
+        setReview({
+          id: v.id!,
+          added: member.careers,
+          removed: [],
+          retained: [],
+        });
+        return;
+      }
       const v = await callAcademic(
         "reviewAccess",
         {
-          email: account.account!.email,
+          email: account!.account!.email,
           cycleId: cycle,
           catalogVersion: catalog.version,
-          accountVersion: account.accountVersion,
-          memberVersion: account.memberVersion,
+          accountVersion: account!.accountVersion,
+          memberVersion: account!.memberVersion,
           member,
         },
         accessReviewSchema,
@@ -149,6 +217,30 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
     setBusy(true);
     setError("");
     try {
+      if (newUser) {
+        localStorage.setItem("pending-user-creation", review.id);
+        const v = await callAcademic(
+          "confirmNewUser",
+          { reviewId: review.id },
+          newUserResultSchema,
+        );
+        setCreation(v);
+        if (v.existing) {
+          setNotice(
+            "El correo ya existe. No se cambió su identidad ni se concedieron permisos.",
+          );
+          onExisting?.(v.email);
+        } else if (v.permissionsAssigned)
+          setCreation(
+            await callAcademic(
+              "activateAccessUser",
+              { reviewId: review.id, attemptId: crypto.randomUUID() },
+              newUserResultSchema,
+            ),
+          );
+        onSaved?.();
+        return;
+      }
       await callAcademic("assignMember", { reviewId: review.id }, okSchema);
       const v = await callAcademic(
         "lookupAccess",
@@ -161,6 +253,7 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
       setNotice(
         "Acceso actualizado. No se creó ninguna cuenta ni se envió invitación.",
       );
+      onSaved?.();
     } catch (e) {
       invalidate();
       setError((e as Error).message);
@@ -170,18 +263,31 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
   }
   return (
     <section aria-label="Asignar acceso" className="guided-intake">
-      <h3>Asignar acceso</h3>
+      <h3>{newUser ? "Nuevo usuario" : "Asignar acceso"}</h3>
       <p>
         Consulta el catálogo de un ciclo para elegir carreras. Los permisos
         continúan vigentes entre ciclos hasta que Administración los cambie; el
         ciclo consultado no limita su duración.
       </p>
+      {newUser && (
+        <label>
+          Nombre
+          <input
+            value={name}
+            disabled={busy || !!creation}
+            onChange={(e) => {
+              invalidate();
+              setName(e.target.value);
+            }}
+          />
+        </label>
+      )}
       <label>
         Correo exacto de la cuenta
         <input
           type="email"
           value={email}
-          disabled={busy}
+          disabled={busy || !!creation}
           onChange={(e) => {
             invalidate();
             setAccount(null);
@@ -189,9 +295,11 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
           }}
         />
       </label>
-      <button disabled={busy || !email.trim()} onClick={() => void lookup()}>
-        Buscar cuenta
-      </button>
+      {!newUser && (
+        <button disabled={busy || !email.trim()} onClick={() => void lookup()}>
+          Buscar cuenta
+        </button>
+      )}
       {account && !account.found && (
         <p role="status">
           No existe una cuenta con ese correo. Solicita su alta por el
@@ -242,8 +350,8 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
           Administración → Fuentes.
         </p>
       )}
-      {account?.found && (
-        <fieldset disabled={busy}>
+      {(account?.found || newUser) && (
+        <fieldset disabled={busy || !!creation}>
           <legend>Acceso propuesto</legend>
           <label>
             Rol
@@ -257,15 +365,19 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
               <option value="admin">Administrador</option>
             </select>
           </label>
-          <label>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={member.active}
-              onChange={(e) => update({ ...member, active: e.target.checked })}
-            />
-            Acceso activo
-          </label>
+          {!newUser && (
+            <label>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={member.active}
+                onChange={(e) =>
+                  update({ ...member, active: e.target.checked })
+                }
+              />
+              Acceso activo
+            </label>
+          )}
           {member.role === "admin" && (
             <p>
               Administrador tiene acceso institucional completo. Las carreras
@@ -274,7 +386,7 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
           )}
           <p>
             Permisos existentes:{" "}
-            {account.member
+            {account?.member
               ? `${account.member.role === "admin" ? "Administrador" : "Coordinador"} · ${account.member.active ? "Activo" : "Inactivo"}`
               : "Sin acceso asignado"}
             .
@@ -351,8 +463,13 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
             </div>
           )}
           <p>{member.careers.length} carreras seleccionadas.</p>
-          <button disabled={!catalog?.version} onClick={() => void prepare()}>
-            Revisar cambios de acceso
+          <button
+            disabled={
+              !catalog?.version || (newUser && (!name.trim() || !email.trim()))
+            }
+            onClick={() => void prepare()}
+          >
+            {newUser ? "Revisar alta" : "Revisar cambios de acceso"}
           </button>
         </fieldset>
       )}
@@ -360,7 +477,8 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
         <section aria-label="Resumen de acceso">
           <h4>Revisar antes de confirmar</h4>
           <p>
-            {account?.account?.name} · {account?.account?.email}
+            {newUser ? name : account?.account?.name} ·{" "}
+            {newUser ? email : account?.account?.email}
           </p>
           <p>
             Rol: {member.role === "admin" ? "Administrador" : "Coordinador"}.
@@ -394,10 +512,28 @@ export default function AccessAssignment({ overview }: { overview: Overview }) {
             He revisado la cuenta, el rol y las carreras que se conceden o
             retiran.
           </label>
-          <button disabled={busy || !confirmed} onClick={() => void save()}>
-            Confirmar acceso
+          <button
+            disabled={busy || !confirmed || !!creation}
+            onClick={() => void save()}
+          >
+            {newUser ? "Confirmar alta" : "Confirmar acceso"}
           </button>
         </section>
+      )}
+      {creation && (
+        <p role="status">
+          Cuenta {creation.accountCreated ? "creada" : "existente"}. Permisos{" "}
+          {creation.permissionsAssigned
+            ? "asignados"
+            : "pendientes de revisión"}
+          . Activación:{" "}
+          {creation.activation === "accepted"
+            ? "solicitud aceptada por Firebase; entrega en el buzón no comprobada"
+            : creation.activation === "synthetic_not_sent"
+              ? "sin envío externo a cuenta sintética"
+              : "pendiente; recupera el alta desde Usuarios y accesos"}
+          .
+        </p>
       )}
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}

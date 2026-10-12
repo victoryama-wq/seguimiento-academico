@@ -649,3 +649,25 @@ membresías: continúa la política existente de permisos vigentes por carrera.
 
 Se conservan decisiones académicas, fuentes, cortes, reportes, roles de cuentas reales
 y reglas Firebase. Guía y evidencia reproducible: [asignación de accesos](asignacion-accesos.md).
+
+## 2026-10-12 — Directorio administrativo y alta revisada
+
+Decisión de producto aprobada: Usuarios y accesos integra el editor anterior con
+listado de cuentas Auth, búsqueda/paginación en servidor y alta por Administración.
+Administrador tiene alcance institucional, independiente de su lista de carreras.
+Las relaciones responsable/carrera del catálogo son auxiliares, nunca autorizaciones.
+El alta no sustituye identidades existentes. No cambia DEC-01–36 ni datos académicos.
+
+Decisión técnica: una propuesta persistente reserva un UID aleatorio interno y las
+versiones del catálogo. La creación Auth y la asignación Firestore son pasos separados;
+se comprueba vigencia antes/después y se conserva la cuenta si falla el segundo paso.
+Los reintentos recuperan el UID reservado; asignación/auditoría usan transacción y
+no reponen permisos retirados. El directorio recupera procesos del mismo actor.
+Activación usa el restablecimiento de contraseña de Firebase, sin contraseña inicial,
+con estados pendiente/aceptada/incierta y bitácora de intentos sin enlaces. Un correo
+aceptado por Firebase no demuestra recepción; pruebas de nube no envían a personas.
+La creación requiere únicamente firebaseauth.users.create además de los permisos
+vigentes de consulta; cualquier ampliación IAM se aplica solo tras autorización.
+
+El ciclo consulta el catálogo, no la vigencia de permisos. Se conserva el rechazo
+al propio cambio de acceso y a revisiones obsoletas. Guía: asignacion-accesos.md.

@@ -19,8 +19,8 @@ const stale = () =>
     "failed-precondition",
     "La revisión venció o la cuenta, sus permisos o el catálogo cambiaron. Busca la cuenta y revisa de nuevo antes de confirmar.",
   );
-const fingerprint = (v: unknown) => hash(canonical(v ?? null));
-async function account(email: string) {
+export const fingerprint = (v: unknown) => hash(canonical(v ?? null));
+export async function account(email: string) {
   try {
     const user = await auth.getUserByEmail(email);
     return {
@@ -35,7 +35,7 @@ async function account(email: string) {
     throw e;
   }
 }
-async function catalog(cycleId: string) {
+export async function catalog(cycleId: string) {
   const cycle = (await db.doc(`cycles/${cycleId}`).get()).data();
   const kind = cycle?.sources?.academicPackage ? "academicPackage" : "catalog";
   const version = (cycle?.sources?.[kind] as string | undefined) ?? null;

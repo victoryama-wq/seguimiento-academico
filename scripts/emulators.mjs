@@ -3,6 +3,8 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
+import { redactAuthLog } from "./redact-auth-log.mjs";
 
 const project = process.env.GCLOUD_PROJECT ?? "demo-seguimiento-ci";
 if (!/^demo-[a-z0-9-]+$/.test(project) || project !== "demo-seguimiento-ci") {
@@ -66,7 +68,7 @@ if (mode !== "check") {
   delete childEnv.FIREBASE_TOKEN;
   delete childEnv.FIREBASE_CONFIG;
   const child = spawn(process.execPath, args, {
-    stdio: "inherit",
+    stdio: ["inherit", "pipe", "pipe"],
     env: {
       ...childEnv,
       XDG_CONFIG_HOME: isolatedConfig,
@@ -81,6 +83,14 @@ if (mode !== "check") {
       PILOT_METRICS: mode === "pilot" ? "1" : "0",
     },
   });
+  for (const [stream, output] of [
+    [child.stdout, process.stdout],
+    [child.stderr, process.stderr],
+  ]) {
+    createInterface({ input: stream }).on("line", (line) =>
+      output.write(`${redactAuthLog(line)}\n`),
+    );
+  }
   child.once("error", (error) => {
     console.error(error);
     process.exitCode = 1;

@@ -43,7 +43,7 @@ writeFileSync(
 );
 writeFileSync(
   `functions/.env.${target.projectId}`,
-  `TRACKING_RUNTIME=staging\nTRACKING_RELEASE_SHA=${sha}\n`,
+  `TRACKING_RUNTIME=staging\nTRACKING_RELEASE_SHA=${sha}\nTRACKING_AUTH_WEB_KEY=${web.apiKey}\n`,
 );
 console.log(
   JSON.stringify({

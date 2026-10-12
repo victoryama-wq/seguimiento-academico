@@ -1,5 +1,6 @@
 import { accessOperations } from "../../src/domain/access-contract";
 import { accessOperation } from "./access";
+import { userOperation, userOperations } from "./users";
 import { progressSchema } from "../../src/domain/report-policy";
 import { intakeOperations } from "../../src/domain/intake-contract";
 import { intakeOperation } from "./intake";
@@ -65,6 +66,7 @@ export async function academicOperation(
     );
   if (op in historyOperations)
     return historyOperation(op as keyof typeof historyOperations, raw, actor);
+  if (userOperations.includes(op)) return userOperation(op, raw, actor);
   if (op in accessOperations)
     return accessOperation(op as keyof typeof accessOperations, raw, actor);
   switch (op) {

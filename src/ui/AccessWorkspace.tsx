@@ -9,7 +9,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-const AccessAssignment = lazy(() => import("./AccessAssignment"));
+const AccessAssignment = lazy(() => import("./UsersPanel"));
 const CoordinatorIntake = lazy(() => import("./CoordinatorIntake"));
 const History = lazy(() => import("./History"));
 const Dashboard = lazy(() => import("./Dashboard"));

@@ -10,6 +10,20 @@ export const memberSchema = z.strictObject({
   careers: z.array(key).max(100),
 });
 export const accessOperations = {
+  listAccessUsers: z.strictObject({
+    search: z.string().trim().max(254).default(""),
+    pageToken: z.string().max(4096).optional(),
+    pageSize: z.int().min(1).max(25).default(15),
+  }),
+  reviewNewUser: z.strictObject({
+    name: z.string().trim().min(1).max(120),
+    email: z.email().trim().max(254),
+    cycleId: key,
+    catalogVersion: key,
+    member: memberSchema,
+  }),
+  confirmNewUser: z.strictObject({ reviewId: key }),
+  activateAccessUser: z.strictObject({ reviewId: key, attemptId: key }),
   accessCatalog: z.strictObject({ cycleId: key }),
   lookupAccess: z.strictObject({ email: z.email().trim().max(254) }),
   reviewAccess: z.strictObject({
@@ -49,4 +63,36 @@ export const accessReviewSchema = z.object({
   added: z.array(z.string()),
   removed: z.array(z.string()),
   retained: z.array(z.string()),
+});
+export const directorySchema = z.object({
+  users: z.array(
+    z.object({
+      email: z.string(),
+      name: z.string(),
+      disabled: z.boolean(),
+      member: memberSchema.nullable(),
+      careerNames: z.array(z.string()),
+      pendingCreation: z.string().nullable(),
+    }),
+  ),
+  nextPageToken: z.string().nullable(),
+});
+export const newUserReviewSchema = z.object({
+  id: z.string().optional(),
+  existing: z.boolean(),
+  email: z.string(),
+});
+export const newUserResultSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  existing: z.boolean(),
+  accountCreated: z.boolean(),
+  permissionsAssigned: z.boolean(),
+  activation: z.enum([
+    "pending",
+    "accepted",
+    "uncertain",
+    "synthetic_not_sent",
+  ]),
+  needsReview: z.boolean().default(false),
 });
