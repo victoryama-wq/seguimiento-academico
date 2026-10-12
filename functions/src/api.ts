@@ -1,3 +1,5 @@
+import { accessOperations } from "../../src/domain/access-contract";
+import { accessOperation } from "./access";
 import { progressSchema } from "../../src/domain/report-policy";
 import { intakeOperations } from "../../src/domain/intake-contract";
 import { intakeOperation } from "./intake";
@@ -15,7 +17,6 @@ import {
 } from "../../src/domain/import-contract";
 import {
   admin,
-  auth,
   bucket,
   canonical,
   career,
@@ -64,6 +65,8 @@ export async function academicOperation(
     );
   if (op in historyOperations)
     return historyOperation(op as keyof typeof historyOperations, raw, actor);
+  if (op in accessOperations)
+    return accessOperation(op as keyof typeof accessOperations, raw, actor);
   switch (op) {
     case "reviseAcademicDecision":
     case "reviseCycleWithdrawal":
@@ -131,27 +134,6 @@ export async function academicOperation(
                 : v.careers.filter((id) => member.careers.includes(id)),
           })),
       };
-    }
-    case "assignMember": {
-      admin(member);
-      const input = operationSchemas.assignMember.parse(raw);
-      if (input.uid === actor)
-        throw new HttpsError(
-          "failed-precondition",
-          "No modifiques tu propia membresía.",
-        );
-      await auth.getUser(input.uid);
-      await db.runTransaction(async (tx) => {
-        admin(await membership(actor, tx));
-        tx.set(db.doc(`memberships/${input.uid}`), input.member);
-        tx.create(db.collection("accessAudit").doc(), {
-          uid: input.uid,
-          member: input.member,
-          approvedBy: actor,
-          createdAt: Date.now(),
-        });
-      });
-      return { ok: true };
     }
     case "createCycle": {
       admin(member);

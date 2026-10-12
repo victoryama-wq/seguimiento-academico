@@ -9,6 +9,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+const AccessAssignment = lazy(() => import("./AccessAssignment"));
 const CoordinatorIntake = lazy(() => import("./CoordinatorIntake"));
 const History = lazy(() => import("./History"));
 const Dashboard = lazy(() => import("./Dashboard"));
@@ -169,40 +170,9 @@ export function AccessWorkspace({
         <>
           {section === "Configuración" &&
             (overview.member.role === "admin" ? (
-              <AdminForm
-                op="assignMember"
-                title="Asignar acceso"
-                fields={[
-                  { name: "uid", label: "Identificador de usuario" },
-                  {
-                    name: "role",
-                    label: "Rol (admin o coordinator)",
-                    value: "coordinator",
-                  },
-                  {
-                    name: "careers",
-                    label: "Carreras autorizadas, separadas por coma",
-                  },
-                  {
-                    name: "active",
-                    label: "Acceso activo (true o false)",
-                    value: "true",
-                  },
-                ]}
-                transform={(v) => ({
-                  uid: v.uid,
-                  member: {
-                    role: v.role,
-                    active:
-                      z.enum(["true", "false"]).parse(v.active) === "true",
-                    careers: v
-                      .careers!.split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  },
-                })}
-                done={refresh}
-              />
+              <Suspense fallback={<p>Cargando asignación de accesos…</p>}>
+                <AccessAssignment overview={overview} />
+              </Suspense>
             ) : (
               <p>
                 Carreras autorizadas: {overview.member.careers.join(", ")}.
@@ -383,8 +353,7 @@ function AdminForm({
   done,
 }: {
   title: string;
-  op:
-    "assignMember" | "createCycle" | "createCourse" | "createCut" | "closeCut";
+  op: "createCycle" | "createCourse" | "createCut" | "closeCut";
   fields: Field[];
   transform?: (v: Record<string, string>) => unknown;
   done: () => Promise<void>;

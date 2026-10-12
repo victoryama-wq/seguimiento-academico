@@ -64,7 +64,7 @@ export async function token(uid: string) {
   if (!data.idToken) throw new Error("No se obtuvo sesión sintética");
   return data.idToken;
 }
-export async function api(
+export async function apiRaw(
   op: string,
   input: unknown,
   authToken?: string,
@@ -248,22 +248,6 @@ export async function seedBase() {
     .set({ role: "admin", active: true, careers: [] });
   const adminToken = await token(people.admin);
   await api(
-    "assignMember",
-    {
-      uid: people.a,
-      member: { role: "coordinator", active: true, careers: ["laf-plan-1"] },
-    },
-    adminToken,
-  );
-  await api(
-    "assignMember",
-    {
-      uid: people.b,
-      member: { role: "coordinator", active: true, careers: ["arq-plan-1"] },
-    },
-    adminToken,
-  );
-  await api(
     "createCycle",
     {
       id: "27-1",
@@ -280,6 +264,23 @@ export async function seedBase() {
   );
   const roster = await source(adminToken, "roster", rosterCsv, rosterMap);
   const catalog = await source(adminToken, "catalog", catalogCsv, catalogMap);
+  await api(
+    "assignMember",
+    {
+      uid: people.a,
+      member: { role: "coordinator", active: true, careers: ["laf-plan-1"] },
+    },
+    adminToken,
+  );
+  await api(
+    "assignMember",
+    {
+      uid: people.b,
+      member: { role: "coordinator", active: true, careers: ["arq-plan-1"] },
+    },
+    adminToken,
+  );
+
   await api(
     "createCourse",
     {
@@ -315,4 +316,42 @@ export async function seedBase() {
     roster,
     catalog,
   };
+}
+
+// Las fixtures históricas pasan ahora por búsqueda, revisión y confirmación reales.
+// apiRaw permite probar rechazos del contrato sin esta comodidad de preparación.
+export async function api(
+  op: string,
+  input: unknown,
+  authToken?: string,
+): Promise<unknown> {
+  if (op !== "assignMember" || !input || !("member" in (input as object)))
+    return apiRaw(op, input, authToken);
+  const v = input as {
+    uid: string;
+    member: import("../../../src/domain/import-contract").Member;
+    cycleId?: string;
+  };
+  const email = (await stores().auth.getUser(v.uid)).email!;
+  const found = (await apiRaw("lookupAccess", { email }, authToken)) as {
+    accountVersion: string;
+    memberVersion: string;
+  };
+  const cycleId = v.cycleId ?? "27-1";
+  const catalog = (await apiRaw("accessCatalog", { cycleId }, authToken)) as {
+    version: string;
+  };
+  const review = (await apiRaw(
+    "reviewAccess",
+    {
+      email,
+      cycleId,
+      catalogVersion: catalog.version,
+      accountVersion: found.accountVersion,
+      memberVersion: found.memberVersion,
+      member: v.member,
+    },
+    authToken,
+  )) as { id: string };
+  return apiRaw("assignMember", { reviewId: review.id }, authToken);
 }

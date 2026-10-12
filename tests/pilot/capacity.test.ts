@@ -130,6 +130,7 @@ for (const count of counts)
           });
         }
         await call("assignMember", {
+          cycleId,
           uid,
           member: { role: "coordinator", active: true, careers: [career] },
         });

@@ -26,6 +26,9 @@ Coordinaciones: [seleccionar corte, subir, revisar, confirmar y consultar](docs/
 Administración conserva la preparación de fuentes, decisiones y avances. Las
 pruebas automáticas no sustituyen ni publican los archivos reales del propietario.
 
+Administración: [asignar accesos con el catálogo confirmado](docs/asignacion-accesos.md),
+buscando una cuenta existente por correo y revisando las carreras antes de confirmar.
+
 El PR #5 incorpora [avance explícito y revisión acumulativa](docs/avance-explicito.md):
 corte Escolarizado y unidad Ejecutivo/Virtual independientes de fechas, actividades
 posteriores conservadas y advertencias antes de sustituir notas por vacío/guion.

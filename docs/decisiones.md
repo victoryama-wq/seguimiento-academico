@@ -629,3 +629,23 @@ La selección del corte se conserva en la sesión y enlaza la publicación al pa
 No se crean cuentas ni permisos para personas reales en las pruebas automáticas.
 Guía: [flujo de coordinadores](flujo-coordinadores.md). DEC-01–36, principal C.A.,
 modalidades, avance explícito, cortes cerrados y conciliación permanecen vigentes.
+
+## 2026-10-12 — Asignación visual de accesos por catálogo confirmado
+
+Decisión de producto aprobada: Administración busca una cuenta existente por correo
+exacto, consulta el catálogo confirmado de un ciclo, selecciona carreras con búsqueda
+por programa/abreviatura/responsable y confirma una revisión explícita. No se crean
+cuentas ni invitaciones. Responsable del catálogo es ayuda de selección, no permiso
+inferido. Los IDs internos nunca se capturan manualmente ni se deducen de abreviaturas.
+
+Decisión técnica: revisión persistente de 30 minutos vinculada a actor, identidad Auth,
+versión de membresía y fuente confirmada. Confirmación transaccional, con auditoría
+antes/después e idempotencia; los reintentos no restauran permisos revocados. Se elimina
+la asignación directa sin revisión. Toda consulta de cuentas y cambio de permisos
+requiere Administración vigente en servidor. Los permisos ausentes del catálogo
+se conservan y se presentan para decisión; nuevas carreras requieren pertenencia
+al catálogo confirmado. Consultar un ciclo no añade una restricción temporal a las
+membresías: continúa la política existente de permisos vigentes por carrera.
+
+Se conservan decisiones académicas, fuentes, cortes, reportes, roles de cuentas reales
+y reglas Firebase. Guía y evidencia reproducible: [asignación de accesos](asignacion-accesos.md).

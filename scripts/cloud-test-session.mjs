@@ -59,5 +59,44 @@ for (const [role, account] of Object.entries(accounts)) {
   assert.equal(b.localId, account.uid);
   tokens[role] = b.idToken;
 }
-export const api = (op, input, role = "admin") =>
-  call("academicApi", { op, input }, role);
+// Compatibilidad de fixtures sintéticas: la API ya no acepta asignaciones directas.
+// Toda actualización pasa por catálogo confirmado, revisión y confirmación.
+export async function api(op, input, role = "admin") {
+  if (op !== "assignMember" || !input?.member)
+    return call("academicApi", { op, input }, role);
+  const target = Object.values(accounts).find((a) => a.uid === input.uid);
+  assert(target, "Solo cuentas sintéticas verificadas en este helper");
+  const found = await api("lookupAccess", { email: target.email }, role);
+  const existing = found.member?.careers ?? [];
+  const added = input.member.careers.filter((id) => !existing.includes(id));
+  const overview = await api("overview", {}, role);
+  let selected;
+  for (const cycle of overview.cycles) {
+    if (input.cycleId && cycle.id !== input.cycleId) continue;
+    const catalog = await api("accessCatalog", { cycleId: cycle.id }, role);
+    if (
+      catalog.version &&
+      added.every((id) => catalog.careers.some((c) => c.id === id))
+    ) {
+      selected = { cycleId: cycle.id, version: catalog.version };
+      break;
+    }
+  }
+  assert(
+    selected,
+    "Se requiere un catálogo confirmado para revisar el acceso sintético",
+  );
+  const review = await api(
+    "reviewAccess",
+    {
+      email: target.email,
+      cycleId: selected.cycleId,
+      catalogVersion: selected.version,
+      accountVersion: found.accountVersion,
+      memberVersion: found.memberVersion,
+      member: input.member,
+    },
+    role,
+  );
+  return api("assignMember", { reviewId: review.id }, role);
+}

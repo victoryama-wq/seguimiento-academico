@@ -1,3 +1,4 @@
+import { accessOperations, memberSchema } from "./access-contract";
 import { z } from "zod";
 import { civilDateSchema } from "./schemas";
 import { courseFilenameResolutionSchema } from "./academic";
@@ -21,11 +22,7 @@ export const keySchema = z
   .max(100)
   .regex(/^[a-zA-Z0-9_-]+$/);
 const label = z.string().trim().min(1).max(180);
-export const memberSchema = z.strictObject({
-  role: z.enum(["admin", "coordinator"]),
-  active: z.boolean(),
-  careers: z.array(keySchema).max(100),
-});
+export { memberSchema } from "./access-contract";
 export type Member = z.infer<typeof memberSchema>;
 export const sourceKind = z.enum([
   "roster",
@@ -50,6 +47,7 @@ export const calendarInput = z.record(
 );
 export const operationSchemas = {
   ...intakeOperations,
+  ...accessOperations,
   ...metricOperations,
   ...historyOperations,
   overview: z.strictObject({}),
@@ -73,7 +71,6 @@ export const operationSchemas = {
     reason: label,
   }),
   revalidate: z.strictObject({ jobId: keySchema }),
-  assignMember: z.strictObject({ uid: keySchema, member: memberSchema }),
   createCycle: z.strictObject({ id: keySchema, dates: calendarInput }),
   createCourse: z.strictObject({
     cycleId: keySchema,
