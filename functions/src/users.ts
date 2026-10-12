@@ -27,14 +27,22 @@ export async function userOperation(op: string, raw: unknown, actor: string) {
   admin(await membership(actor));
   if (op === "listAccessUsers") {
     const input = accessOperations.listAccessUsers.parse(raw);
-    // Authentication pagina en servidor. Un filtro puede dar una página vacía,
-    // conservando el cursor; nunca se envía el directorio completo al cliente.
-    const page = await auth.listUsers(input.pageSize, input.pageToken);
-    const users = page.users.filter((u) =>
+    // Buscar más allá de la página inicial, sin enviar cuentas no coincidentes.
+    // El presupuesto acota cada petición; el cursor conserva la continuación.
+    let page = await auth.listUsers(input.pageSize, input.pageToken);
+    const matches = (u: (typeof page.users)[number]) =>
       normalize(`${u.displayName ?? ""} ${u.email ?? ""}`).includes(
         normalize(input.search),
-      ),
-    );
+      );
+    let users = page.users.filter(matches);
+    for (
+      let scanned = 1;
+      !users.length && page.pageToken && scanned < 40;
+      scanned++
+    ) {
+      page = await auth.listUsers(input.pageSize, page.pageToken);
+      users = page.users.filter(matches);
+    }
     const labels = new Map<string, string>();
     const cycles = await db.collection("cycles").get();
     for (const cycle of cycles.docs) {

@@ -4,9 +4,10 @@
 
 Administración abre **Configuración → Usuarios y accesos**. El directorio incluye
 cuentas sin membresía académica, permite buscar por nombre/correo y pagina desde
-Authentication en servidor (hasta 15 cuentas por página). El filtro se aplica en
-servidor a cada página; si no hay coincidencias pero aparece **Siguiente página**,
-continúa la consulta. No se descarga todo el directorio al navegador. Se distinguen
+Authentication en servidor (hasta 15 cuentas por página). La búsqueda recorre páginas
+en servidor hasta encontrar coincidencias, terminar el directorio o consumir 40 páginas
+por petición. Si llega a ese presupuesto sin coincidencias, **Siguiente página** continúa
+desde el cursor, sin repetir cuentas. No se descarga todo el directorio al navegador. Se distinguen
 cuenta deshabilitada, acceso inactivo y acceso sin asignar. Administrador se muestra
 con alcance institucional. **Gestionar** abre la identidad y los permisos existentes.
 
@@ -176,3 +177,4 @@ Capturas exclusivamente sintéticas: [escritorio](evidencia/usuarios/escritorio-
 y [móvil](evidencia/usuarios/movil-sintetico.png). La guía personalizada del coordinador
 real permanece únicamente en `private/guia-alta-leonardo.md`; el PR no publica nombres
 ni correos del catálogo real. Entrega de correo real y aceptación operativa pendientes.
+

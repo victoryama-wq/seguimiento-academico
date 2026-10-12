@@ -39,6 +39,21 @@ async function review(email: string) {
 }
 it("directorio paginado incluye cuentas sin permisos, deshabilitadas y alcance institucional sin hashes ni UID", async () => {
   await stores().auth.createUser({
+    uid: "zz-directory-match",
+    email: "last-match@example.invalid",
+    displayName: "Coincidencia al final del directorio",
+  });
+  const searched = directorySchema.parse(
+    await api(
+      "listAccessUsers",
+      { search: "Coincidencia al final", pageSize: 1 },
+      sessions.admin,
+    ),
+  );
+  expect(searched.users.map((u) => u.email)).toEqual([
+    "last-match@example.invalid",
+  ]);
+  await stores().auth.createUser({
     email: "directory-disabled@example.invalid",
     disabled: true,
   });
